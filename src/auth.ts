@@ -1,7 +1,6 @@
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
-import fs from "fs/promises"
-import path from "path"
+import whitelistData from "./whitelist.json"
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [Google],
@@ -11,8 +10,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 const email = user?.email;
                 if (email) {
                     try {
-                        const fileContents = await fs.readFile(path.join(process.cwd(), 'src', 'whitelist.json'), 'utf8');
-                        const whitelist = JSON.parse(fileContents);
+                        const whitelist: string[] = whitelistData;
                         if (whitelist.includes(email)) {
                             return true;
                         }
