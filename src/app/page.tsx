@@ -13,11 +13,11 @@ export default function Home() {
       {/* Background Image Container */}
       <div
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90"
-        style={{ backgroundImage: "url('/background-placeholder.jpg')" }}
+        style={{ backgroundImage: "url('/background-placeholder.webp')" }}
       ></div>
 
       {/* Dark sage overlay to ensure the bright image background doesn't consume the text */}
-      <div className="absolute inset-0 z-0 bg-wedding-sage-darkest/75 backdrop-blur-md"></div>
+      <div className="absolute inset-0 z-0 bg-wedding-sage-darkest/75"></div>
 
       {/* Subtle colorful glows to match the floral theme */}
       <div className="absolute inset-0 z-0 mix-blend-soft-light opacity-40"
