@@ -36,9 +36,18 @@ export default async function LoginPage({
                     className="w-full flex flex-col gap-4"
                 >
                     {error && (
-                        <p className="text-red-300 text-sm md:text-base text-center mt-2 drop-shadow-md bg-red-900/40 p-2 rounded backdrop-blur-sm tracking-wide">
-                            Acceso denegado. Verifica que tu correo esté autorizado.
-                        </p>
+                        <div className="text-red-300 text-sm md:text-base text-center mt-2 drop-shadow-md bg-red-900/40 p-3 rounded-md backdrop-blur-sm tracking-wide flex flex-col gap-2">
+                            <p>No pudimos reconocer tu correo.</p>
+                            <p>
+                                Si crees que esto es un error, por favor, ponte en contacto con nuestro{" "}
+                                <a
+                                    href="mailto:soporte@davidyrocio.wedding?subject=Problema%20con%20la%20invitación&body=Hola,%20estoy%20teniendo%20un%20problema%20con%20la%20invitación.%20¿Me%20darían%20una%20mano%20para%20acceder?%20Gracias."
+                                    className="underline font-medium hover:text-red-100 transition-colors"
+                                >
+                                    equipo de soporte
+                                </a>.
+                            </p>
+                        </div>
                     )}
                     <SubmitButton />
                 </form>
