@@ -44,22 +44,20 @@ const strings: Translations = {
 
 export default function Error({
     error,
-    reset,
 }: {
     error: Error & { digest?: string }
-    reset: () => void
 }) {
-    const [lang, setLang] = useState<string>("es");
-
-    useEffect(() => {
-        // Attempt to guess browser language setup
-        const userLang = navigator.language.split('-')[0];
-        if (strings[userLang]) {
-            setLang(userLang);
+    const [lang] = useState<string>(() => {
+        if (typeof window !== 'undefined') {
+            const userLang = window.navigator.language.split('-')[0];
+            if (strings[userLang]) {
+                return userLang;
+            }
         }
-    }, []);
+        return "es";
+    });
 
-    const currentStrings = strings[lang];
+    const currentStrings = strings[lang] || strings['es'];
 
     // Determine error payload to send
     const errorMessage = `${error.name}: ${error.message}\n\nStack:\n${error.stack || "No stack details"}`;
