@@ -1,8 +1,5 @@
-import dynamic from 'next/dynamic';
+import Countdown from "@/components/Countdown";
 import { MapPin } from "lucide-react";
-
-// Deshabilitamos SSR para evitar desajustes de hidratación en fechas dinámicas
-const Countdown = dynamic(() => import('@/components/Countdown'), { ssr: false });
 
 export default function Home() {
   return (

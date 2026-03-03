@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 
 export default function Countdown() {
     const [timeLeft, setTimeLeft] = useState({
-        days: 0,
-        hours: 0,
-        minutes: 0,
-        seconds: 0,
+        days: -1,
+        hours: -1,
+        minutes: -1,
+        seconds: -1,
     });
 
     useEffect(() => {
@@ -30,11 +30,20 @@ export default function Countdown() {
             }
         };
 
-        updateTimer();
+        // Render delays setting state by 1 tick to prevent synchronous state update in effect warning
+        // while also ensuring hydration uses the initial -1 values.
+        const timeout = setTimeout(updateTimer, 0);
         const timer = setInterval(updateTimer, 1000);
 
-        return () => clearInterval(timer);
+        return () => {
+            clearTimeout(timeout);
+            clearInterval(timer);
+        };
     }, []);
+
+    if (timeLeft.days === -1) {
+        return <div className="h-24"></div>; // Placeholder para evitar desajustes de hidratación 
+    }
 
     return (
         <div className="flex gap-4 sm:gap-8 justify-center items-center text-center">
