@@ -1,5 +1,11 @@
 import Countdown from "@/components/Countdown";
 import { MapPin } from "lucide-react";
+import { Pinyon_Script } from "next/font/google";
+
+const pinyonScript = Pinyon_Script({
+  weight: "400",
+  subsets: ["latin"],
+});
 
 export default function Home() {
   return (
@@ -22,7 +28,7 @@ export default function Home() {
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-5xl py-12 min-h-screen justify-center">
-        <h1 className="font-cursive text-6xl md:text-8xl text-wedding-blush-light drop-shadow-xl mb-6 text-center">
+        <h1 className={`${pinyonScript.className} text-6xl md:text-8xl text-wedding-blush-light drop-shadow-xl mb-6 text-center`}>
           David & Rocio
         </h1>
 
