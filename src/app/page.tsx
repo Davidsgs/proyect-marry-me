@@ -3,24 +3,26 @@ import { MapPin } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-cream">
+    <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest">
       {/* Background Image Container */}
       <div
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-50"
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90"
         style={{ backgroundImage: "url('/background-placeholder.jpg')" }}
       ></div>
 
-      {/* Soft color overlays inspired by the specific palette */}
-      <div className="absolute inset-0 z-0 mix-blend-multiply opacity-60"
+      {/* Dark sage overlay to ensure the bright image background doesn't consume the text */}
+      <div className="absolute inset-0 z-0 bg-wedding-sage-darkest/75 backdrop-blur-md"></div>
+
+      {/* Subtle colorful glows to match the floral theme */}
+      <div className="absolute inset-0 z-0 mix-blend-soft-light opacity-40"
         style={{
-          background: "radial-gradient(circle at 10% 20%, var(--color-wedding-blush-light), transparent 50%), radial-gradient(circle at 90% 80%, var(--color-wedding-sage-light), transparent 50%)",
+          background: "radial-gradient(circle at 20% 30%, var(--color-wedding-blush-light), transparent 60%), radial-gradient(circle at 80% 70%, var(--color-wedding-sage-light), transparent 60%)",
         }}
       ></div>
-      <div className="absolute inset-0 z-0 bg-wedding-cream/60 backdrop-blur-[6px]"></div>
 
       {/* Content */}
       <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-5xl">
-        <p className="text-lg md:text-2xl font-light tracking-[0.2em] uppercase text-wedding-sage-dark/80 mb-12 text-center text-balance">
+        <p className="text-lg md:text-2xl font-light tracking-[0.2em] uppercase text-wedding-cream/90 mb-12 text-center text-balance drop-shadow-md">
           Estás invitado a algo especial
         </p>
 
@@ -29,8 +31,8 @@ export default function Home() {
         </div>
 
         <div className="flex flex-col items-center gap-4 text-center">
-          <MapPin className="w-8 h-8 text-wedding-sage-dark/70" strokeWidth={1} />
-          <p className="text-lg md:text-xl font-light tracking-wide text-wedding-sage-dark">
+          <MapPin className="w-8 h-8 text-wedding-blush-light" strokeWidth={1} />
+          <p className="text-lg md:text-xl font-light tracking-wide text-wedding-cream drop-shadow-sm">
             Lugar por confirmar, Buenos Aires, Argentina.
           </p>
         </div>
