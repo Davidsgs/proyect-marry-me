@@ -21,19 +21,35 @@ export default function Home() {
       ></div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-5xl">
-        <p className="text-lg md:text-2xl font-light tracking-[0.2em] uppercase text-wedding-cream/90 mb-12 text-center text-balance drop-shadow-md">
+      <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-5xl py-12 min-h-screen justify-center">
+        <h1 className="font-cursive text-6xl md:text-8xl text-wedding-blush-light drop-shadow-xl mb-6 text-center">
+          David & Rocio
+        </h1>
+
+        <p className="text-sm md:text-xl font-light tracking-[0.2em] md:tracking-[0.3em] uppercase text-wedding-cream/90 mb-12 text-center text-balance drop-shadow-md">
           Estás invitado a algo especial
         </p>
 
-        <div className="mb-16 md:mb-24 w-full">
+        <div className="mb-12 md:mb-16 w-full">
           <Countdown />
         </div>
 
-        <div className="flex flex-col items-center gap-4 text-center">
-          <MapPin className="w-8 h-8 text-wedding-blush-light" strokeWidth={1} />
-          <p className="text-lg md:text-xl font-light tracking-wide text-wedding-cream drop-shadow-sm">
-            Lugar por confirmar, Buenos Aires, Argentina.
+        <div className="flex flex-col items-center gap-6 text-center">
+          <p className="text-2xl md:text-3xl font-serif text-wedding-cream drop-shadow-md tracking-wider">
+            03 de Abril, 2027
+          </p>
+
+          <div className="flex items-center gap-3">
+            <MapPin className="w-6 h-6 md:w-8 md:h-8 text-wedding-blush-light" strokeWidth={1.5} />
+            <p className="text-lg md:text-xl font-light tracking-wide text-wedding-cream drop-shadow-sm">
+              Lugar por confirmar, Buenos Aires, Argentina.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-16 md:mt-24 text-center">
+          <p className="text-sm md:text-base font-light text-wedding-cream/70 max-w-md mx-auto text-balance tracking-wide">
+            Pronto vas a poder confirmar tu asistencia, y tener más novedades.
           </p>
         </div>
       </div>

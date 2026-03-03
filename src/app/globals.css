@@ -3,6 +3,7 @@
 @theme {
   --font-sans: var(--font-inter);
   --font-serif: var(--font-cormorant);
+  --font-cursive: var(--font-great-vibes);
   --color-wedding-sage-dark: #66745A;
   --color-wedding-sage-light: #9CA68F;
   --color-wedding-blush-dark: #DBAAB0;
