@@ -27,7 +27,7 @@ export default function Home() {
         </h1>
 
         <p className="text-sm md:text-xl font-light tracking-[0.2em] md:tracking-[0.3em] uppercase text-wedding-cream/90 mb-12 text-center text-balance drop-shadow-md">
-          Estás invitado a algo especial
+          Te invitamos a nuestro momento especial
         </p>
 
         <div className="mb-12 md:mb-16 w-full">

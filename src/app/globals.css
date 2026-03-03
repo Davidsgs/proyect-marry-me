@@ -3,13 +3,25 @@
 @theme {
   --font-sans: var(--font-inter);
   --font-serif: var(--font-cormorant);
-  --font-cursive: var(--font-great-vibes);
+  --font-cursive: var(--font-pinyon-script);
   --color-wedding-sage-dark: #66745A;
   --color-wedding-sage-light: #9CA68F;
   --color-wedding-blush-dark: #DBAAB0;
   --color-wedding-blush-light: #F4D3D7;
   --color-wedding-cream: #F8F8F8;
   --color-wedding-sage-darkest: #1E2419;
+}
+
+/* Reset image behaviors that might cause horizontal lines */
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block;
 }
 
 body {

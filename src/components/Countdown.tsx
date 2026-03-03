@@ -46,25 +46,25 @@ export default function Countdown() {
     }
 
     return (
-        <div className="flex gap-4 sm:gap-8 justify-center items-center text-center">
-            <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md">{timeLeft.days}</span>
-                <span className="text-sm border-t border-wedding-blush-light/30 pt-2 mt-2 tracking-widest uppercase text-wedding-cream/80">Días</span>
+        <div className="flex flex-wrap gap-4 sm:gap-8 justify-center items-end text-center z-10">
+            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
+                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.days}</span>
+                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Días</span>
             </div>
-            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 text-wedding-blush-light/60">:</span>
-            <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md">{timeLeft.hours.toString().padStart(2, '0')}</span>
-                <span className="text-sm border-t border-wedding-blush-light/30 pt-2 mt-2 tracking-widest uppercase text-wedding-cream/80">Horas</span>
+            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 sm:mb-12 text-wedding-blush-light/60">:</span>
+            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
+                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.hours.toString().padStart(2, '0')}</span>
+                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Horas</span>
             </div>
-            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 text-wedding-blush-light/60">:</span>
-            <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md">{timeLeft.minutes.toString().padStart(2, '0')}</span>
-                <span className="text-sm border-t border-wedding-blush-light/30 pt-2 mt-2 tracking-widest uppercase text-wedding-cream/80">Minutos</span>
+            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 sm:mb-12 text-wedding-blush-light/60">:</span>
+            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
+                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.minutes.toString().padStart(2, '0')}</span>
+                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Minutos</span>
             </div>
-            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 text-wedding-blush-light/60">:</span>
-            <div className="flex flex-col items-center">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md">{timeLeft.seconds.toString().padStart(2, '0')}</span>
-                <span className="text-sm border-t border-wedding-blush-light/30 pt-2 mt-2 tracking-widest uppercase text-wedding-cream/80">Segundos</span>
+            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 sm:mb-12 text-wedding-blush-light/60">:</span>
+            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
+                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.seconds.toString().padStart(2, '0')}</span>
+                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Segundos</span>
             </div>
         </div>
     );
