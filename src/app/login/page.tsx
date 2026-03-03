@@ -35,7 +35,7 @@ export default async function LoginPage({
                     }}
                     className="w-full flex flex-col gap-4"
                 >
-                    {error && (
+                    {error === "AccessDenied" && (
                         <div className="text-red-300 text-sm md:text-base text-center mt-2 drop-shadow-md bg-red-900/40 p-3 rounded-md backdrop-blur-sm tracking-wide flex flex-col gap-2">
                             <p>No pudimos reconocer tu correo.</p>
                             <p>

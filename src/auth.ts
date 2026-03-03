@@ -26,5 +26,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     },
     pages: {
         signIn: '/login', // Provide custom login page
+        error: '/login', // Return users here on validation failure / whitelist rejection
     }
 })
