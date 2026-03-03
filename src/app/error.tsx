@@ -1,6 +1,6 @@
 "use client" // Error boundaries must be Client Components
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Pinyon_Script } from 'next/font/google';
 
 const pinyonScript = Pinyon_Script({
