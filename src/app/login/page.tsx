@@ -1,6 +1,6 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { Pinyon_Script } from 'next/font/google';
+import { signIn } from '@/auth';
+import { SubmitButton } from '@/components/SubmitButton';
 
 const pinyonScript = Pinyon_Script({
     weight: "400",
@@ -15,23 +15,6 @@ export default async function LoginPage({
     const resolvedParams = await searchParams;
     const error = resolvedParams?.error;
 
-    async function login(formData: FormData) {
-        'use server';
-        const password = formData.get('password');
-        if (password === 'nuestraboda') {
-            const cookieStore = await cookies();
-            cookieStore.set('site_auth', 'true', {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                maxAge: 60 * 60 * 24 * 30, // 30 days
-                path: '/',
-            });
-            redirect('/');
-        } else {
-            redirect('/login?error=true');
-        }
-    }
-
     return (
         <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest">
             <div
@@ -45,26 +28,19 @@ export default async function LoginPage({
                     Acceso Privado
                 </h1>
 
-                <form action={login} className="w-full flex flex-col gap-4">
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Ingresa la contraseña"
-                        className="px-4 py-3 rounded-md bg-white/10 border border-wedding-cream/20 text-wedding-cream placeholder-wedding-cream/50 focus:outline-none focus:border-wedding-blush-light focus:bg-white/20 text-center tracking-widest text-lg md:text-xl backdrop-blur-sm transition-all"
-                        required
-                        autoFocus
-                    />
+                <form
+                    action={async () => {
+                        "use server"
+                        await signIn("google")
+                    }}
+                    className="w-full flex flex-col gap-4"
+                >
                     {error && (
                         <p className="text-red-300 text-sm md:text-base text-center mt-2 drop-shadow-md bg-red-900/40 p-2 rounded backdrop-blur-sm tracking-wide">
-                            Contraseña incorrecta, intenta de nuevo.
+                            Acceso denegado. Verifica que tu correo esté autorizado.
                         </p>
                     )}
-                    <button
-                        type="submit"
-                        className="w-full mt-2 px-4 py-3 bg-wedding-sage-light hover:brightness-110 text-wedding-sage-darkest font-medium rounded-md transition-all uppercase tracking-widest text-sm md:text-base shadow-lg"
-                    >
-                        Entrar
-                    </button>
+                    <SubmitButton />
                 </form>
             </div>
         </main>

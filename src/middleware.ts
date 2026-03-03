@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { auth } from '@/auth';
 
-export function middleware(req: NextRequest) {
-    const isAuth = req.cookies.has('site_auth');
+export default auth((req) => {
+    const isAuth = !!req.auth;
     const isLoginPage = req.nextUrl.pathname.startsWith('/login');
 
     if (!isAuth && !isLoginPage) {
@@ -14,7 +14,7 @@ export function middleware(req: NextRequest) {
     }
 
     return NextResponse.next();
-}
+});
 
 export const config = {
     matcher: [
