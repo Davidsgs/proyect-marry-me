@@ -4,13 +4,35 @@ import { auth } from '@/auth';
 export default auth((req) => {
     const isAuth = !!req.auth;
     const isLoginPage = req.nextUrl.pathname.startsWith('/login');
+    const role = req.auth?.user?.role;
 
     if (!isAuth && !isLoginPage) {
         return NextResponse.redirect(new URL('/login', req.url));
     }
 
     if (isAuth && isLoginPage) {
-        return NextResponse.redirect(new URL('/', req.url));
+        // If authenticated and tries to go to login, redirect based on role
+        if (role === 'ADMIN') {
+            return NextResponse.redirect(new URL('/admin', req.url));
+        }
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // Role-based route protection
+    if (isAuth) {
+        const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
+        const isDashboardRoute = req.nextUrl.pathname.startsWith('/dashboard');
+
+        if (isAdminRoute && role !== 'ADMIN') {
+            return NextResponse.redirect(new URL('/dashboard', req.url));
+        }
+
+        if (isDashboardRoute && role === 'ADMIN') {
+            // Admins probably don't need to see dashboard, but allow or redirect?
+            // Actually they can visit dashboard or redirect to admin. Let's redirect to admin for now, or allow them.
+            // Let's allow admins to see dashboard if they want, or redirect to admin if strictly separated. Let's just redirect to admin for simplicity.
+            return NextResponse.redirect(new URL('/admin', req.url));
+        }
     }
 
     return NextResponse.next();
