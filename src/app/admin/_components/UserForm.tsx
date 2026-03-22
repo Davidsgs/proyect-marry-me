@@ -2,6 +2,7 @@
 
 import { createUser } from "@/app/actions/admin";
 import type { families as familiesTable } from "@/db/schema";
+import { Plus } from "lucide-react";
 
 export default function UserForm({ families }: { families: typeof familiesTable.$inferSelect[] }) {
     return (
@@ -14,39 +15,55 @@ export default function UserForm({ families }: { families: typeof familiesTable.
                 familyId: isNaN(familyId) ? 0 : familyId,
                 role: formData.get("role") as "ADMIN" | "MAIN_GUEST" | "GUEST",
             })
-        }} className="space-y-4">
-            <div className="flex gap-4">
-                <div className="w-1/2">
-                    <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Nombre(s)</label>
-                    <input required type="text" name="name" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none" placeholder="David" />
+        }} className="grid grid-cols-1 md:grid-cols-12 gap-5 items-end">
+            
+            <div className="md:col-span-6">
+                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-wedding-sage-dark mb-2">Nombre(s) <span className="text-wedding-blush">*</span></label>
+                <input required type="text" name="name" className="w-full px-4 py-3 border border-wedding-olive/20 rounded-xl bg-wedding-cream/30 focus:bg-white focus:ring-2 focus:ring-wedding-olive/50 focus:border-wedding-olive transition-all outline-none text-wedding-sage-darkest placeholder-wedding-sage-light" placeholder="David" />
+            </div>
+
+            <div className="md:col-span-6">
+                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-wedding-sage-dark mb-2">Apellidos <span className="text-wedding-blush">*</span></label>
+                <input required type="text" name="lastName" className="w-full px-4 py-3 border border-wedding-olive/20 rounded-xl bg-wedding-cream/30 focus:bg-white focus:ring-2 focus:ring-wedding-olive/50 focus:border-wedding-olive transition-all outline-none text-wedding-sage-darkest placeholder-wedding-sage-light" placeholder="García" />
+            </div>
+
+            <div className="md:col-span-12 lg:col-span-6">
+                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-wedding-sage-dark mb-2">Correo (acceso app) <span className="text-wedding-blush">*</span></label>
+                <input required type="email" name="email" className="w-full px-4 py-3 border border-wedding-olive/20 rounded-xl bg-wedding-cream/30 focus:bg-white focus:ring-2 focus:ring-wedding-olive/50 focus:border-wedding-olive transition-all outline-none text-wedding-sage-darkest placeholder-wedding-sage-light" placeholder="correo@gmail.com" />
+            </div>
+
+            <div className="md:col-span-6 lg:col-span-3">
+                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-wedding-sage-dark mb-2">Familia <span className="text-wedding-blush">*</span></label>
+                <div className="relative">
+                    <select required name="familyId" className="w-full px-4 py-3 border border-wedding-olive/20 rounded-xl bg-wedding-cream/30 focus:bg-white focus:ring-2 focus:ring-wedding-olive/50 focus:border-wedding-olive transition-all outline-none text-wedding-sage-darkest appearance-none">
+                        <option value="" disabled selected>Selecciona...</option>
+                        {families.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-wedding-sage-dark">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
                 </div>
-                <div className="w-1/2">
-                    <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Apellidos</label>
-                    <input required type="text" name="lastName" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none" placeholder="García" />
+            </div>
+
+            <div className="md:col-span-6 lg:col-span-3">
+                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-wedding-sage-dark mb-2">Rol Interno</label>
+                <div className="relative">
+                    <select name="role" className="w-full px-4 py-3 border border-wedding-olive/20 rounded-xl bg-wedding-cream/30 focus:bg-white focus:ring-2 focus:ring-wedding-olive/50 focus:border-wedding-olive transition-all outline-none text-wedding-sage-darkest appearance-none">
+                        <option value="MAIN_GUEST">Principal (Titular)</option>
+                        <option value="GUEST" selected>Acompañante</option>
+                        <option value="ADMIN">Administrador</option>
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-wedding-sage-dark">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
                 </div>
             </div>
-            <div>
-                <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Correo Electrónico (Google Auth)</label>
-                <input required type="email" name="email" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none" placeholder="correo@gmail.com" />
+
+            <div className="md:col-span-12 mt-2">
+                <button type="submit" className="w-full bg-wedding-olive hover:bg-wedding-sage-darkest text-wedding-cream py-3 rounded-xl transition-colors shadow-[0_2px_10px_rgba(111,127,106,0.2)] hover:shadow-[0_4px_15px_rgba(111,127,106,0.25)] font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-2 h-[48px]">
+                    <Plus className="w-4 h-4" /> Registrar Invitado
+                </button>
             </div>
-            <div>
-                <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Familia</label>
-                <select required name="familyId" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none">
-                    <option value="">Selecciona Familia...</option>
-                    {families.map(f => <option key={f.id} value={f.id}>{f.name} (ID: {f.id})</option>)}
-                </select>
-            </div>
-            <div>
-                <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Rol</label>
-                <select name="role" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none">
-                    <option value="GUEST">Invitado Opcional (GUEST)</option>
-                    <option value="MAIN_GUEST">Invitado Principal (MAIN_GUEST - Quien Confirma Asistencia)</option>
-                    <option value="ADMIN">Administrador (ADMIN)</option>
-                </select>
-            </div>
-            <button type="submit" className="w-full bg-wedding-blush text-white py-2 rounded-md hover:bg-wedding-blush/90 transition-colors shadow-sm font-medium">
-                Añadir Usuario
-            </button>
         </form>
     )
 }
