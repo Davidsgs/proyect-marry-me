@@ -19,8 +19,9 @@ export async function deleteFamily(id: number) {
     revalidatePath("/admin");
 }
 
-export async function createUser(data: { email: string, name: string, familyId: number, role: 'ADMIN' | 'MAIN_GUEST' | 'GUEST' }) {
-    await db.insert(users).values(data);
+export async function createUser(data: { email: string, name: string, lastName: string, familyId: number, role: 'ADMIN' | 'MAIN_GUEST' | 'GUEST' }) {
+    const fullname = `${data.name} ${data.lastName}`.trim();
+    await db.insert(users).values({ ...data, fullname });
     revalidatePath("/admin");
 }
 

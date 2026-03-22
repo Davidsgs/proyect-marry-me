@@ -10,13 +10,20 @@ export default function UserForm({ families }: { families: typeof familiesTable.
             await createUser({
                 email: formData.get("email") as string,
                 name: formData.get("name") as string,
+                lastName: formData.get("lastName") as string,
                 familyId: isNaN(familyId) ? 0 : familyId,
                 role: formData.get("role") as "ADMIN" | "MAIN_GUEST" | "GUEST",
             })
         }} className="space-y-4">
-            <div>
-                <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Nombre Completo</label>
-                <input required type="text" name="name" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none" placeholder="David Garcia" />
+            <div className="flex gap-4">
+                <div className="w-1/2">
+                    <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Nombre(s)</label>
+                    <input required type="text" name="name" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none" placeholder="David" />
+                </div>
+                <div className="w-1/2">
+                    <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Apellidos</label>
+                    <input required type="text" name="lastName" className="w-full px-4 py-2 border border-wedding-sage/30 rounded-md bg-wedding-cream/50 focus:ring-2 focus:ring-wedding-olive focus:outline-none" placeholder="García" />
+                </div>
             </div>
             <div>
                 <label className="block text-sm font-medium text-wedding-sage-darkest mb-1">Correo Electrónico (Google Auth)</label>

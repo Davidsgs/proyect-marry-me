@@ -18,7 +18,7 @@ export default function UserList({ users, families }: Props) {
                 return (
                     <li key={user.id} className="flex justify-between items-start bg-wedding-blush/5 p-3 rounded-md border border-wedding-blush/20 text-sm">
                         <div className="space-y-1">
-                            <span className="font-semibold block text-wedding-sage-darkest">{user.name}</span>
+                            <span className="font-semibold block text-wedding-sage-darkest">{user.fullname || `${user.name} ${user.lastName}`}</span>
                             <span className="text-xs text-gray-600 block">{user.email}</span>
                             <div className="flex gap-2 text-xs mt-1">
                                 <span className="bg-wedding-olive/10 text-wedding-olive px-2 py-0.5 rounded-full">{user.role}</span>
