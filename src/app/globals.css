@@ -10,6 +10,20 @@
   --color-wedding-blush-light: #F4D3D7;
   --color-wedding-cream: #F8F8F8;
   --color-wedding-sage-darkest: #1E2419;
+
+  /* DESIGN.md theme colors */
+  --color-surface: #fdf9f3;
+  --color-surface-container-low: #f7f3ed;
+  --color-surface-container-lowest: #ffffff;
+  --color-primary: #7f5351;
+  --color-primary-container: #d9a3a0;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #603837;
+  --color-on-surface: #1c1c18;
+  --color-on-surface-variant: #514443;
+  --color-secondary-container: #d3e8d5;
+  --color-on-secondary-container: #56695a;
+  --color-outline-variant: rgba(81, 68, 67, 0.15);
 }
 
 /* Reset image behaviors that might cause horizontal lines */

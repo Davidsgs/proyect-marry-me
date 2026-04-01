@@ -1,9 +1,6 @@
 import { getFamilies, getUsers } from "@/app/actions/admin";
-import FamilyForm from "./_components/FamilyForm";
-import UserForm from "./_components/UserForm";
-import FamilyList from "./_components/FamilyList";
-import UserList from "./_components/UserList";
-import { Users, CheckCircle2, Clock, XCircle, HeartHandshake, CheckSquare } from "lucide-react";
+import { CheckCircle2, ChevronRight, CheckSquare } from "lucide-react";
+import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
 
@@ -14,162 +11,176 @@ export default async function AdminPage() {
     // Stats calculations
     const totalUsers = users.length;
     const confirmedUsers = users.filter((u) => u.isConfirmed).length;
-    
-    const totalFamilies = families.length;
-    const confirmedFamilies = families.filter((f) => f.globalRsvpStatus === "CONFIRMED").length;
-    const pendingFamilies = families.filter((f) => f.globalRsvpStatus === "PENDING").length;
+    const pendingUsers = totalUsers - confirmedUsers;
+
     const declinedFamilies = families.filter((f) => f.globalRsvpStatus === "DECLINED").length;
-    
+
     // Progress calculation
     const confirmationProgress = totalUsers > 0 ? Math.round((confirmedUsers / totalUsers) * 100) : 0;
-    const familyProgress = totalFamilies > 0 ? Math.round(((confirmedFamilies + declinedFamilies) / totalFamilies) * 100) : 0;
+
+    // Recent confirmations mock (we can slice the real users that are confirmed)
+    const recentConfirmed = users.filter((u) => u.isConfirmed).slice(0, 4);
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8">
+        <div className="max-w-6xl mx-auto space-y-10">
+            {/* Header Section */}
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-serif text-wedding-sage-darkest drop-shadow-sm">
-                        Dashboard
+                    <h1 className="text-3xl font-serif italic text-primary drop-shadow-sm">
+                        Estadísticas de tu Boda
                     </h1>
-                    <p className="text-wedding-sage-dark font-sans text-sm tracking-wide mt-1">
-                        Resumen de la planificación y estadísticas de tu boda
+                    <p className="text-on-surface-variant font-sans text-sm tracking-wide mt-2">
+                        Bienvenida de nuevo, Sarah. Aquí tienes un resumen del progreso de tu gran día.
                     </p>
                 </div>
-                {/* Add actions */}
-                <div className="flex gap-3">
-                    <a href="#families" className="flex items-center gap-2 bg-wedding-olive hover:bg-wedding-sage-darkest text-wedding-cream px-5 py-2.5 rounded-full transition-all shadow-md hover:shadow-lg font-sans text-sm tracking-widest uppercase font-medium">
-                        Agregar Familia
-                    </a>
+                <div>
+                    <Link href="/admin/guests#users" className="flex items-center gap-2 bg-primary text-on-primary px-6 py-3 rounded-2xl transition-all shadow-sm hover:shadow-md font-sans text-sm font-medium">
+                        Agregar Invitado
+                    </Link>
                 </div>
             </div>
 
-            {/* Stats Bento Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {/* Main Status / Confirmed Users Card */}
-                <div className="md:col-span-2 bg-white p-6 rounded-[2rem] shadow-sm border border-wedding-olive/10 flex flex-col justify-between group hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-wedding-sage-dark font-sans text-sm tracking-widest uppercase font-medium">Estado General</p>
-                            <h3 className="text-3xl font-serif text-wedding-sage-darkest mt-1">Confirmaciones individuales</h3>
-                        </div>
-                        <div className="w-12 h-12 rounded-full bg-wedding-olive/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <Users className="w-6 h-6 text-wedding-olive" />
-                        </div>
+            {/* Stats Row */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Total Guests Card */}
+                <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
+                    <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium mb-4">Total Guests</p>
+                    <div className="flex items-baseline gap-2 mb-4">
+                        <span className="text-4xl font-serif text-primary">{totalUsers}</span>
                     </div>
-                    
-                    <div className="mt-8">
-                        <div className="flex justify-between items-end mb-2">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-serif text-wedding-sage-darkest">{confirmedUsers}</span>
-                                <span className="text-wedding-sage-dark font-sans">/ {totalUsers} invitados</span>
-                            </div>
-                            <span className="text-wedding-olive font-medium font-sans text-lg">{confirmationProgress}%</span>
-                        </div>
-                        <div className="w-full bg-wedding-cream rounded-full h-3 overflow-hidden border border-wedding-olive/5">
-                            <div className="bg-wedding-olive h-3 rounded-full transition-all duration-1000 ease-out" style={{ width: `${confirmationProgress}%` }}></div>
-                        </div>
+                    {/* Fake progress bar to match image */}
+                    <div className="w-full bg-surface h-2 rounded-full overflow-hidden mt-auto">
+                        <div className="bg-primary h-2 rounded-full transition-all duration-1000 ease-out" style={{ width: `100%` }}></div>
                     </div>
                 </div>
 
-                {/* Families Confirmed Card */}
-                <div className="bg-wedding-olive text-wedding-cream p-6 rounded-[2rem] shadow-sm flex flex-col justify-between relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-700"></div>
-                    <div className="relative z-10">
-                        <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center mb-4">
-                            <CheckCircle2 className="w-5 h-5 text-wedding-cream" />
-                        </div>
-                        <h3 className="text-4xl font-serif mb-1">{confirmedFamilies}</h3>
-                        <p className="text-white/80 font-sans text-sm tracking-wide">Familias Confirmadas</p>
+                {/* RSVP Progress Card */}
+                <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
+                    <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium mb-4">Rsvp Progress</p>
+                    <div className="flex items-baseline gap-2 mb-4">
+                        <span className="text-4xl font-serif text-primary">{confirmationProgress}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-auto text-sm text-on-surface-variant font-medium">
+                        <CheckCircle2 className="w-4 h-4 text-on-secondary-container" />
+                        <span>{confirmedUsers} confirmed of {totalUsers}</span>
                     </div>
                 </div>
 
-                {/* Families Pending Card */}
-                <div className="bg-wedding-sage-light/20 p-6 rounded-[2rem] border border-wedding-sage-light/30 shadow-sm flex flex-col justify-between group hover:bg-wedding-sage-light/30 transition-colors">
-                    <div>
-                        <div className="w-10 h-10 rounded-full bg-wedding-sage/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <Clock className="w-5 h-5 text-wedding-sage-darkest" />
-                        </div>
-                        <h3 className="text-4xl font-serif text-wedding-sage-darkest mb-1">{pendingFamilies}</h3>
-                        <p className="text-wedding-sage-dark font-sans text-sm tracking-wide">Familias Pendientes</p>
+                {/* Budget Overview Card */}
+                <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
+                    <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium mb-4">Budget Overview</p>
+                    <div className="flex items-baseline gap-2 mb-4">
+                        <span className="text-4xl font-serif text-primary">$12,500</span>
                     </div>
-                </div>
-
-                {/* Families Declined Card */}
-                 <div className="bg-wedding-blush-light/30 p-6 rounded-[2rem] border border-wedding-blush/20 shadow-sm flex flex-col justify-between group hover:bg-wedding-blush-light/50 transition-colors">
-                    <div>
-                        <div className="w-10 h-10 rounded-full bg-wedding-blush/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                            <XCircle className="w-5 h-5 text-wedding-blush-dark" />
-                        </div>
-                        <h3 className="text-4xl font-serif text-wedding-sage-darkest mb-1">{declinedFamilies}</h3>
-                        <p className="text-wedding-sage-dark font-sans text-sm tracking-wide">Familias Canceladas</p>
+                    <div className="mt-auto text-sm text-on-surface-variant font-medium">
+                        <span>42% of total target budget</span>
                     </div>
-                </div>
-
-                {/* Total Families Progress Card */}
-                <div className="md:col-span-2 bg-white p-6 rounded-[2rem] shadow-sm border border-wedding-olive/10 flex flex-col justify-between group hover:shadow-md transition-all">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="text-wedding-sage-dark font-sans text-sm tracking-widest uppercase font-medium">Progreso Respuestas</p>
-                            <h3 className="text-2xl font-serif text-wedding-sage-darkest mt-1">Familias / Grupos</h3>
-                        </div>
-                        <div className="w-12 h-12 rounded-full bg-wedding-olive/10 flex items-center justify-center group-hover:scale-110 transition-transform">
-                            <HeartHandshake className="w-6 h-6 text-wedding-olive" />
-                        </div>
-                    </div>
-                    
-                    <div className="mt-8">
-                        <div className="flex justify-between items-end mb-2">
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-serif text-wedding-sage-darkest">{totalFamilies}</span>
-                                <span className="text-wedding-sage-dark font-sans">grupos familiares</span>
-                            </div>
-                            <span className="text-wedding-olive font-medium font-sans text-lg">{familyProgress}%</span>
-                        </div>
-                        <div className="w-full bg-wedding-cream rounded-full h-3 overflow-hidden border border-wedding-olive/5">
-                            <div className="bg-wedding-sage-light h-3 rounded-full transition-all duration-1000 ease-out" style={{ width: `${familyProgress}%` }}></div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Decorative End Card */}
-                <div className="bg-wedding-cream p-6 rounded-[2rem] border border-wedding-sage/10 shadow-sm flex flex-col justify-center items-center text-center relative overflow-hidden group">
-                    <div className="w-16 h-16 bg-white/50 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-inner">
-                        <CheckSquare className="w-8 h-8 text-wedding-sage-light" />
-                    </div>
-                    <h3 className="text-xl font-serif text-wedding-sage-darkest">Gestión Centralizada</h3>
-                    <p className="text-wedding-sage-dark text-sm font-sans mt-2 max-w-[12rem] mx-auto">Continúa abajo para agregar y editar la lista</p>
                 </div>
             </div>
 
-            {/* Content Lists Section */}
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8 pt-6 border-t border-wedding-olive/10">
-                {/* Families Management */}
-                <div id="families" className="scroll-mt-32 space-y-6 bg-white p-6 sm:p-8 rounded-[2rem] border border-wedding-olive/10 shadow-sm">
-                    <div className="border-b border-wedding-olive/10 pb-4 mb-6">
-                        <h3 className="text-2xl font-serif text-wedding-sage-darkest">1. Familias</h3>
-                        <p className="text-sm text-wedding-sage-dark font-sans mt-1">
-                            Agrupa invitados obligatoriamente. El titular de la familia (MAIN_GUEST) podrá confirmar por los demás miembros.
-                        </p>
-                    </div>
-                    <FamilyForm />
-                    <div className="mt-8 pt-6 border-t border-wedding-cream">
-                        <FamilyList families={families} />
+            {/* Pills Row */}
+            <div className="flex flex-wrap gap-3 items-center">
+                <div className="bg-secondary-container text-on-secondary-container px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-on-secondary-container"></span>
+                    Confirmed ({confirmedUsers})
+                </div>
+                <div className="bg-primary-container text-on-primary-container px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-on-primary-container"></span>
+                    Pending ({pendingUsers})
+                </div>
+                <div className="bg-outline-variant/20 text-on-surface-variant px-4 py-2 rounded-full text-sm font-medium flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-on-surface-variant"></span>
+                    Declined ({declinedFamilies})
+                </div>
+            </div>
+
+            {/* Main Columns */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Confirmaciones Recientes */}
+                <div className="space-y-4">
+                    <h2 className="font-serif italic text-2xl text-primary mb-6">Confirmaciones Recientes</h2>
+
+                    <div className="space-y-3">
+                        {recentConfirmed.length === 0 ? (
+                            <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm text-on-surface-variant text-sm">
+                                No hay confirmaciones aún.
+                            </div>
+                        ) : (
+                            recentConfirmed.map((u) => (
+                                <div key={u.id} className="bg-surface-container-lowest p-4 rounded-2xl shadow-[0_4px_20px_rgba(81,68,67,0.03)] flex items-center justify-between hover:shadow-md transition-shadow">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-surface-container-low text-primary flex items-center justify-center font-serif text-lg">
+                                            {u.name.charAt(0)}{u.lastName.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-on-surface">{u.name} {u.lastName}</p>
+                                            <p className="text-xs text-on-surface-variant mt-0.5">{u.role}</p>
+                                        </div>
+                                    </div>
+                                    <div className="bg-secondary-container text-on-secondary-container px-3 py-1 rounded-full text-xs font-medium">
+                                        CONFIRMED
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                        {recentConfirmed.length > 0 && (
+                            <Link href="/admin/guests" className="w-full py-4 text-xs tracking-widest font-medium text-primary uppercase hover:text-primary/70 transition-colors flex items-center justify-center gap-1 mt-2">
+                                Ver todos los invitados <ChevronRight className="w-4 h-4" />
+                            </Link>
+                        )}
                     </div>
                 </div>
 
-                {/* Users Management */}
-                <div id="users" className="scroll-mt-32 space-y-6 bg-white p-6 sm:p-8 rounded-[2rem] border border-wedding-olive/10 shadow-sm">
-                    <div className="border-b border-wedding-olive/10 pb-4 mb-6">
-                        <h3 className="text-2xl font-serif text-wedding-sage-darkest">2. Usuarios / Invitados</h3>
-                        <p className="text-sm text-wedding-sage-dark font-sans mt-1">
-                            Añade a los invitados vinculándolos al correo que usarán para conectar con Google y asígnales una familia.
-                        </p>
-                    </div>
-                    <UserForm families={families} />
-                    <div className="mt-8 pt-6 border-t border-wedding-cream">
-                        <UserList users={users} families={families} />
+                {/* Next Steps */}
+                <div className="space-y-4">
+                    <h2 className="font-serif italic text-2xl text-primary mb-6">Próximos Pasos</h2>
+
+                    <div className="space-y-3">
+                        <div className="bg-surface-container-lowest p-5 rounded-3xl shadow-[0_4px_20px_rgba(81,68,67,0.03)] flex gap-4 hover:shadow-md transition-shadow border-none">
+                            <div className="w-12 h-12 rounded-2xl bg-surface flex-shrink-0 flex items-center justify-center border-none shadow-sm">
+                                <CheckSquare className="w-5 h-5 text-primary opacity-60" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-medium text-on-surface mb-1">Prueba de selección de Menú</h4>
+                                <p className="text-sm text-on-surface-variant mb-3">Terminar de definir los menús.</p>
+                                <span className="inline-block bg-surface px-3 py-1 rounded-full text-xs font-medium text-primary border-none shadow-sm">
+                                    MAY 15
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="bg-surface-container-lowest p-5 rounded-3xl shadow-[0_4px_20px_rgba(81,68,67,0.03)] flex gap-4 hover:shadow-md transition-shadow border-none">
+                            <div className="w-12 h-12 rounded-2xl bg-surface flex-shrink-0 flex items-center justify-center border-none shadow-sm">
+                                <CheckSquare className="w-5 h-5 text-primary opacity-60" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-medium text-on-surface mb-1">Confirmar Invitaciones</h4>
+                                <p className="text-sm text-on-surface-variant mb-3">Confirmar las invitaciones a los invitados. </p>
+                                <span className="inline-block bg-surface px-3 py-1 rounded-full text-xs font-medium text-primary border-none shadow-sm">
+                                    JUNE 02
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="bg-surface-container-lowest p-5 rounded-3xl shadow-[0_4px_20px_rgba(81,68,67,0.03)] flex gap-4 hover:shadow-md transition-shadow border-none">
+                            <div className="w-12 h-12 rounded-2xl bg-surface flex-shrink-0 flex items-center justify-center border-none shadow-sm">
+                                <CheckSquare className="w-5 h-5 text-primary opacity-60" />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-medium text-on-surface mb-1">Pago total del lugar</h4>
+                                <p className="text-sm text-on-surface-variant mb-3">Enviar el pago final al lugar.</p>
+                                <span className="inline-block bg-surface px-3 py-1 rounded-full text-xs font-medium text-primary border-none shadow-sm">
+                                    JULY 10
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Footer mark */}
+            <div className="pb-16 text-center">
+                <p className="font-serif italic text-primary/60 text-lg">David y Rocio • Nuestra Boda</p>
             </div>
         </div>
     );
