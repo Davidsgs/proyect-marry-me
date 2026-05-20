@@ -2,6 +2,7 @@ import { db } from "@/db";
 import { families, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getRsvpDeadline } from "@/app/actions/config";
 import RsvpForm from "./_components/RsvpForm";
 import ReadOnlyRsvp from "./_components/ReadOnlyRsvp";
 
@@ -27,6 +28,13 @@ export default async function DashboardPage() {
     if (!family) {
         return <p>Familia no encontrada.</p>;
     }
+
+    const deadline = await getRsvpDeadline();
+    const now = new Date();
+    const isPastDeadline = deadline ? now > deadline : false;
+    const hasResponded = family.globalRsvpStatus !== 'PENDING';
+    const isLocked = hasResponded;
+    const isLockedHard = hasResponded && isPastDeadline;
 
     let delegate: { name: string; lastName: string; email: string } | null = null;
     if (family.delegateUserId) {
@@ -66,7 +74,13 @@ export default async function DashboardPage() {
                 </div>
 
                 {isDelegate ? (
-                    <RsvpForm family={family} members={familyMembers} />
+                    <RsvpForm 
+                        family={family} 
+                        members={familyMembers} 
+                        isLocked={isLocked}
+                        isLockedHard={isLockedHard}
+                        deadline={deadline}
+                    />
                 ) : (
                     <ReadOnlyRsvp family={family} members={familyMembers} delegate={delegate} />
                 )}
