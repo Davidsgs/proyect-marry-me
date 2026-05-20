@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users } from "lucide-react";
+import { LayoutDashboard, Users, Settings } from "lucide-react";
 
-export default function AdminMobileNav() {
+export default function AdminMobileNav({ permissions }: { permissions?: string[] }) {
   const pathname = usePathname();
 
   const navItems = [
@@ -12,9 +12,13 @@ export default function AdminMobileNav() {
     { href: "/admin/guests", icon: Users, label: "Invitados" },
   ];
 
+  const visibleNavItems = permissions?.includes("settings.write")
+    ? [...navItems, { href: "/admin/settings", icon: Settings, label: "Ajustes" }]
+    : navItems;
+
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-surface-container-low/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.04)] rounded-t-[1.5rem] border-none">
-      {navItems.map((item) => {
+      {visibleNavItems.map((item) => {
         const isActive = pathname === item.href;
 
         return (

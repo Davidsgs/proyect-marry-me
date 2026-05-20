@@ -47,3 +47,11 @@ export const userRoles = sqliteTable("user_roles", {
   roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: 'cascade' }),
 }, (t) => ({ pk: primaryKey({ columns: [t.userId, t.roleId] }) }));
 
+export const eventConfig = sqliteTable("event_config", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(),
+  value: text("value"),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+

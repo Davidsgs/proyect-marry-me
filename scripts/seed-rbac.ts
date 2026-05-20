@@ -31,7 +31,7 @@ async function main() {
 
   // Import dynamically to ensure dotenv is loaded first
   const { db } = await import("../src/db");
-  const { roles, permissions, rolePermissions, userRoles, users } = await import("../src/db/schema");
+  const { roles, permissions, rolePermissions, userRoles, users, eventConfig } = await import("../src/db/schema");
 
   // 1. Insertar roles del sistema
   for (const role of systemRoles) {
@@ -128,6 +128,18 @@ async function main() {
       await db.insert(userRoles).values({ userId: user.id, roleId });
       console.log(`Usuario ${user.email} vinculado al rol ${roleKey}`);
     }
+  }
+
+  // 5. Insertar fecha límite inicial de RSVP en event_config
+  const existingDeadline = await db.select().from(eventConfig).where(eq(eventConfig.key, "rsvp_deadline")).get();
+  if (!existingDeadline) {
+    await db.insert(eventConfig).values({
+      key: "rsvp_deadline",
+      value: "2027-03-01T23:59:00",
+    });
+    console.log("Fecha límite de RSVP inicial sembrada: 2027-03-01T23:59:00");
+  } else {
+    console.log("Fecha límite de RSVP ya existe.");
   }
 
   console.log("Sembrado del sistema RBAC completado de forma idempotente.");

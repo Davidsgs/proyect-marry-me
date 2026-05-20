@@ -11,10 +11,11 @@ import {
   Archive,
   UserPlus,
   LogOut,
+  Settings,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ permissions }: { permissions?: string[] }) {
   const pathname = usePathname();
 
   const navItems = [
@@ -25,6 +26,10 @@ export default function AdminSidebar() {
     { href: "#", icon: MessageSquare, label: "Messages" },
     { href: "#", icon: Archive, label: "Archive" },
   ];
+
+  const visibleNavItems = permissions?.includes("settings.write")
+    ? [...navItems, { href: "/admin/settings", icon: Settings, label: "Ajustes" }]
+    : navItems;
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-full z-40 flex-col py-8 bg-surface-container-low w-72 justify-between">
@@ -37,7 +42,7 @@ export default function AdminSidebar() {
         </div>
 
         <nav className="px-4 space-y-1 font-sans">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             // Exactly matching the route or checking if it's the root admin path
             const isActive = pathname === item.href;
 

@@ -32,7 +32,7 @@ export default async function AdminLayout({
       </header>
 
       {/* Navigation Drawer (Desktop) */}
-      <AdminSidebar />
+      <AdminSidebar permissions={session?.user?.permissions} />
 
       {/* Main Content Area */}
       <main className="flex-1 px-4 sm:px-8 py-8 lg:py-12 lg:ml-72 transition-all duration-300">
@@ -40,7 +40,7 @@ export default async function AdminLayout({
       </main>
 
       {/* Bottom Navigation (Mobile) */}
-      <AdminMobileNav />
+      <AdminMobileNav permissions={session?.user?.permissions} />
     </div>
   );
 }
