@@ -6,12 +6,11 @@ import { eq } from "drizzle-orm"
 import { getUserPermissions } from "@/lib/permissions"
 
 declare module "next-auth" {
-    interface Session {
-      user: {
-        role: "ADMIN" | "MAIN_GUEST" | "GUEST";
-        familyId: number | null;
-        permissions: string[];
-      } & DefaultSession["user"]
+    interface User {
+      id?: any;
+      role?: "ADMIN" | "MAIN_GUEST" | "GUEST";
+      familyId?: number | null;
+      permissions?: string[];
     }
 }
 
@@ -44,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 try {
                     const dbUser = await db.select().from(users).where(eq(users.email, user.email)).get();
                     if (dbUser) {
+                        token.uid = dbUser.id;
                         token.role = dbUser.role;
                         token.familyId = dbUser.familyId;
                         token.permissions = await getUserPermissions(dbUser.id);
@@ -56,6 +56,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         },
         async session({ session, token }) {
             if (session.user) {
+                session.user.id = token.uid as number;
                 session.user.role = token.role as "ADMIN" | "MAIN_GUEST" | "GUEST";
                 session.user.familyId = token.familyId as number | null;
                 session.user.permissions = (token.permissions as string[]) || [];

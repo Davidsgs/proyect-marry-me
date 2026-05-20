@@ -28,7 +28,19 @@ export default async function DashboardPage() {
         return <p>Familia no encontrada.</p>;
     }
 
-    const isMainGuest = session.user?.role === "MAIN_GUEST" || session.user?.role === "ADMIN";
+    let delegate: { name: string; lastName: string; email: string } | null = null;
+    if (family.delegateUserId) {
+        const delegateUser = await db.select().from(users).where(eq(users.id, family.delegateUserId)).get();
+        if (delegateUser) {
+            delegate = {
+                name: delegateUser.name,
+                lastName: delegateUser.lastName,
+                email: delegateUser.email
+            };
+        }
+    }
+
+    const isDelegate = session?.user?.id === family.delegateUserId || session?.user?.permissions?.includes('admin.dashboard');
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
@@ -39,7 +51,7 @@ export default async function DashboardPage() {
                 </h2>
                 <p className="text-gray-600 max-w-xl mx-auto font-light text-lg">
                     Estamos muy felices de compartir este día tan especial con ustedes.
-                    {isMainGuest 
+                    {isDelegate 
                         ? " Por favor, confirma la asistencia de cada miembro a continuación." 
                         : " Otra persona de tu familia es responsable de confirmar tu asistencia."}
                 </p>
@@ -53,10 +65,10 @@ export default async function DashboardPage() {
                     </svg>
                 </div>
 
-                {isMainGuest ? (
+                {isDelegate ? (
                     <RsvpForm family={family} members={familyMembers} />
                 ) : (
-                    <ReadOnlyRsvp family={family} members={familyMembers} />
+                    <ReadOnlyRsvp family={family} members={familyMembers} delegate={delegate} />
                 )}
             </div>
         </div>

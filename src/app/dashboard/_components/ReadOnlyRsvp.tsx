@@ -6,9 +6,10 @@ import { Check, X } from "lucide-react";
 interface Props {
     family: typeof families.$inferSelect;
     members: typeof users.$inferSelect[];
+    delegate: { name: string; lastName: string; email: string } | null;
 }
 
-export default function ReadOnlyRsvp({ family, members }: Props) {
+export default function ReadOnlyRsvp({ family, members, delegate }: Props) {
     const isDeclined = family.globalRsvpStatus === 'DECLINED';
 
     return (
@@ -48,9 +49,23 @@ export default function ReadOnlyRsvp({ family, members }: Props) {
                </div>
             )}
             
-            <p className="text-center text-sm font-light text-gray-500 italic mt-8 pt-4 border-t border-wedding-sage/10">
-                Si deseas modificar tu asistencia, por favor contacta al representante de tu familia o a los novios.
-            </p>
+            {delegate ? (
+                <div className="p-5 rounded-xl bg-wedding-blush/5 border border-wedding-blush/20 text-wedding-sage-darkest text-sm font-light flex items-start gap-4 mt-8 pt-6 border-t border-wedding-sage/10 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                    <div className="p-2 bg-wedding-blush/10 rounded-lg text-wedding-blush shrink-0">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <span className="font-medium text-wedding-olive block mb-1">Confirmación a través de tu Delegado</span>
+                        Para confirmar tu asistencia, <span className="font-semibold text-wedding-sage-darkest">{delegate.name} {delegate.lastName}</span> ({delegate.email}) debe ingresar y hacerlo por todo el grupo.
+                    </div>
+                </div>
+            ) : (
+                <p className="text-center text-sm font-light text-gray-500 italic mt-8 pt-4 border-t border-wedding-sage/10">
+                    Si deseas modificar tu asistencia, por favor contacta al representante de tu familia o a los novios.
+                </p>
+            )}
         </div>
     )
 }

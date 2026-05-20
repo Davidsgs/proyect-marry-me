@@ -1,5 +1,5 @@
 ---
-trigger: always_on
+trigger: manual
 ---
 
 Directiva Principal: Ejecuta cada desarrollo siguiendo estrictamente este flujo secuencial. No avances al siguiente paso sin completar el anterior.

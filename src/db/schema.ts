@@ -1,10 +1,11 @@
-import { integer, sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
+import { AnySQLiteColumn, integer, sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const families = sqliteTable("families", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   globalRsvpStatus: text("global_rsvp_status", { enum: ["PENDING", "CONFIRMED", "DECLINED"] }).default("PENDING").notNull(),
+  delegateUserId: integer("delegate_user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
@@ -15,7 +16,7 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   lastName: text("last_name").default("").notNull(),
   fullname: text("fullname").default("").notNull(),
-  familyId: integer("family_id").references(() => families.id, { onDelete: 'cascade' }),
+  familyId: integer("family_id").references((): AnySQLiteColumn => families.id, { onDelete: 'cascade' }),
   role: text("role", { enum: ["ADMIN", "MAIN_GUEST", "GUEST"] }).default("GUEST").notNull(),
   isConfirmed: integer("is_confirmed", { mode: 'boolean' }).default(false),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),

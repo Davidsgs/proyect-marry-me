@@ -1,3 +1,7 @@
+---
+trigger: manual
+---
+
 ```markdown
 # Design System Document
 
