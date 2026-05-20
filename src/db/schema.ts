@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const families = sqliteTable("families", {
@@ -21,3 +21,29 @@ export const users = sqliteTable("users", {
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
+
+export const roles = sqliteTable("roles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(),        // ej: "admin", "main_guest", "guest", "wedding_planner"
+  label: text("label").notNull(),             // ej: "Administrador"
+  isSystem: integer("is_system", { mode: 'boolean' }).default(false).notNull(), // no borrable
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+export const permissions = sqliteTable("permissions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  key: text("key").notNull().unique(),        // ej: "calendar.read", "tasks.write", "rsvp.confirm_own_family"
+  label: text("label").notNull(),
+  section: text("section").notNull(),         // ej: "calendar", "tasks", "whiteboard", "rsvp", "users"
+});
+
+export const rolePermissions = sqliteTable("role_permissions", {
+  roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: 'cascade' }),
+  permissionId: integer("permission_id").notNull().references(() => permissions.id, { onDelete: 'cascade' }),
+}, (t) => ({ pk: primaryKey({ columns: [t.roleId, t.permissionId] }) }));
+
+export const userRoles = sqliteTable("user_roles", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: 'cascade' }),
+}, (t) => ({ pk: primaryKey({ columns: [t.userId, t.roleId] }) }));
+
