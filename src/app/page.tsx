@@ -1,13 +1,16 @@
 import Countdown from "@/components/Countdown";
 import { MapPin } from "lucide-react";
 import { Pinyon_Script } from "next/font/google";
+import Link from "next/link";
+import { auth } from "@/auth";
 
 const pinyonScript = Pinyon_Script({
   weight: "400",
   subsets: ["latin"],
 });
 
-export default function Home() {
+export default async function Home() {
+  const session = await auth();
   return (
     <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest">
       {/* Background Image Container */}
@@ -54,9 +57,28 @@ export default function Home() {
         </div>
 
         <div className="mt-16 md:mt-24 text-center">
-          <p className="text-sm md:text-base font-light text-wedding-cream/70 max-w-md mx-auto text-balance tracking-wide">
-            Pronto vas a poder confirmar tu asistencia, y tener más novedades.
-          </p>
+          {!session ? (
+            <Link
+              href="/login?callbackUrl=/dashboard"
+              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
+            >
+              Confirmar asistencia
+            </Link>
+          ) : session.user?.permissions?.includes("admin.dashboard") ? (
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
+            >
+              Ir al panel
+            </Link>
+          ) : (
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
+            >
+              Ver tu invitación
+            </Link>
+          )}
         </div>
       </div>
     </main>
