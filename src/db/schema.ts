@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 export const families = sqliteTable("families", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
+  alias: text("alias").default("").notNull(),
   globalRsvpStatus: text("global_rsvp_status", { enum: ["PENDING", "CONFIRMED", "DECLINED"] }).default("PENDING").notNull(),
   delegateUserId: integer("delegate_user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),

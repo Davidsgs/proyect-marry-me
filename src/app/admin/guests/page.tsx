@@ -30,7 +30,7 @@ export default async function GuestsPage() {
                     </div>
                     <FamilyForm />
                     <div className="mt-8 pt-6">
-                        <FamilyList families={families} />
+                        <FamilyList families={families} users={users} />
                     </div>
                 </div>
 
