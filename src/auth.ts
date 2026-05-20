@@ -3,12 +3,14 @@ import Google from "next-auth/providers/google"
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
+import { getUserPermissions } from "@/lib/permissions"
 
 declare module "next-auth" {
     interface Session {
       user: {
         role: "ADMIN" | "MAIN_GUEST" | "GUEST";
         familyId: number | null;
+        permissions: string[];
       } & DefaultSession["user"]
     }
 }
@@ -44,6 +46,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                     if (dbUser) {
                         token.role = dbUser.role;
                         token.familyId = dbUser.familyId;
+                        token.permissions = await getUserPermissions(dbUser.id);
                     }
                 } catch(e) {
                     console.error("JWT Error:", e);
@@ -55,6 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (session.user) {
                 session.user.role = token.role as "ADMIN" | "MAIN_GUEST" | "GUEST";
                 session.user.familyId = token.familyId as number | null;
+                session.user.permissions = (token.permissions as string[]) || [];
             }
             return session;
         }
@@ -64,3 +68,4 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         error: '/login', // Return users here on validation failure / whitelist rejection
     }
 })
+

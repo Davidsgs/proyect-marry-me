@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Menu } from "lucide-react";
 import AdminSidebar from "./_components/AdminSidebar";
 import AdminMobileNav from "./_components/AdminMobileNav";
+import { hasPermission } from "@/lib/permissions";
 
 export default async function AdminLayout({
   children,
@@ -11,7 +12,7 @@ export default async function AdminLayout({
 }) {
   const session = await auth();
 
-  if (session?.user?.role !== "ADMIN") {
+  if (!hasPermission(session?.user?.permissions, "admin.dashboard")) {
     redirect("/");
   }
 
