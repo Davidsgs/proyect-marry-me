@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings } from "lucide-react";
+import { LayoutDashboard, Users, Settings, ListTodo } from "lucide-react";
 
 export default function AdminMobileNav({ permissions }: { permissions?: string[] }) {
   const pathname = usePathname();
@@ -12,9 +12,14 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
     { href: "/admin/guests", icon: Users, label: "Invitados" },
   ];
 
-  const visibleNavItems = permissions?.includes("settings.write")
-    ? [...navItems, { href: "/admin/settings", icon: Settings, label: "Ajustes" }]
-    : navItems;
+  const dynamicItems = [...navItems];
+  if (permissions?.includes("tasks.read")) {
+    dynamicItems.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
+  }
+  if (permissions?.includes("settings.write")) {
+    dynamicItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });
+  }
+  const visibleNavItems = dynamicItems;
 
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-8 pt-4 bg-surface-container-low/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.04)] rounded-t-[1.5rem] border-none">

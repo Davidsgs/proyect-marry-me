@@ -56,4 +56,13 @@ export const eventConfig = sqliteTable("event_config", {
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
-
+export const tasks = sqliteTable("tasks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  description: text("description").default("").notNull(),
+  dueDate: text("due_date"),
+  isCompleted: integer("is_completed", { mode: 'boolean' }).default(false).notNull(),
+  createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});

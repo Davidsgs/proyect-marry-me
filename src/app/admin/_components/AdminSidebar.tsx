@@ -12,6 +12,7 @@ import {
   UserPlus,
   LogOut,
   Settings,
+  ListTodo,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -27,9 +28,14 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
     { href: "#", icon: Archive, label: "Archive" },
   ];
 
-  const visibleNavItems = permissions?.includes("settings.write")
-    ? [...navItems, { href: "/admin/settings", icon: Settings, label: "Ajustes" }]
-    : navItems;
+  const dynamicItems = [...navItems];
+  if (permissions?.includes("tasks.read")) {
+    dynamicItems.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
+  }
+  if (permissions?.includes("settings.write")) {
+    dynamicItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });
+  }
+  const visibleNavItems = dynamicItems;
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-full z-40 flex-col py-8 bg-surface-container-low w-72 justify-between">
