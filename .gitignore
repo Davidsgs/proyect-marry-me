@@ -52,3 +52,7 @@ next-env.d.ts
 *.sqlite3
 build-log.txt
 *.log
+
+PLAN.md
+
+/.agents
