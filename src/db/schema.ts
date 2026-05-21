@@ -63,6 +63,8 @@ export const tasks = sqliteTable("tasks", {
   description: text("description").default("").notNull(),
   dueDate: text("due_date"),
   isCompleted: integer("is_completed", { mode: 'boolean' }).default(false).notNull(),
+  completedAt: text("completed_at"),
+  completedBy: integer("completed_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),

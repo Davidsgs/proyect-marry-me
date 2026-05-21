@@ -12,11 +12,7 @@ export default auth((req) => {
     }
 
     if (isAuth && isLoginPage) {
-        // If authenticated and tries to go to login, redirect based on permissions
-        if (hasAdminDashboard) {
-            return NextResponse.redirect(new URL('/welcome', req.url));
-        }
-        return NextResponse.redirect(new URL('/dashboard', req.url));
+        return NextResponse.redirect(new URL('/', req.url));
     }
 
     // Permission-based route protection
