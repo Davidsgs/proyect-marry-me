@@ -1,9 +1,10 @@
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import { getTasks } from "@/app/actions/tasks";
+import { getTables } from "@/app/actions/tables";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { getRsvpDeadline } from "@/app/actions/config";
-import { CheckCircle2, ChevronRight, ListTodo, Users as UsersIcon, Home, CalendarClock } from "lucide-react";
+import { CheckCircle2, ChevronRight, ListTodo, Users as UsersIcon, Home, CalendarClock, Armchair, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
@@ -19,10 +20,12 @@ export default async function AdminPage() {
     const session = await auth();
     const perms = session?.user?.permissions;
     const canReadTasks = hasPermission(perms, "tasks.read");
+    const canReadTables = hasPermission(perms, "tables.read");
 
     const families = await getFamilies();
     const users = await getUsers();
     const allTasks = canReadTasks ? await getTasks() : [];
+    const tables = canReadTables ? await getTables() : [];
     const deadline = await getRsvpDeadline();
 
     // Family-level metrics
@@ -39,6 +42,15 @@ export default async function AdminPage() {
     const confirmedGuests = guestUsers.filter((u) => u.isConfirmed).length;
     const adultGuests = guestUsers.filter((u) => u.ageCategory === "ADULT").length;
     const minorGuests = totalGuests - adultGuests;
+
+    // Table metrics
+    const totalTables = tables.length;
+    const totalSeats = tables.reduce((sum, t) => sum + t.capacity, 0);
+    const seatedGuests = guestUsers.filter((u) => u.tableId != null).length;
+    const toSeat = totalGuests - seatedGuests;
+    const overCapacityTables = tables.filter(
+        (t) => guestUsers.filter((u) => u.tableId === t.id).length > t.capacity,
+    ).length;
 
     // Task metrics
     const pendingTasks = allTasks.filter((t) => !t.isCompleted);
@@ -83,7 +95,7 @@ export default async function AdminPage() {
             </div>
 
             {/* Stats híbridas */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${canReadTables ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-6`}>
                 {/* Familias: respondieron / total */}
                 <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
@@ -141,6 +153,43 @@ export default async function AdminPage() {
                         <span>{allTasks.length - pendingTasks.length} completadas</span>
                     </div>
                 </div>
+
+                {/* Mesas: sentados / total + condición */}
+                {canReadTables && (
+                    <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium">Mesas</p>
+                            <Armchair className="w-4 h-4 text-on-surface-variant opacity-60" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mb-4">
+                            <span className="text-4xl font-serif text-primary">{seatedGuests}</span>
+                            <span className="text-lg text-on-surface-variant font-light">/ {totalGuests} sentados</span>
+                        </div>
+                        <div className="mt-auto flex flex-col gap-1 text-xs font-medium">
+                            {toSeat > 0 ? (
+                                <div className="flex items-center gap-2 text-on-surface-variant">
+                                    <AlertTriangle className="w-3.5 h-3.5 text-on-surface-variant opacity-70" />
+                                    <span>Faltan {toSeat} por sentar</span>
+                                </div>
+                            ) : totalTables > 0 ? (
+                                <div className="flex items-center gap-2 text-on-secondary-container">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Todos sentados</span>
+                                </div>
+                            ) : (
+                                <span className="text-on-surface-variant/80">Sin mesas creadas</span>
+                            )}
+                            {overCapacityTables > 0 ? (
+                                <div className="flex items-center gap-2 text-error">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span>{overCapacityTables} sobre capacidad</span>
+                                </div>
+                            ) : (
+                                <span className="text-on-surface-variant/80">{totalTables} mesas · {totalSeats} asientos</span>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Pills RSVP (todas a nivel familia) */}

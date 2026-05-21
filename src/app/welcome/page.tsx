@@ -1,7 +1,7 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Mail, LogOut } from "lucide-react";
+import { LayoutDashboard, Mail, LogOut, Timer } from "lucide-react";
 import { Pinyon_Script } from "next/font/google";
 
 const pinyonScript = Pinyon_Script({
@@ -41,7 +41,7 @@ export default async function WelcomePage() {
                     ¿Cómo quieres continuar?
                 </p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
                     <Link
                         href="/admin"
                         className="group bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center text-center gap-4 border border-wedding-sage/10"
@@ -65,6 +65,19 @@ export default async function WelcomePage() {
                         <h2 className="text-2xl font-serif text-wedding-sage-darkest">Ver mi invitación</h2>
                         <p className="text-sm text-gray-600 font-light">
                             Revisa el estado de tu invitación como un invitado más.
+                        </p>
+                    </Link>
+
+                    <Link
+                        href="/"
+                        className="group bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center text-center gap-4 border border-wedding-sage/10"
+                    >
+                        <div className="w-14 h-14 rounded-2xl bg-wedding-sage/20 flex items-center justify-center group-hover:bg-wedding-sage/30 transition-colors">
+                            <Timer className="w-7 h-7 text-wedding-sage-darkest" strokeWidth={1.5} />
+                        </div>
+                        <h2 className="text-2xl font-serif text-wedding-sage-darkest">Cuenta atrás</h2>
+                        <p className="text-sm text-gray-600 font-light">
+                            Ver el contador hasta el gran día.
                         </p>
                     </Link>
                 </div>

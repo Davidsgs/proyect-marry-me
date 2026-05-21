@@ -48,36 +48,51 @@ export default async function Home() {
             03 de Abril, 2027
           </p>
 
-          <div className="flex items-center gap-3">
-            <MapPin className="w-6 h-6 md:w-8 md:h-8 text-wedding-blush-light" strokeWidth={1.5} />
-            <p className="text-lg md:text-xl font-light tracking-wide text-wedding-cream drop-shadow-sm">
-              Lugar por confirmar, Buenos Aires, Argentina.
-            </p>
-          </div>
+          <a
+            href="https://maps.app.goo.gl/YBEZj9J8gLLBycu39"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center gap-4 px-6 py-4 rounded-2xl border border-wedding-cream/15 hover:border-wedding-blush-light/40 bg-white/5 hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+          >
+            <div className="shrink-0 w-10 h-10 rounded-xl bg-wedding-blush-light/15 group-hover:bg-wedding-blush-light/25 flex items-center justify-center transition-colors">
+              <MapPin className="w-5 h-5 text-wedding-blush-light" strokeWidth={1.5} />
+            </div>
+            <div className="text-left">
+              <p className="text-base md:text-lg font-light tracking-wide text-wedding-cream drop-shadow-sm leading-snug">
+                Tomás de Anchorena 2347
+              </p>
+              <p className="text-xs text-wedding-cream/50 tracking-widest uppercase mt-0.5">
+                Ituzaingó · Buenos Aires · Ver en mapa →
+              </p>
+            </div>
+          </a>
         </div>
 
-        <div className="mt-16 md:mt-24 text-center">
+        <div className="mt-16 md:mt-24 flex flex-col sm:flex-row items-center justify-center gap-4">
           {!session ? (
             <Link
               href="/login?callbackUrl=/dashboard"
               className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
             >
-              Confirmar asistencia
-            </Link>
-          ) : session.user?.permissions?.includes("admin.dashboard") ? (
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
-            >
-              Ir al panel
+              Ver mi invitación
             </Link>
           ) : (
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
-            >
-              Ver tu invitación
-            </Link>
+            <>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
+              >
+                Ver mi invitación
+              </Link>
+              {session.user?.permissions?.includes("admin.dashboard") && (
+                <Link
+                  href="/admin"
+                  className="inline-flex items-center gap-3 px-10 py-4 rounded-full border border-wedding-cream/40 text-wedding-cream font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-cream/10 transition-all"
+                >
+                  Panel de admin
+                </Link>
+              )}
+            </>
           )}
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, Settings, ListTodo } from "lucide-react";
+import { LayoutDashboard, Users, Settings, ListTodo, Armchair } from "lucide-react";
 
 export default function AdminMobileNav({ permissions }: { permissions?: string[] }) {
   const pathname = usePathname();
@@ -15,6 +15,9 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
   const dynamicItems = [...navItems];
   if (permissions?.includes("tasks.read")) {
     dynamicItems.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
+  }
+  if (permissions?.includes("tables.read")) {
+    dynamicItems.push({ href: "/admin/tables", icon: Armchair, label: "Mesas" });
   }
   if (permissions?.includes("settings.write")) {
     dynamicItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });
