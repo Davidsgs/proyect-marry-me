@@ -3,7 +3,7 @@
 import { db } from "@/db";
 import { families, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
 import { auth } from "@/auth";
 import { getRsvpDeadline } from "@/app/actions/config";
 
@@ -51,7 +51,11 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
                 .where(eq(users.id, update.userId));
     }
 
+    updateTag("families");
+    updateTag("users");
     revalidatePath("/dashboard");
+    revalidatePath("/admin");
+    revalidatePath("/admin/guests");
     return { success: true };
 }
 

@@ -36,7 +36,7 @@ export default async function DashboardPage() {
     const isLocked = hasResponded;
     const isLockedHard = hasResponded && isPastDeadline;
 
-    let delegate: { name: string; lastName: string; email: string } | null = null;
+    let delegate: { name: string; lastName: string; email: string | null } | null = null;
     if (family.delegateUserId) {
         const delegateUser = await db.select().from(users).where(eq(users.id, family.delegateUserId)).get();
         if (delegateUser) {
@@ -51,27 +51,28 @@ export default async function DashboardPage() {
     const isDelegate = session?.user?.id === family.delegateUserId || session?.user?.permissions?.includes('admin.dashboard');
 
     return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="text-center space-y-4 mb-10">
-                <span className="text-wedding-blush text-sm font-semibold tracking-widest uppercase">Tu Invitación</span>
-                <h2 className="text-4xl md:text-5xl font-serif text-wedding-olive drop-shadow-sm">
+        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+            <div className="text-center space-y-5 mb-4">
+                <div className="flex items-center justify-center gap-3">
+                    <span className="h-px w-10 bg-wedding-sage/60"></span>
+                    <span className="text-wedding-olive/80 text-[11px] font-light tracking-[0.35em] uppercase">Tu invitación</span>
+                    <span className="h-px w-10 bg-wedding-sage/60"></span>
+                </div>
+                <h2 className="text-5xl md:text-6xl font-serif italic text-wedding-olive leading-tight">
                     {family.name}
                 </h2>
-                <p className="text-gray-600 max-w-xl mx-auto font-light text-lg">
+                <p className="text-wedding-olive/70 max-w-xl mx-auto font-light text-base leading-relaxed">
                     Estamos muy felices de compartir este día tan especial con ustedes.
-                    {isDelegate 
-                        ? " Por favor, confirma la asistencia de cada miembro a continuación." 
+                    {isDelegate
+                        ? " Por favor, confirma la asistencia de cada miembro a continuación."
                         : " Otra persona de tu familia es responsable de confirmar tu asistencia."}
                 </p>
             </div>
 
-            <div className="bg-white p-6 md:p-8 rounded-xl shadow-lg shadow-wedding-sage/5 border border-wedding-sage/10 relative overflow-hidden">
-                {/* Decorative element */}
-                <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                    <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor" className="text-wedding-olive">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zM8.5 13.5l2.5 2.5 5-5-1.5-1.5-3.5 3.5-1-1-1.5 1.5z"/>
-                    </svg>
-                </div>
+            <div className="bg-white/90 backdrop-blur-sm p-6 md:p-10 rounded-3xl shadow-[0_8px_40px_rgba(111,127,106,0.08)] border border-wedding-sage/20 relative overflow-hidden">
+                {/* Botanical decorative accent */}
+                <div className="absolute -top-6 -right-6 w-40 h-40 rounded-full bg-wedding-sage/10 blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-wedding-blush/15 blur-3xl pointer-events-none"></div>
 
                 {isDelegate ? (
                     <RsvpForm 

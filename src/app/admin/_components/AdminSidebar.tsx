@@ -5,37 +5,27 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
-  CircleDollarSign,
-  Gift,
-  MessageSquare,
-  Archive,
-  UserPlus,
   LogOut,
   Settings,
   ListTodo,
+  Mail,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 export default function AdminSidebar({ permissions }: { permissions?: string[] }) {
   const pathname = usePathname();
 
-  const navItems = [
-    { href: "/admin", icon: LayoutDashboard, label: "Overview" },
-    { href: "/admin/guests", icon: Users, label: "Guests" },
-    { href: "#", icon: CircleDollarSign, label: "Budget" },
-    { href: "#", icon: Gift, label: "Registry" },
-    { href: "#", icon: MessageSquare, label: "Messages" },
-    { href: "#", icon: Archive, label: "Archive" },
+  const navItems: { href: string; icon: typeof LayoutDashboard; label: string }[] = [
+    { href: "/admin", icon: LayoutDashboard, label: "Resumen" },
+    { href: "/admin/guests", icon: Users, label: "Invitados" },
   ];
 
-  const dynamicItems = [...navItems];
   if (permissions?.includes("tasks.read")) {
-    dynamicItems.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
+    navItems.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
   }
   if (permissions?.includes("settings.write")) {
-    dynamicItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });
+    navItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });
   }
-  const visibleNavItems = dynamicItems;
 
   return (
     <aside className="hidden lg:flex fixed left-0 top-0 h-full z-40 flex-col py-8 bg-surface-container-low w-72 justify-between">
@@ -48,8 +38,7 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
         </div>
 
         <nav className="px-4 space-y-1 font-sans">
-          {visibleNavItems.map((item) => {
-            // Exactly matching the route or checking if it's the root admin path
+          {navItems.map((item) => {
             const isActive = pathname === item.href;
 
             return (
@@ -70,16 +59,19 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
       </div>
 
       <div className="px-8 flex flex-col gap-4">
-        <button className="w-full flex items-center justify-center gap-2 bg-primary/5 text-primary hover:bg-primary/10 transition-colors py-3 rounded-xl font-sans text-xs tracking-widest uppercase font-medium border-none">
-          <UserPlus className="w-4 h-4" />
-          <span>Invitar a Colaborador</span>
-        </button>
+        <Link
+          href="/dashboard"
+          className="w-full flex items-center justify-center gap-2 text-on-surface-variant hover:text-primary transition-colors py-2 font-sans text-xs tracking-widest uppercase font-medium border-none"
+        >
+          <Mail className="w-4 h-4" />
+          <span>Ver mi invitación</span>
+        </Link>
         <button
           onClick={() => signOut({ callbackUrl: "/" })}
           className="w-full flex items-center justify-center gap-2 text-on-surface-variant hover:text-primary transition-colors py-2 font-sans text-xs tracking-widest uppercase font-medium border-none"
         >
           <LogOut className="w-4 h-4" />
-          <span>Cerrar Sesión</span>
+          <span>Cerrar sesión</span>
         </button>
       </div>
     </aside>

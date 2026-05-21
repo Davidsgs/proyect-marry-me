@@ -13,12 +13,13 @@ export const families = sqliteTable("families", {
 
 export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  email: text("email").notNull().unique(),
+  email: text("email").unique(),
   name: text("name").notNull(),
   lastName: text("last_name").default("").notNull(),
   fullname: text("fullname").default("").notNull(),
   familyId: integer("family_id").references((): AnySQLiteColumn => families.id, { onDelete: 'cascade' }),
   role: text("role", { enum: ["ADMIN", "MAIN_GUEST", "GUEST"] }).default("GUEST").notNull(),
+  ageCategory: text("age_category", { enum: ["BABY", "CHILD", "ADULT"] }).default("ADULT").notNull(),
   isConfirmed: integer("is_confirmed", { mode: 'boolean' }).default(false),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),

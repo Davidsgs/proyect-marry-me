@@ -1,4 +1,4 @@
-import NextAuth, { type DefaultSession } from "next-auth"
+import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
 import { db } from "@/db"
 import { users } from "@/db/schema"
@@ -7,6 +7,10 @@ import { getUserPermissions } from "@/lib/permissions"
 
 declare module "next-auth" {
     interface User {
+      // Numeric DB id. Typed as `any` because next-auth's DefaultUser declares
+      // `id?: string`, and TS module-augmentation cannot widen a property to a
+      // conflicting type without collapsing it to `never`.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       id?: any;
       role?: "ADMIN" | "MAIN_GUEST" | "GUEST";
       familyId?: number | null;
@@ -37,7 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               return false;
             }
         },
-        async jwt({ token, user, trigger }) {
+        async jwt({ token, user }) {
             // When user signs in, user object is available
             if (user?.email) {
                 try {

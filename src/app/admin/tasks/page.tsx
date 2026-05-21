@@ -70,7 +70,7 @@ export default async function TasksPage() {
             )}
 
             <div className="pb-16 text-center">
-                <p className="font-serif italic text-primary/60 text-lg">Ethereal Union • Handcrafted Elegance</p>
+                <p className="font-serif italic text-primary/60 text-lg">David &amp; Rocio · 03 de Abril, 2026</p>
             </div>
         </div>
     );

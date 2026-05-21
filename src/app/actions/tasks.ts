@@ -2,17 +2,29 @@
 
 import { db } from "@/db";
 import { tasks } from "@/db/schema";
-import { eq, asc, desc } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { eq, asc } from "drizzle-orm";
+import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
+
+const fetchAllTasks = unstable_cache(
+    async () => db.select().from(tasks).orderBy(asc(tasks.isCompleted), asc(tasks.dueDate)).all(),
+    ["all-tasks"],
+    { tags: ["tasks"] }
+);
+
+function invalidateTasks() {
+    updateTag("tasks");
+    revalidatePath("/admin/tasks");
+    revalidatePath("/admin");
+}
 
 export async function getTasks() {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "tasks.read")) {
         throw new Error("Sin permisos");
     }
-    return await db.select().from(tasks).orderBy(asc(tasks.isCompleted), asc(tasks.dueDate)).all();
+    return await fetchAllTasks();
 }
 
 export async function createTask(data: { title: string; description?: string; dueDate?: string }) {
@@ -28,8 +40,7 @@ export async function createTask(data: { title: string; description?: string; du
         createdBy: session?.user?.id ?? null,
     });
 
-    revalidatePath("/admin/tasks");
-    revalidatePath("/admin");
+    invalidateTasks();
 }
 
 export async function updateTask(id: number, data: { title?: string; description?: string; dueDate?: string }) {
@@ -47,8 +58,7 @@ export async function updateTask(id: number, data: { title?: string; description
         await db.update(tasks).set(updateSet).where(eq(tasks.id, id));
     }
 
-    revalidatePath("/admin/tasks");
-    revalidatePath("/admin");
+    invalidateTasks();
 }
 
 export async function toggleTask(id: number) {
@@ -62,8 +72,7 @@ export async function toggleTask(id: number) {
 
     await db.update(tasks).set({ isCompleted: !task.isCompleted }).where(eq(tasks.id, id));
 
-    revalidatePath("/admin/tasks");
-    revalidatePath("/admin");
+    invalidateTasks();
 }
 
 export async function deleteTask(id: number) {
@@ -74,6 +83,5 @@ export async function deleteTask(id: number) {
 
     await db.delete(tasks).where(eq(tasks.id, id));
 
-    revalidatePath("/admin/tasks");
-    revalidatePath("/admin");
+    invalidateTasks();
 }

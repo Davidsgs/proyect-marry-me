@@ -19,8 +19,13 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
     const router = useRouter();
     const [editing, setEditing] = useState(!isLocked);
     const [status, setStatus] = useState<'PENDING' | 'CONFIRMED' | 'DECLINED'>(family.globalRsvpStatus as 'PENDING' | 'CONFIRMED' | 'DECLINED');
+    // Default: pre-select every member when the family hasn't responded yet.
+    // For families that already submitted a response, preserve each member's stored choice.
     const [memberStatus, setMemberStatus] = useState<Record<number, boolean>>(
-        members.reduce((acc, m) => ({ ...acc, [m.id]: Boolean(m.isConfirmed) }), {})
+        members.reduce((acc, m) => ({
+            ...acc,
+            [m.id]: family.globalRsvpStatus === 'PENDING' ? true : Boolean(m.isConfirmed),
+        }), {})
     );
     const [isPending, setIsPending] = useState(false);
     const [error, setError] = useState("");
@@ -117,7 +122,7 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                                     </div>
                                     <span className={`font-medium sm:text-lg ${memberStatus[m.id] ? 'text-wedding-sage-darkest' : 'text-gray-500 line-through'}`}>{m.name}</span>
                                 </div>
-                                <span className="text-xs text-gray-400 capitalize">{m.role === 'MAIN_GUEST' ? 'Principal' : 'Invitado'}</span>
+                                <span className="text-xs text-gray-400 capitalize">{family.delegateUserId === m.id ? 'Titular' : 'Invitado'}</span>
                             </li>
                         ))}
                     </ul>

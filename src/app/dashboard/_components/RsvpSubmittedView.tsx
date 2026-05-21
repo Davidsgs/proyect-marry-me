@@ -28,69 +28,80 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
         : "";
 
     return (
-        <div className="space-y-8 animate-in fade-in zoom-in-95 duration-500">
+        <div className="space-y-10 animate-in fade-in zoom-in-95 duration-500 relative">
             {/* Header state card */}
-            <div className={`p-6 md:p-8 rounded-2xl border text-center space-y-4 shadow-sm relative overflow-hidden transition-all ${
-                isConfirmed 
-                    ? "bg-wedding-sage/5 border-wedding-sage/20 text-wedding-sage-darkest"
-                    : "bg-wedding-blush/5 border-wedding-blush/20 text-wedding-blush"
+            <div className={`p-8 md:p-10 rounded-3xl text-center space-y-5 relative overflow-hidden transition-all ${
+                isConfirmed
+                    ? "bg-gradient-to-br from-wedding-sage/15 via-wedding-cream/60 to-wedding-sage-light/20 border border-wedding-sage/30"
+                    : "bg-gradient-to-br from-wedding-blush/15 via-wedding-cream/60 to-wedding-blush-light/30 border border-wedding-blush/30"
             }`}>
-                {/* Backdrop Glow */}
-                <div className={`absolute -right-16 -top-16 w-32 h-32 rounded-full blur-3xl opacity-20 pointer-events-none ${
+                {/* Botanical glow */}
+                <div className={`absolute -right-20 -top-20 w-48 h-48 rounded-full blur-3xl opacity-40 pointer-events-none ${
                     isConfirmed ? "bg-wedding-sage" : "bg-wedding-blush"
                 }`} />
+                <div className={`absolute -left-16 -bottom-16 w-40 h-40 rounded-full blur-3xl opacity-30 pointer-events-none ${
+                    isConfirmed ? "bg-wedding-sage-light" : "bg-wedding-blush-light"
+                }`} />
 
-                <div className="mx-auto w-16 h-16 rounded-full flex items-center justify-center shadow-inner transition-transform hover:scale-105 duration-300">
+                <div className="relative mx-auto w-20 h-20 rounded-full flex items-center justify-center">
                     {isConfirmed ? (
-                        <div className="w-12 h-12 rounded-full bg-wedding-sage/25 flex items-center justify-center text-wedding-olive animate-pulse">
-                            <Check className="w-6 h-6 stroke-[3]" />
+                        <div className="w-16 h-16 rounded-full bg-white/70 border border-wedding-sage/40 flex items-center justify-center text-wedding-olive shadow-[0_4px_20px_rgba(175,195,177,0.35)]">
+                            <Check className="w-7 h-7 stroke-[2.5]" />
                         </div>
                     ) : (
-                        <div className="w-12 h-12 rounded-full bg-wedding-blush/25 flex items-center justify-center text-wedding-blush animate-pulse">
-                            <X className="w-6 h-6 stroke-[3]" />
+                        <div className="w-16 h-16 rounded-full bg-white/70 border border-wedding-blush/40 flex items-center justify-center text-wedding-terracotta shadow-[0_4px_20px_rgba(231,198,193,0.4)]">
+                            <X className="w-7 h-7 stroke-[2.5]" />
                         </div>
                     )}
                 </div>
 
-                <div className="space-y-2">
-                    <h3 className="text-2xl font-serif tracking-wide">
+                <div className="space-y-3 relative">
+                    <h3 className="text-3xl md:text-4xl font-serif italic text-wedding-olive tracking-wide">
                         {isConfirmed ? "¡Asistencia Confirmada!" : "No Podrán Asistir"}
                     </h3>
-                    <p className="max-w-md mx-auto text-sm text-gray-600 font-light leading-relaxed">
-                        {isConfirmed 
+                    <p className="max-w-md mx-auto text-sm md:text-base text-wedding-olive/75 font-light leading-relaxed">
+                        {isConfirmed
                             ? "¡Qué gran alegría! Nos emociona muchísimo saber que compartiremos este día tan especial con ustedes. Nos vemos muy pronto."
                             : "Lamentamos que no puedan asistir, pero sabemos que nos acompañarán con el cariño de siempre a la distancia."}
                     </p>
                 </div>
             </div>
 
-            {/* List of members with reduced opacity (disabled view) */}
+            {/* List of members */}
             {isConfirmed && (
-                <div className="space-y-4 opacity-75">
-                    <h4 className="text-sm font-serif text-wedding-sage-darkest tracking-wider uppercase border-b border-wedding-sage/10 pb-2">
-                        Miembros confirmados
-                    </h4>
-                    <ul className="space-y-3">
+                <div className="space-y-4 relative">
+                    <div className="flex items-center gap-3">
+                        <span className="h-px flex-1 bg-wedding-sage/30"></span>
+                        <h4 className="text-[11px] font-light text-wedding-olive/80 tracking-[0.3em] uppercase">
+                            Miembros confirmados
+                        </h4>
+                        <span className="h-px flex-1 bg-wedding-sage/30"></span>
+                    </div>
+                    <ul className="space-y-2.5">
                         {members.map(m => (
-                            <li 
-                                key={m.id} 
-                                className={`flex items-center justify-between p-3 sm:p-4 rounded-xl border transition-all ${
-                                    m.isConfirmed 
-                                        ? "border-wedding-sage/30 bg-wedding-cream/20 text-wedding-sage-darkest" 
-                                        : "border-gray-100 bg-gray-50/50 text-gray-400"
+                            <li
+                                key={m.id}
+                                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${
+                                    m.isConfirmed
+                                        ? "border-wedding-sage/25 bg-wedding-cream/40 text-wedding-olive hover:bg-wedding-cream/70"
+                                        : "border-wedding-olive/10 bg-wedding-cream/20 text-wedding-olive/40"
                                 }`}
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 ${
-                                        m.isConfirmed ? "bg-wedding-olive text-white" : "bg-gray-200 text-transparent"
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${
+                                        m.isConfirmed ? "bg-wedding-sage text-white" : "bg-wedding-cream border border-wedding-olive/15 text-transparent"
                                     }`}>
                                         <Check className="w-3.5 h-3.5 stroke-[3]" />
                                     </div>
-                                    <span className={`font-medium ${m.isConfirmed ? "" : "line-through text-gray-400"}`}>
+                                    <span className={`font-medium ${m.isConfirmed ? "" : "line-through"}`}>
                                         {m.name} {m.lastName}
                                     </span>
                                 </div>
-                                <span className="text-xs uppercase tracking-wider text-gray-400 px-2.5 py-0.5 rounded-full bg-gray-100/50">
+                                <span className={`text-[10px] uppercase tracking-[0.2em] px-3 py-1 rounded-full ${
+                                    m.isConfirmed
+                                        ? "text-wedding-olive bg-wedding-sage/20"
+                                        : "text-wedding-olive/40 bg-wedding-cream/60"
+                                }`}>
                                     {m.isConfirmed ? "Asistirá" : "No asiste"}
                                 </span>
                             </li>
@@ -100,33 +111,33 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
             )}
 
             {/* Action panel or Locked banner */}
-            <div className="pt-4">
+            <div className="pt-2 relative">
                 {isLockedHard ? (
-                    <div className="p-4 md:p-5 rounded-xl bg-gray-50 border border-gray-200/60 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left transition-all hover:bg-gray-100/50">
-                        <div className="p-3 bg-red-50 text-red-600 rounded-lg shrink-0">
+                    <div className="p-5 md:p-6 rounded-2xl bg-wedding-cream/60 border border-wedding-terracotta/30 flex flex-col sm:flex-row items-center gap-4 text-center sm:text-left">
+                        <div className="p-3 bg-wedding-blush/30 text-wedding-terracotta rounded-2xl shrink-0">
                             <Lock className="w-5 h-5" />
                         </div>
                         <div className="space-y-1">
-                            <h5 className="font-semibold text-gray-800 text-sm">Respuesta bloqueada permanentemente</h5>
-                            <p className="text-xs text-gray-500 font-light leading-relaxed">
-                                El plazo límite para modificar confirmaciones venció el <strong className="text-gray-700">{formattedDeadline}</strong>. 
+                            <h5 className="font-serif italic text-wedding-olive text-base">Respuesta bloqueada</h5>
+                            <p className="text-xs text-wedding-olive/70 font-light leading-relaxed">
+                                El plazo límite para modificar confirmaciones venció el <strong className="text-wedding-olive font-medium">{formattedDeadline}</strong>.
                                 Si necesitas realizar un cambio de fuerza mayor, contacta directamente a David o Rocío.
                             </p>
                         </div>
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={onModify}
-                            className="w-full py-3.5 px-6 border border-wedding-sage hover:bg-wedding-sage hover:text-wedding-cream text-wedding-olive font-serif tracking-widest uppercase rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 group duration-300"
+                            className="w-full py-4 px-6 border border-wedding-olive/40 hover:border-wedding-olive hover:bg-wedding-olive hover:text-wedding-cream text-wedding-olive font-serif italic tracking-[0.2em] uppercase text-sm rounded-2xl transition-all flex items-center justify-center gap-2 group duration-300"
                         >
                             <Edit2 className="w-4 h-4 transition-transform group-hover:scale-110" />
                             Modificar mi respuesta
                         </button>
-                        
+
                         {deadlineDate && (
-                            <p className="text-center text-xs text-gray-500 font-light flex items-center justify-center gap-1">
+                            <p className="text-center text-xs text-wedding-olive/60 font-light flex items-center justify-center gap-1.5">
                                 <Calendar className="w-3.5 h-3.5 text-wedding-sage" />
                                 Tienes tiempo para modificar tu respuesta hasta el {formattedDeadline}.
                             </p>
