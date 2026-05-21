@@ -4,12 +4,32 @@
   --font-sans: var(--font-inter);
   --font-serif: var(--font-cormorant);
   --font-cursive: var(--font-pinyon-script);
-  --color-wedding-sage-dark: #66745A;
-  --color-wedding-sage-light: #9CA68F;
-  --color-wedding-blush-dark: #DBAAB0;
-  --color-wedding-blush-light: #F4D3D7;
-  --color-wedding-cream: #F8F8F8;
-  --color-wedding-sage-darkest: #1E2419;
+
+  /* Brand palette — style-guide.md */
+  --color-wedding-cream: #f2eee8;        /* Crema/Beige claro */
+  --color-wedding-blush: #e7c6c1;        /* Rosa empolvado claro */
+  --color-wedding-blush-light: #f1dad7;  /* Tinted lighter blush for soft fills */
+  --color-wedding-blush-dark: #d9a3a0;   /* Rosa oscuro/Terracota */
+  --color-wedding-terracotta: #d9a3a0;   /* Alias terracota */
+  --color-wedding-sage: #afc3b1;         /* Verde salvia/menta */
+  --color-wedding-sage-light: #c8d6c9;   /* Tinted lighter sage */
+  --color-wedding-sage-dark: #6f7f6a;    /* Verde oliva/musgo (legacy alias) */
+  --color-wedding-olive: #6f7f6a;        /* Verde oliva/musgo */
+  --color-wedding-sage-darkest: #1E2419; /* Hero dark backdrop only */
+
+  /* DESIGN.md theme colors */
+  --color-surface: #fdf9f3;
+  --color-surface-container-low: #f7f3ed;
+  --color-surface-container-lowest: #ffffff;
+  --color-primary: #7f5351;
+  --color-primary-container: #d9a3a0;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #603837;
+  --color-on-surface: #1c1c18;
+  --color-on-surface-variant: #514443;
+  --color-secondary-container: #d3e8d5;
+  --color-on-secondary-container: #56695a;
+  --color-outline-variant: rgba(81, 68, 67, 0.15);
 }
 
 /* Reset image behaviors that might cause horizontal lines */

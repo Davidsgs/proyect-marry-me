@@ -4,13 +4,33 @@ import { auth } from '@/auth';
 export default auth((req) => {
     const isAuth = !!req.auth;
     const isLoginPage = req.nextUrl.pathname.startsWith('/login');
+    const permissions = req.auth?.user?.permissions;
+    const hasAdminDashboard = permissions?.includes('admin.dashboard');
 
     if (!isAuth && !isLoginPage) {
         return NextResponse.redirect(new URL('/login', req.url));
     }
 
     if (isAuth && isLoginPage) {
-        return NextResponse.redirect(new URL('/', req.url));
+        // If authenticated and tries to go to login, redirect based on permissions
+        if (hasAdminDashboard) {
+            return NextResponse.redirect(new URL('/welcome', req.url));
+        }
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // Permission-based route protection
+    if (isAuth) {
+        const isAdminRoute = req.nextUrl.pathname.startsWith('/admin');
+        const isWelcomeRoute = req.nextUrl.pathname.startsWith('/welcome');
+
+        if (isAdminRoute && !hasAdminDashboard) {
+            return NextResponse.redirect(new URL('/dashboard', req.url));
+        }
+
+        if (isWelcomeRoute && !hasAdminDashboard) {
+            return NextResponse.redirect(new URL('/dashboard', req.url));
+        }
     }
 
     return NextResponse.next();

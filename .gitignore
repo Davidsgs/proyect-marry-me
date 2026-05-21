@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local IDE / tooling
+.vscode/
+.idea/
+.claude/
+
+# local databases & build artifacts
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+build-log.txt
+*.log
