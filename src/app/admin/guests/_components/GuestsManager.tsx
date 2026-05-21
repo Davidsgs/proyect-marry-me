@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import type { families as familiesTable, users as usersTable } from "@/db/schema";
-import { createFamily, deleteFamily, updateFamily, createUser, deleteUser, updateUser } from "@/app/actions/admin";
+import { createFamily, deleteFamily, updateFamily, createUser, createManyUsers, deleteUser, updateUser } from "@/app/actions/admin";
 import {
     Plus,
     Search,
@@ -43,6 +43,7 @@ export default function GuestsManager({ families, users }: Props) {
     const [query, setQuery] = useState("");
     const [showFamilyForm, setShowFamilyForm] = useState(false);
     const [showUserForm, setShowUserForm] = useState(false);
+    const [showBulkForm, setShowBulkForm] = useState(false);
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [familyFilter, setFamilyFilter] = useState<number | "all">("all");
     const [, startTransition] = useTransition();
@@ -138,10 +139,22 @@ export default function GuestsManager({ families, users }: Props) {
                         </div>
                     </div>
                 )}
+                {tab === "users" && (
+                    <button
+                        onClick={() => {
+                            setShowBulkForm((v) => !v);
+                            setShowUserForm(false);
+                        }}
+                        className="flex items-center justify-center gap-2 bg-surface-container text-on-surface px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
+                    >
+                        {showBulkForm ? <X className="w-4 h-4" /> : <UsersIcon className="w-4 h-4" />}
+                        {showBulkForm ? "Cerrar" : "Cargar familia"}
+                    </button>
+                )}
                 <button
                     onClick={() => {
                         if (tab === "families") setShowFamilyForm((v) => !v);
-                        else setShowUserForm((v) => !v);
+                        else { setShowUserForm((v) => !v); setShowBulkForm(false); }
                     }}
                     className="flex items-center justify-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
                 >
@@ -158,6 +171,9 @@ export default function GuestsManager({ families, users }: Props) {
             )}
             {tab === "users" && showUserForm && (
                 <UserFormInline families={families} onDone={() => setShowUserForm(false)} />
+            )}
+            {tab === "users" && showBulkForm && (
+                <BulkUserFormInline families={families} onDone={() => setShowBulkForm(false)} />
             )}
 
             {/* Content */}
@@ -350,6 +366,193 @@ function UserFormInline({ families, onDone }: { families: Family[]; onDone: () =
                 </button>
             </div>
         </form>
+    );
+}
+
+type BulkRow = {
+    key: number;
+    name: string;
+    lastName: string;
+    email: string;
+    ageCategory: AgeCategory;
+    role: Role;
+};
+
+function makeBulkRow(key: number): BulkRow {
+    return { key, name: "", lastName: "", email: "", ageCategory: "ADULT", role: "GUEST" };
+}
+
+function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: () => void }) {
+    const [pending, startTransition] = useTransition();
+    const [familyId, setFamilyId] = useState<string>("");
+    const [sharedLastName, setSharedLastName] = useState("");
+    const [rows, setRows] = useState<BulkRow[]>([makeBulkRow(0), makeBulkRow(1)]);
+    const [error, setError] = useState<string | null>(null);
+    const nextKey = useRef(2);
+
+    const addRow = () => setRows((rs) => [...rs, makeBulkRow(nextKey.current++)]);
+    const removeRow = (key: number) => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
+    const updateRow = (key: number, patch: Partial<BulkRow>) =>
+        setRows((rs) => rs.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+
+    const handleSubmit = () => {
+        setError(null);
+        if (!familyId) {
+            setError("Selecciona una familia.");
+            return;
+        }
+        const members = rows
+            .map((r) => ({
+                ...r,
+                lastName: r.lastName.trim() || sharedLastName.trim(),
+            }))
+            .filter((r) => r.name.trim() !== "" || r.lastName.trim() !== "");
+
+        if (members.length === 0) {
+            setError("Añade al menos un invitado con nombre.");
+            return;
+        }
+        const missingName = members.some((r) => r.name.trim() === "");
+        if (missingName) {
+            setError("Cada invitado necesita un nombre.");
+            return;
+        }
+        const missingEmail = members.some((r) => r.ageCategory === "ADULT" && r.email.trim() === "");
+        if (missingEmail) {
+            setError("Los adultos necesitan correo.");
+            return;
+        }
+
+        startTransition(async () => {
+            await createManyUsers(
+                Number(familyId),
+                members.map((r) => ({
+                    name: r.name.trim(),
+                    lastName: r.lastName.trim(),
+                    email: r.ageCategory === "ADULT" ? r.email.trim() : null,
+                    role: r.ageCategory === "ADULT" ? r.role : "GUEST",
+                    ageCategory: r.ageCategory,
+                }))
+            );
+            onDone();
+        });
+    };
+
+    const validCount = rows.filter((r) => r.name.trim() !== "").length;
+
+    return (
+        <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm space-y-5">
+            <div className="flex items-center gap-2">
+                <UsersIcon className="w-4 h-4 text-primary" />
+                <p className="text-xs font-sans tracking-widest uppercase font-medium text-primary">Cargar varios invitados de una familia</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Familia</label>
+                    <select
+                        value={familyId}
+                        onChange={(e) => setFamilyId(e.target.value)}
+                        className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none shadow-sm cursor-pointer"
+                    >
+                        <option value="" disabled>Selecciona...</option>
+                        {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                    </select>
+                </div>
+                <div>
+                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
+                        Apellido común <span className="text-on-surface-variant/60 normal-case tracking-normal">(opcional, se aplica a filas sin apellido)</span>
+                    </label>
+                    <input
+                        value={sharedLastName}
+                        onChange={(e) => setSharedLastName(e.target.value)}
+                        className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm"
+                        placeholder="García"
+                    />
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                {rows.map((row, idx) => {
+                    const isMinor = row.ageCategory !== "ADULT";
+                    return (
+                        <div key={row.key} className="bg-surface p-4 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                            <span className="hidden md:flex md:col-span-1 items-center justify-center w-7 h-7 rounded-full bg-surface-container text-on-surface-variant text-xs font-medium">{idx + 1}</span>
+                            <input
+                                value={row.name}
+                                onChange={(e) => updateRow(row.key, { name: e.target.value })}
+                                className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm"
+                                placeholder="Nombre(s)"
+                            />
+                            <input
+                                value={row.lastName}
+                                onChange={(e) => updateRow(row.key, { lastName: e.target.value })}
+                                className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm"
+                                placeholder={sharedLastName ? `Apellido (${sharedLastName})` : "Apellido"}
+                            />
+                            <input
+                                type="email"
+                                value={row.email}
+                                onChange={(e) => updateRow(row.key, { email: e.target.value })}
+                                disabled={isMinor}
+                                className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                placeholder={isMinor ? "Sin correo (menor)" : "Correo"}
+                            />
+                            <div className="md:col-span-2 flex items-center gap-1">
+                                <div className="flex-1 grid grid-cols-3 gap-1">
+                                    {(["ADULT", "CHILD", "BABY"] as AgeCategory[]).map((cat) => (
+                                        <button
+                                            key={cat}
+                                            type="button"
+                                            title={AGE_LABEL[cat]}
+                                            onClick={() => updateRow(row.key, { ageCategory: cat })}
+                                            className={`py-2 rounded-lg text-[10px] font-sans uppercase font-medium transition-all border-none ${row.ageCategory === cat
+                                                ? "bg-primary text-on-primary shadow-sm"
+                                                : "bg-surface-container text-on-surface-variant hover:bg-primary/10"
+                                                }`}
+                                        >
+                                            {AGE_LABEL[cat].charAt(0)}
+                                        </button>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => removeRow(row.key)}
+                                    disabled={rows.length === 1}
+                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
+                                    aria-label="Quitar fila"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                <button
+                    type="button"
+                    onClick={addRow}
+                    className="flex items-center justify-center gap-2 bg-surface-container text-on-surface px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
+                >
+                    <Plus className="w-4 h-4" /> Añadir fila
+                </button>
+                <div className="flex items-center gap-3">
+                    {error && <p className="text-xs text-error font-sans">{error}</p>}
+                    <button
+                        disabled={pending}
+                        type="button"
+                        onClick={handleSubmit}
+                        className="bg-primary text-on-primary px-6 py-2.5 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                        Registrar {validCount > 0 ? `(${validCount})` : ""}
+                    </button>
+                </div>
+            </div>
+            <p className="text-[10px] text-on-surface-variant/70 italic">Las iniciales A/N/B indican Adulto, Niño o Bebé. El titular se asigna luego desde la tarjeta de la familia.</p>
+        </div>
     );
 }
 
