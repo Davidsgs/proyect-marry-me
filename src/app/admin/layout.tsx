@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import AdminSidebar from "./_components/AdminSidebar";
 import AdminMobileNav from "./_components/AdminMobileNav";
+import AdminMobileHeaderActions from "./_components/AdminMobileHeaderActions";
 import { hasPermission } from "@/lib/permissions";
 
 export default async function AdminLayout({
@@ -28,6 +29,7 @@ export default async function AdminLayout({
             03 de Abril, 2026
           </span>
         </div>
+        <AdminMobileHeaderActions />
       </header>
 
       {/* Navigation Drawer (Desktop) */}
