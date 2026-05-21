@@ -167,6 +167,40 @@ export async function createUser(data: { email?: string | null, name: string, la
     invalidateUsers();
 }
 
+export async function createManyUsers(
+    familyId: number,
+    members: { email?: string | null; name: string; lastName: string; role: 'ADMIN' | 'MAIN_GUEST' | 'GUEST'; ageCategory?: 'BABY' | 'CHILD' | 'ADULT' }[]
+) {
+    const session = await auth();
+    if (!hasPermission(session?.user?.permissions, "users.write")) {
+        throw new Error("Sin permisos");
+    }
+
+    const clean = members.filter((m) => m.name.trim() !== "" || m.lastName.trim() !== "");
+    if (clean.length === 0) return;
+
+    for (const member of clean) {
+        const fullname = `${member.name} ${member.lastName}`.trim();
+        const email = member.email && member.email.trim() !== "" ? member.email.trim() : null;
+        const inserted = await db.insert(users).values({
+            email,
+            name: member.name,
+            lastName: member.lastName,
+            fullname,
+            familyId,
+            role: member.role,
+            ageCategory: member.ageCategory ?? "ADULT",
+        }).returning({ id: users.id });
+
+        const newUserId = inserted[0]?.id;
+        if (newUserId) {
+            await syncSystemRole(newUserId, member.role);
+        }
+    }
+
+    invalidateUsers();
+}
+
 export async function getUsers() {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "users.read")) {
