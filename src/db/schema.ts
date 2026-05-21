@@ -18,9 +18,22 @@ export const users = sqliteTable("users", {
   lastName: text("last_name").default("").notNull(),
   fullname: text("fullname").default("").notNull(),
   familyId: integer("family_id").references((): AnySQLiteColumn => families.id, { onDelete: 'cascade' }),
+  tableId: integer("table_id").references((): AnySQLiteColumn => tables.id, { onDelete: 'set null' }),
   role: text("role", { enum: ["ADMIN", "MAIN_GUEST", "GUEST"] }).default("GUEST").notNull(),
   ageCategory: text("age_category", { enum: ["BABY", "CHILD", "ADULT"] }).default("ADULT").notNull(),
   isConfirmed: integer("is_confirmed", { mode: 'boolean' }).default(false),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+export const tables = sqliteTable("tables", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  number: integer("number").notNull(),
+  name: text("name").default("").notNull(),
+  capacity: integer("capacity").default(10).notNull(),
+  notes: text("notes").default("").notNull(),
+  posX: integer("pos_x"),
+  posY: integer("pos_y"),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });

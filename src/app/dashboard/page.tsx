@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { getRsvpDeadline } from "@/app/actions/config";
 import RsvpForm from "./_components/RsvpForm";
 import ReadOnlyRsvp from "./_components/ReadOnlyRsvp";
+import MyTableCard from "./_components/MyTableCard";
 
 export const dynamic = 'force-dynamic';
 
@@ -85,6 +86,8 @@ export default async function DashboardPage() {
                     <ReadOnlyRsvp family={family} members={familyMembers} delegate={delegate} />
                 )}
             </div>
+
+            {session?.user?.id && <MyTableCard currentUserId={session.user.id} />}
         </div>
     );
 }

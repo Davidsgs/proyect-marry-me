@@ -14,6 +14,8 @@ const systemPermissions = [
   { key: "users.write", label: "Escribir/Modificar Usuarios", section: "users" },
   { key: "families.read", label: "Leer Familias", section: "families" },
   { key: "families.write", label: "Escribir/Modificar Familias", section: "families" },
+  { key: "tables.read", label: "Leer Mesas", section: "tables" },
+  { key: "tables.write", label: "Escribir/Modificar Mesas", section: "tables" },
   { key: "calendar.read", label: "Leer Calendario", section: "calendar" },
   { key: "calendar.write", label: "Escribir/Modificar Calendario", section: "calendar" },
   { key: "tasks.read", label: "Leer Tareas", section: "tasks" },

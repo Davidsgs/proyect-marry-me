@@ -9,6 +9,7 @@ import {
   Settings,
   ListTodo,
   Mail,
+  Armchair,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -22,6 +23,9 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
 
   if (permissions?.includes("tasks.read")) {
     navItems.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
+  }
+  if (permissions?.includes("tables.read")) {
+    navItems.push({ href: "/admin/tables", icon: Armchair, label: "Mesas" });
   }
   if (permissions?.includes("settings.write")) {
     navItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });
