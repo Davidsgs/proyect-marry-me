@@ -21,6 +21,8 @@ export const systemPermissions = [
   { key: "calendar.write", label: "Escribir/Modificar Calendario", section: "calendar", description: "Crear, editar y reordenar actividades del cronograma." },
   { key: "tasks.read", label: "Leer Tareas", section: "tasks", description: "Ver la lista de tareas." },
   { key: "tasks.write", label: "Escribir/Modificar Tareas", section: "tasks", description: "Crear, completar y eliminar tareas." },
+  { key: "finance.read", label: "Leer Economía", section: "finance", description: "Ver ingresos, egresos, balance y planes de pago en cuotas." },
+  { key: "finance.write", label: "Escribir/Modificar Economía", section: "finance", description: "Registrar/editar/eliminar movimientos y planes de cuotas; marcar cuotas pagadas." },
   { key: "whiteboard.read", label: "Leer Pizarra", section: "whiteboard", description: "Ver la pizarra de notas." },
   { key: "whiteboard.write", label: "Escribir/Modificar Pizarra", section: "whiteboard", description: "Editar la pizarra de notas." },
   { key: "rsvp.confirm_own_family", label: "Confirmar RSVP de Familia Propia", section: "rsvp", description: "Confirmar la asistencia de su propia familia." },

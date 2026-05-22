@@ -2,10 +2,12 @@ import { getFamilies, getUsers } from "@/app/actions/admin";
 import { getTasks } from "@/app/actions/tasks";
 import { getTables } from "@/app/actions/tables";
 import { getSchedule } from "@/app/actions/schedule";
+import { getFinanceSummary } from "@/app/actions/finance";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { getRsvpDeadline } from "@/app/actions/config";
-import { CheckCircle2, ChevronRight, ListTodo, Users as UsersIcon, Home, CalendarClock, Armchair, AlertTriangle } from "lucide-react";
+import { formatMoney } from "@/lib/money";
+import { CheckCircle2, ChevronRight, ListTodo, Users as UsersIcon, Home, CalendarClock, Armchair, AlertTriangle, Wallet } from "lucide-react";
 import Link from "next/link";
 
 export const dynamic = 'force-dynamic';
@@ -23,12 +25,14 @@ export default async function AdminPage() {
     const canReadTasks = hasPermission(perms, "tasks.read");
     const canReadTables = hasPermission(perms, "tables.read");
     const canReadSchedule = hasPermission(perms, "calendar.read");
+    const canReadFinance = hasPermission(perms, "finance.read");
 
     const families = await getFamilies();
     const users = await getUsers();
     const allTasks = canReadTasks ? await getTasks() : [];
     const tables = canReadTables ? await getTables() : [];
     const schedule = canReadSchedule ? await getSchedule() : [];
+    const finance = canReadFinance ? await getFinanceSummary() : null;
     const deadline = await getRsvpDeadline();
 
     // Family-level metrics
@@ -84,7 +88,7 @@ export default async function AdminPage() {
 
     // 3 stats base (familias, invitados, tareas) + las opcionales. Con 5 tarjetas
     // pasamos a 3 columnas (3+2) para que ninguna quede huérfana en su fila.
-    const statCount = 3 + (canReadTables ? 1 : 0) + (canReadSchedule ? 1 : 0);
+    const statCount = 3 + (canReadTables ? 1 : 0) + (canReadSchedule ? 1 : 0) + (canReadFinance ? 1 : 0);
     const statCols = statCount >= 5 ? "lg:grid-cols-3" : statCount === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
 
     return (
@@ -230,6 +234,38 @@ export default async function AdminPage() {
                                 <div className="flex items-center gap-2 text-on-secondary-container">
                                     <CheckCircle2 className="w-3.5 h-3.5" />
                                     <span>Todo el día completado</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Economía: balance + cuotas pendientes */}
+                {canReadFinance && finance && (
+                    <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium">Economía</p>
+                            <Wallet className="w-4 h-4 text-on-surface-variant opacity-60" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mb-4">
+                            <span className={`text-3xl font-serif ${finance.balanceCents < 0 ? "text-error" : "text-primary"}`}>
+                                {formatMoney(finance.balanceCents)}
+                            </span>
+                            <span className="text-xs text-on-surface-variant font-light">balance</span>
+                        </div>
+                        <div className="mt-auto flex flex-col gap-1 text-xs font-medium">
+                            {finance.pendingCount > 0 ? (
+                                <div className="flex items-center gap-2 text-on-surface-variant">
+                                    <CalendarClock className="w-3.5 h-3.5 opacity-70" />
+                                    <span>{finance.pendingCount} cuotas · {formatMoney(finance.pendingCents)} por pagar</span>
+                                </div>
+                            ) : (
+                                <span className="text-on-surface-variant/80">Sin cuotas pendientes</span>
+                            )}
+                            {finance.overdueCount > 0 && (
+                                <div className="flex items-center gap-2 text-error">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span>{finance.overdueCount} vencida{finance.overdueCount === 1 ? "" : "s"}</span>
                                 </div>
                             )}
                         </div>
