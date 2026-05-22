@@ -2,8 +2,8 @@
 
 import { toggleTask, deleteTask, updateTask } from "@/app/actions/tasks";
 import type { tasks } from "@/db/schema";
-import { Trash2, Check, Calendar, Pencil, X, Save, MoreVertical, User, Clock } from "lucide-react";
-import { useState, useRef, useEffect } from "react";
+import { Trash2, Check, Calendar, Pencil, X, Save, MoreVertical, User, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { useState, useRef, useEffect, useTransition } from "react";
 
 type Task = typeof tasks.$inferSelect & { completedByName?: string | null };
 
@@ -104,6 +104,17 @@ export default function TaskItem({ task, canWrite }: Props) {
     const [editDesc, setEditDesc] = useState(task.description ?? "");
     const [editDate, setEditDate] = useState(task.dueDate ?? "");
     const [saving, setSaving] = useState(false);
+    const [showDetail, setShowDetail] = useState(false);
+    const [confirmOpen, setConfirmOpen] = useState(false);
+    const [deleting, startDelete] = useTransition();
+
+    function handleDelete() {
+        startDelete(async () => {
+            await deleteTask(task.id);
+            setConfirmOpen(false);
+            setShowDetail(false);
+        });
+    }
 
     const formattedDate = task.dueDate
         ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(task.dueDate))
@@ -179,6 +190,7 @@ export default function TaskItem({ task, canWrite }: Props) {
     }
 
     return (
+        <>
         <div className={`flex items-center gap-2 p-4 rounded-xl transition-all group ${
             task.isCompleted
                 ? "bg-surface-container-low/50"
@@ -206,8 +218,12 @@ export default function TaskItem({ task, canWrite }: Props) {
                     </div>
                 )}
 
-                {/* Content */}
-                <div className="flex-1 min-w-0">
+                {/* Content — tap abre el detalle (texto completo, útil en móvil) */}
+                <button
+                    type="button"
+                    onClick={() => setShowDetail(true)}
+                    className="flex-1 min-w-0 text-left border-none bg-transparent cursor-pointer"
+                >
                     <p className={`font-sans text-sm font-medium truncate ${
                         task.isCompleted ? "line-through text-on-surface-variant" : "text-on-surface"
                     }`}>
@@ -218,7 +234,7 @@ export default function TaskItem({ task, canWrite }: Props) {
                             {task.description}
                         </p>
                     )}
-                </div>
+                </button>
 
                 {/* Due date badge (pending only) */}
                 {!task.isCompleted && formattedDate && (
@@ -251,12 +267,196 @@ export default function TaskItem({ task, canWrite }: Props) {
             {/* Delete button — outside opacity wrapper */}
             {canWrite && (
                 <button
-                    onClick={() => deleteTask(task.id)}
+                    onClick={() => setConfirmOpen(true)}
                     className="w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
             )}
+        </div>
+
+        {showDetail && (
+            <TaskDetailModal
+                task={task}
+                canWrite={canWrite}
+                onClose={() => setShowDetail(false)}
+                onEdit={() => { setShowDetail(false); setIsEditing(true); }}
+                onToggle={() => toggleTask(task.id)}
+                onDelete={() => setConfirmOpen(true)}
+            />
+        )}
+
+        {confirmOpen && (
+            <ConfirmDeleteModal
+                taskTitle={task.title}
+                deleting={deleting}
+                onCancel={() => setConfirmOpen(false)}
+                onConfirm={handleDelete}
+            />
+        )}
+        </>
+    );
+}
+
+function TaskDetailModal({
+    task,
+    canWrite,
+    onClose,
+    onEdit,
+    onToggle,
+    onDelete,
+}: {
+    task: Task;
+    canWrite: boolean;
+    onClose: () => void;
+    onEdit: () => void;
+    onToggle: () => void;
+    onDelete: () => void;
+}) {
+    const formattedDate = task.dueDate
+        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(task.dueDate))
+        : null;
+    const isPastDue = task.dueDate && !task.isCompleted && new Date(task.dueDate) < new Date();
+    const completedDate = task.completedAt
+        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(task.completedAt))
+        : null;
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true">
+            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} aria-hidden />
+            <div className="relative w-full sm:max-w-md bg-surface-container-lowest rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 sm:fade-in duration-200">
+                {/* Header */}
+                <div className="shrink-0 flex items-start justify-between gap-3 p-5 border-b border-surface-container">
+                    <div className="min-w-0">
+                        <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-1">
+                            {task.isCompleted ? "Tarea completada" : "Detalle de la tarea"}
+                        </p>
+                        <h3 className={`font-serif text-xl leading-snug ${task.isCompleted ? "line-through text-on-surface-variant" : "text-primary"}`}>
+                            {task.title}
+                        </h3>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        aria-label="Cerrar"
+                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors border-none cursor-pointer"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* Cuerpo scrollable */}
+                <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
+                    <section>
+                        <h4 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Descripción</h4>
+                        {task.description ? (
+                            <p className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed">{task.description}</p>
+                        ) : (
+                            <p className="text-sm text-on-surface-variant/50 italic">Sin descripción.</p>
+                        )}
+                    </section>
+
+                    {formattedDate && !task.isCompleted && (
+                        <section>
+                            <h4 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Fecha límite</h4>
+                            <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full ${isPastDue ? "bg-error/10 text-error" : "bg-surface-container text-on-surface-variant"}`}>
+                                <Calendar className="w-3.5 h-3.5" />
+                                {formattedDate}{isPastDue && " · vencida"}
+                            </span>
+                        </section>
+                    )}
+
+                    {task.isCompleted && (
+                        <section className="space-y-2">
+                            <h4 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant">Finalizada</h4>
+                            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+                                <User className="w-4 h-4 text-primary/70 shrink-0" />
+                                <span>{task.completedByName ?? "Admin"}</span>
+                            </div>
+                            {completedDate && (
+                                <div className="flex items-center gap-2 text-sm text-on-surface-variant">
+                                    <Clock className="w-4 h-4 text-primary/70 shrink-0" />
+                                    <span>{completedDate}</span>
+                                </div>
+                            )}
+                        </section>
+                    )}
+                </div>
+
+                {/* Acciones */}
+                {canWrite && (
+                    <div className="shrink-0 flex items-center gap-2 p-4 border-t border-surface-container">
+                        <button
+                            onClick={onToggle}
+                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium hover:bg-surface-container transition-all border-none cursor-pointer"
+                        >
+                            <Check className="w-4 h-4" />
+                            {task.isCompleted ? "Reabrir" : "Completar"}
+                        </button>
+                        {!task.isCompleted && (
+                            <button
+                                onClick={onEdit}
+                                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium hover:bg-surface-container transition-all border-none cursor-pointer"
+                            >
+                                <Pencil className="w-4 h-4" />
+                                Editar
+                            </button>
+                        )}
+                        <button
+                            onClick={onDelete}
+                            aria-label="Eliminar tarea"
+                            className="flex items-center justify-center px-4 py-3 rounded-xl text-error hover:bg-error/10 transition-all border-none cursor-pointer"
+                        >
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function ConfirmDeleteModal({
+    taskTitle,
+    deleting,
+    onCancel,
+    onConfirm,
+}: {
+    taskTitle: string;
+    deleting: boolean;
+    onCancel: () => void;
+    onConfirm: () => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} aria-hidden />
+            <div className="relative w-full max-w-sm bg-surface-container-lowest rounded-3xl shadow-xl p-6 animate-in fade-in zoom-in-95 duration-150">
+                <div className="flex flex-col items-center text-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center">
+                        <AlertTriangle className="w-6 h-6" />
+                    </div>
+                    <h3 className="font-serif text-xl text-on-surface">¿Eliminar tarea?</h3>
+                    <p className="text-sm text-on-surface-variant">
+                        Vas a eliminar <span className="font-medium text-on-surface">«{taskTitle}»</span>. Esta acción no se puede deshacer.
+                    </p>
+                </div>
+                <div className="flex gap-2 mt-6">
+                    <button
+                        onClick={onCancel}
+                        disabled={deleting}
+                        className="flex-1 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium hover:bg-surface-container transition-all border-none cursor-pointer disabled:opacity-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={deleting}
+                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-error text-white text-sm font-medium hover:bg-error/90 transition-all border-none cursor-pointer disabled:opacity-60"
+                    >
+                        {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                        Eliminar
+                    </button>
+                </div>
+            </div>
         </div>
     );
 }

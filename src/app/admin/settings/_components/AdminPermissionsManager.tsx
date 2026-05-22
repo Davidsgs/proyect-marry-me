@@ -17,6 +17,7 @@ const SECTION_LABELS: Record<string, string> = {
   tables: "Mesas",
   calendar: "Cronograma",
   tasks: "Tareas",
+  finance: "Economía",
   whiteboard: "Pizarra",
   rsvp: "RSVP",
   settings: "Ajustes",
