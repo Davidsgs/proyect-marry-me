@@ -2,38 +2,14 @@ import { config } from "dotenv";
 config({ path: ".env.local" });
 
 import { eq, and } from "drizzle-orm";
-
-const systemRoles = [
-  { key: "admin", label: "Administrador", isSystem: true },
-  { key: "main_guest", label: "Invitado Principal (Delegado)", isSystem: true },
-  { key: "guest", label: "Invitado", isSystem: true },
-];
-
-const systemPermissions = [
-  { key: "users.read", label: "Leer Usuarios", section: "users" },
-  { key: "users.write", label: "Escribir/Modificar Usuarios", section: "users" },
-  { key: "families.read", label: "Leer Familias", section: "families" },
-  { key: "families.write", label: "Escribir/Modificar Familias", section: "families" },
-  { key: "tables.read", label: "Leer Mesas", section: "tables" },
-  { key: "tables.write", label: "Escribir/Modificar Mesas", section: "tables" },
-  { key: "calendar.read", label: "Leer Calendario", section: "calendar" },
-  { key: "calendar.write", label: "Escribir/Modificar Calendario", section: "calendar" },
-  { key: "tasks.read", label: "Leer Tareas", section: "tasks" },
-  { key: "tasks.write", label: "Escribir/Modificar Tareas", section: "tasks" },
-  { key: "whiteboard.read", label: "Leer Pizarra", section: "whiteboard" },
-  { key: "whiteboard.write", label: "Escribir/Modificar Pizarra", section: "whiteboard" },
-  { key: "rsvp.confirm_own_family", label: "Confirmar RSVP de Familia Propia", section: "rsvp" },
-  { key: "rsvp.view_own_family", label: "Ver RSVP de Familia Propia", section: "rsvp" },
-  { key: "admin.dashboard", label: "Acceder al Panel Admin", section: "admin" },
-  { key: "settings.write", label: "Modificar Ajustes del Evento", section: "settings" },
-];
+import { systemRoles, systemPermissions, rolePermAssignments, BASELINE_ADMIN_PERMS } from "./rbac-catalog";
 
 async function main() {
   console.log("Iniciando sembrado del sistema RBAC...");
 
   // Import dynamically to ensure dotenv is loaded first
   const { db } = await import("../src/db");
-  const { roles, permissions, rolePermissions, userRoles, users, eventConfig } = await import("../src/db/schema");
+  const { roles, permissions, rolePermissions, userRoles, userPermissions, users, eventConfig } = await import("../src/db/schema");
 
   // 1. Insertar roles del sistema
   for (const role of systemRoles) {
@@ -46,14 +22,17 @@ async function main() {
     }
   }
 
-  // 2. Insertar permisos
+  // 2. Insertar permisos (con descripción). Si ya existe, refresca su descripción.
   for (const perm of systemPermissions) {
     const existing = await db.select().from(permissions).where(eq(permissions.key, perm.key)).get();
     if (!existing) {
       await db.insert(permissions).values(perm);
       console.log(`Permiso creado: ${perm.key}`);
     } else {
-      console.log(`Permiso existente: ${perm.key}`);
+      await db.update(permissions)
+        .set({ label: perm.label, section: perm.section, description: perm.description })
+        .where(eq(permissions.key, perm.key));
+      console.log(`Permiso existente (descripción actualizada): ${perm.key}`);
     }
   }
 
@@ -64,23 +43,9 @@ async function main() {
   const roleMap = new Map(allRoles.map((r) => [r.key, r.id]));
   const permMap = new Map(allPerms.map((p) => [p.key, p.id]));
 
-  // 3. Definir asignaciones de permisos a roles
-  const rolePermAssignments = [
-    {
-      roleKey: "admin",
-      perms: systemPermissions.map((p) => p.key),
-    },
-    {
-      roleKey: "main_guest",
-      perms: ["rsvp.confirm_own_family", "rsvp.view_own_family"],
-    },
-    {
-      roleKey: "guest",
-      perms: ["rsvp.view_own_family"],
-    },
-  ];
-
-  // Vincular permisos a roles
+  // 3. Vincular permisos a roles (asignaciones desde el catálogo compartido).
+  // El rol `admin` solo concede el acceso base; el resto de permisos de cada
+  // administrador viven en user_permissions (ver paso 4b).
   for (const assignment of rolePermAssignments) {
     const roleId = roleMap.get(assignment.roleKey);
     if (!roleId) continue;
@@ -107,6 +72,20 @@ async function main() {
     }
   }
 
+  // 3b. Recortar el rol `admin` al acceso base: elimina cualquier permiso extra
+  // heredado de un modelo anterior (cuando el rol admin concedía todo). Así el
+  // seed converge al modelo de permisos por administrador de forma idempotente.
+  const adminRoleId = roleMap.get("admin");
+  if (adminRoleId) {
+    const baseline = new Set(BASELINE_ADMIN_PERMS);
+    for (const perm of allPerms) {
+      if (baseline.has(perm.key)) continue;
+      await db.delete(rolePermissions).where(
+        and(eq(rolePermissions.roleId, adminRoleId), eq(rolePermissions.permissionId, perm.id))
+      );
+    }
+  }
+
   // 4. Vincular usuarios existentes a sus nuevos roles basados en users.role
   const allUsers = await db.select().from(users).all();
   for (const user of allUsers) {
@@ -130,6 +109,24 @@ async function main() {
       await db.insert(userRoles).values({ userId: user.id, roleId });
       console.log(`Usuario ${user.email} vinculado al rol ${roleKey}`);
     }
+  }
+
+  // 4b. Dar a cada administrador el set completo de permisos editables en
+  // user_permissions, solo si nunca fue configurado (0 filas). Así un admin nuevo
+  // arranca con plenos poderes y luego se restringe con los toggles; re-ejecutar
+  // el seed NO pisa permisos ya desactivados manualmente.
+  const baseline = new Set(BASELINE_ADMIN_PERMS);
+  const editablePerms = systemPermissions.filter((p) => !baseline.has(p.key));
+  for (const user of allUsers) {
+    if (user.role !== "ADMIN") continue;
+    const existingDirect = await db.select().from(userPermissions).where(eq(userPermissions.userId, user.id)).all();
+    if (existingDirect.length > 0) continue;
+    for (const perm of editablePerms) {
+      const permId = permMap.get(perm.key);
+      if (!permId) continue;
+      await db.insert(userPermissions).values({ userId: user.id, permissionId: permId });
+    }
+    console.log(`Permisos completos sembrados para admin ${user.email}`);
   }
 
   // 5. Insertar fecha límite inicial de RSVP en event_config

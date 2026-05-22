@@ -9,6 +9,7 @@ import {
   Settings,
   ListTodo,
   Armchair,
+  CalendarClock,
   MoreHorizontal,
   Mail,
   LogOut,
@@ -36,6 +37,9 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
   }
   if (permissions?.includes("tables.read")) {
     items.push({ href: "/admin/tables", icon: Armchair, label: "Mesas" });
+  }
+  if (permissions?.includes("calendar.read")) {
+    items.push({ href: "/admin/cronograma", icon: CalendarClock, label: "Cronograma" });
   }
   if (permissions?.includes("settings.write")) {
     items.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });

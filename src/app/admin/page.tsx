@@ -1,6 +1,7 @@
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import { getTasks } from "@/app/actions/tasks";
 import { getTables } from "@/app/actions/tables";
+import { getSchedule } from "@/app/actions/schedule";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { getRsvpDeadline } from "@/app/actions/config";
@@ -21,11 +22,13 @@ export default async function AdminPage() {
     const perms = session?.user?.permissions;
     const canReadTasks = hasPermission(perms, "tasks.read");
     const canReadTables = hasPermission(perms, "tables.read");
+    const canReadSchedule = hasPermission(perms, "calendar.read");
 
     const families = await getFamilies();
     const users = await getUsers();
     const allTasks = canReadTasks ? await getTasks() : [];
     const tables = canReadTables ? await getTables() : [];
+    const schedule = canReadSchedule ? await getSchedule() : [];
     const deadline = await getRsvpDeadline();
 
     // Family-level metrics
@@ -52,6 +55,11 @@ export default async function AdminPage() {
         (t) => guestUsers.filter((u) => u.tableId === t.id).length > t.capacity,
     ).length;
 
+    // Schedule metrics
+    const totalActivities = schedule.length;
+    const completedActivities = schedule.filter((a) => a.isCompleted).length;
+    const nextActivity = schedule.find((a) => !a.isCompleted) ?? null;
+
     // Task metrics
     const pendingTasks = allTasks.filter((t) => !t.isCompleted);
     const upcomingTasks = [...pendingTasks]
@@ -74,6 +82,11 @@ export default async function AdminPage() {
         ? deadline.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
         : null;
 
+    // 3 stats base (familias, invitados, tareas) + las opcionales. Con 5 tarjetas
+    // pasamos a 3 columnas (3+2) para que ninguna quede huérfana en su fila.
+    const statCount = 3 + (canReadTables ? 1 : 0) + (canReadSchedule ? 1 : 0);
+    const statCols = statCount >= 5 ? "lg:grid-cols-3" : statCount === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3";
+
     return (
         <div className="max-w-6xl mx-auto space-y-10">
             {/* Header */}
@@ -95,7 +108,7 @@ export default async function AdminPage() {
             </div>
 
             {/* Stats híbridas */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 ${canReadTables ? "lg:grid-cols-4" : "lg:grid-cols-3"} gap-6`}>
+            <div className={`grid grid-cols-1 md:grid-cols-2 ${statCols} gap-6`}>
                 {/* Familias: respondieron / total */}
                 <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
                     <div className="flex items-center justify-between mb-4">
@@ -186,6 +199,38 @@ export default async function AdminPage() {
                                 </div>
                             ) : (
                                 <span className="text-on-surface-variant/80">{totalTables} mesas · {totalSeats} asientos</span>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Cronograma: completadas / total + próxima actividad */}
+                {canReadSchedule && (
+                    <div className="bg-surface-container-lowest p-6 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium">Cronograma</p>
+                            <CalendarClock className="w-4 h-4 text-on-surface-variant opacity-60" />
+                        </div>
+                        <div className="flex items-baseline gap-2 mb-4">
+                            <span className="text-4xl font-serif text-primary">{completedActivities}</span>
+                            <span className="text-lg text-on-surface-variant font-light">/ {totalActivities} hechas</span>
+                        </div>
+                        <div className="mt-auto flex flex-col gap-1 text-xs font-medium">
+                            {totalActivities === 0 ? (
+                                <span className="text-on-surface-variant/80">Sin actividades aún</span>
+                            ) : nextActivity ? (
+                                <div className="flex items-center gap-2 text-on-surface-variant">
+                                    <ChevronRight className="w-3.5 h-3.5 opacity-70" />
+                                    <span className="truncate">
+                                        Sigue: {nextActivity.title}
+                                        {nextActivity.time ? ` · ${nextActivity.time}` : ""}
+                                    </span>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-2 text-on-secondary-container">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Todo el día completado</span>
+                                </div>
                             )}
                         </div>
                     </div>

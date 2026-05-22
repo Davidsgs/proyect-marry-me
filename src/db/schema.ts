@@ -50,6 +50,9 @@ export const permissions = sqliteTable("permissions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   key: text("key").notNull().unique(),        // ej: "calendar.read", "tasks.write", "rsvp.confirm_own_family"
   label: text("label").notNull(),
+  // Descripción tipo Discord: explica qué habilita el permiso. Se muestra junto
+  // al toggle en el editor de permisos por administrador.
+  description: text("description").default("").notNull(),
   section: text("section").notNull(),         // ej: "calendar", "tasks", "whiteboard", "rsvp", "users"
 });
 
@@ -62,6 +65,15 @@ export const userRoles = sqliteTable("user_roles", {
   userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   roleId: integer("role_id").notNull().references(() => roles.id, { onDelete: 'cascade' }),
 }, (t) => ({ pk: primaryKey({ columns: [t.userId, t.roleId] }) }));
+
+// Permisos otorgados directamente a un usuario, además de los heredados por sus
+// roles. Habilita la edición tipo Discord (toggle on/off por administrador): el
+// rol "admin" solo concede el acceso base (admin.dashboard) y cada permiso extra
+// se concede aquí por usuario. getUserPermissions une rol + estos.
+export const userPermissions = sqliteTable("user_permissions", {
+  userId: integer("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  permissionId: integer("permission_id").notNull().references(() => permissions.id, { onDelete: 'cascade' }),
+}, (t) => ({ pk: primaryKey({ columns: [t.userId, t.permissionId] }) }));
 
 export const eventConfig = sqliteTable("event_config", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -81,4 +93,41 @@ export const tasks = sqliteTable("tasks", {
   createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Cronograma del día de la boda: cada actividad es un hito de la cronología
+// (Titulo + hora), con una sublista de tareas (solo checkboxes) y notas al pie.
+export const scheduleActivities = sqliteTable("schedule_activities", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  time: text("time"),                                  // "HH:MM" o null
+  notes: text("notes").default("").notNull(),
+  isCompleted: integer("is_completed", { mode: 'boolean' }).default(false).notNull(),
+  completedAt: text("completed_at"),
+  // Posición dentro de la cronología. El drag & drop reescribe este campo;
+  // las completadas conservan su lugar (se grisean, no se mueven al fondo).
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Responsables de una actividad: solo nombres. Las tareas de la actividad
+// pueden apuntar a uno de ellos (scheduleTasks.responsibleId).
+export const scheduleResponsibles = sqliteTable("schedule_responsibles", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  activityId: integer("activity_id").notNull().references(() => scheduleActivities.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+export const scheduleTasks = sqliteTable("schedule_tasks", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  activityId: integer("activity_id").notNull().references(() => scheduleActivities.id, { onDelete: 'cascade' }),
+  label: text("label").notNull(),
+  isCompleted: integer("is_completed", { mode: 'boolean' }).default(false).notNull(),
+  // Responsable opcional: si se borra el responsable, la tarea queda sin asignar.
+  responsibleId: integer("responsible_id").references((): AnySQLiteColumn => scheduleResponsibles.id, { onDelete: 'set null' }),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
