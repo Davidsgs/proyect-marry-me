@@ -2,7 +2,9 @@ import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { getConfig } from "@/app/actions/config";
+import { getAdminsWithPermissions, getEditablePermissions } from "@/app/actions/permissions";
 import SettingsForm from "./_components/SettingsForm";
+import AdminPermissionsManager from "./_components/AdminPermissionsManager";
 
 export const dynamic = 'force-dynamic';
 
@@ -13,6 +15,10 @@ export default async function SettingsPage() {
   }
 
   const rsvpDeadline = await getConfig("rsvp_deadline");
+  const [admins, editablePermissions] = await Promise.all([
+    getAdminsWithPermissions(),
+    getEditablePermissions(),
+  ]);
 
   return (
     <div className="max-w-2xl mx-auto space-y-10">
@@ -32,6 +38,21 @@ export default async function SettingsPage() {
         </div>
 
         <SettingsForm initialDeadline={rsvpDeadline} />
+      </div>
+
+      <div className="bg-surface-container-lowest p-6 sm:p-8 rounded-3xl shadow-[0_8px_32px_rgba(81,68,67,0.04)] space-y-6">
+        <div className="pb-4 mb-2 border-b border-surface-container/50">
+          <h3 className="text-2xl font-serif text-primary">Permisos de Administradores</h3>
+          <p className="text-sm text-on-surface-variant font-sans mt-1">
+            Activa o desactiva lo que puede hacer cada administrador. Los cambios se aplican la próxima vez que el administrador inicie sesión.
+          </p>
+        </div>
+
+        <AdminPermissionsManager
+          admins={admins}
+          permissions={editablePermissions}
+          currentUserId={session!.user!.id as number}
+        />
       </div>
 
       <div className="pb-16 text-center">

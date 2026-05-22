@@ -10,6 +10,7 @@ import {
   ListTodo,
   Mail,
   Armchair,
+  CalendarClock,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
@@ -26,6 +27,9 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
   }
   if (permissions?.includes("tables.read")) {
     navItems.push({ href: "/admin/tables", icon: Armchair, label: "Mesas" });
+  }
+  if (permissions?.includes("calendar.read")) {
+    navItems.push({ href: "/admin/cronograma", icon: CalendarClock, label: "Cronograma" });
   }
   if (permissions?.includes("settings.write")) {
     navItems.push({ href: "/admin/settings", icon: Settings, label: "Ajustes" });

@@ -1,11 +1,11 @@
 "use server";
 
 import { db } from "@/db";
-import { families, users, roles, userRoles } from "@/db/schema";
+import { families, users, roles, userRoles, permissions, userPermissions } from "@/db/schema";
 import { and, eq, ne, inArray } from "drizzle-orm";
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
-import { hasPermission } from "@/lib/permissions";
+import { hasPermission, BASELINE_ADMIN_PERMS } from "@/lib/permissions";
 
 type UserRole = "ADMIN" | "MAIN_GUEST" | "GUEST";
 
@@ -36,6 +36,27 @@ async function syncSystemRole(userId: number, role: UserRole) {
         and(eq(userRoles.userId, userId), inArray(userRoles.roleId, systemRoleIds))
     );
     await db.insert(userRoles).values({ userId, roleId: target.id });
+}
+
+/**
+ * Concede a un usuario todos los permisos editables (todos menos los base).
+ * Es el set por defecto de un administrador nuevo: arranca con plenos poderes y
+ * luego se restringe con los toggles en Ajustes. Idempotente.
+ */
+async function grantAllEditablePermissions(userId: number) {
+    const baseline = new Set(BASELINE_ADMIN_PERMS);
+    const allPerms = await db.select().from(permissions).all();
+    const existing = await db.select().from(userPermissions).where(eq(userPermissions.userId, userId)).all();
+    const have = new Set(existing.map((e) => e.permissionId));
+    for (const perm of allPerms) {
+        if (baseline.has(perm.key) || have.has(perm.id)) continue;
+        await db.insert(userPermissions).values({ userId, permissionId: perm.id });
+    }
+}
+
+/** Elimina todos los permisos directos de un usuario (al dejar de ser admin). */
+async function clearUserPermissions(userId: number) {
+    await db.delete(userPermissions).where(eq(userPermissions.userId, userId));
 }
 
 const fetchAllFamilies = unstable_cache(
@@ -163,6 +184,8 @@ export async function createUser(data: { email?: string | null, name: string, la
     const newUserId = inserted[0]?.id;
     if (newUserId) {
         await syncSystemRole(newUserId, data.role);
+        // Un admin nuevo arranca con todos los permisos editables (se restringen luego).
+        if (data.role === "ADMIN") await grantAllEditablePermissions(newUserId);
     }
     invalidateUsers();
 }
@@ -195,6 +218,7 @@ export async function createManyUsers(
         const newUserId = inserted[0]?.id;
         if (newUserId) {
             await syncSystemRole(newUserId, member.role);
+            if (member.role === "ADMIN") await grantAllEditablePermissions(newUserId);
         }
     }
 
@@ -232,12 +256,27 @@ export async function updateUser(id: number, data: { email?: string | null; name
         updateSet.fullname = `${nextName} ${nextLast}`.trim();
     }
 
+    // Capturar el rol previo antes de actualizar, para detectar transiciones
+    // de/hacia ADMIN y ajustar los permisos directos en consecuencia.
+    let prevRole: 'ADMIN' | 'MAIN_GUEST' | 'GUEST' | undefined;
+    if (data.role !== undefined) {
+        const before = await db.select({ role: users.role }).from(users).where(eq(users.id, id)).get();
+        prevRole = before?.role;
+    }
+
     if (Object.keys(updateSet).length > 0) {
         await db.update(users).set(updateSet).where(eq(users.id, id));
     }
 
     if (data.role !== undefined) {
         await syncSystemRole(id, data.role);
+        if (data.role === "ADMIN" && prevRole !== "ADMIN") {
+            // Promovido a admin: arranca con todos los permisos editables.
+            await grantAllEditablePermissions(id);
+        } else if (data.role !== "ADMIN" && prevRole === "ADMIN") {
+            // Deja de ser admin: limpiar permisos directos.
+            await clearUserPermissions(id);
+        }
     }
 
     invalidateUsers();

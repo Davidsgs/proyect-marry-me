@@ -61,7 +61,9 @@ src/
   auth.ts                    Configuración de NextAuth
   middleware.ts              Protección de rutas
 scripts/
+  rbac-catalog.ts            Catálogo compartido de roles y permisos (con descripciones)
   seed-rbac.ts               Siembra idempotente de roles, permisos y config inicial
+  migrate-per-admin-perms.ts Migra bases existentes a permisos por administrador
 ```
 
 ## Puesta en marcha
@@ -101,6 +103,7 @@ scripts/
 - `npm run lint` — ESLint
 - `npx drizzle-kit push` — aplica el esquema a Turso
 - `npx tsx scripts/seed-rbac.ts` — siembra RBAC
+- `npx tsx scripts/migrate-per-admin-perms.ts` — migra una base existente al modelo de permisos por administrador (idempotente: añade columna/tabla, copia los permisos de cada admin a `user_permissions` y recorta el rol `admin` al acceso base)
 
 ## Estado actual
 
