@@ -131,3 +131,49 @@ export const scheduleTasks = sqliteTable("schedule_tasks", {
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
+
+// ─── Economía ────────────────────────────────────────────────────────────────
+// Importes SIEMPRE en centavos (entero) para evitar errores de coma flotante.
+// El formateo a "$ 1.234,56" (ARS, es-AR) vive en src/lib/money.ts.
+
+// Movimientos sueltos: un ingreso o egreso puntual.
+export const financeTransactions = sqliteTable("finance_transactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  type: text("type", { enum: ["INCOME", "EXPENSE"] }).notNull(),
+  concept: text("concept").notNull(),
+  category: text("category").default("").notNull(),
+  amountCents: integer("amount_cents").notNull(),
+  date: text("date"),                                  // fecha del movimiento (ISO "YYYY-MM-DD") o null
+  notes: text("notes").default("").notNull(),
+  createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Plan de pago en cuotas: cabecera (concepto + total + nº de cuotas). Las cuotas
+// individuales viven en finance_installments y dan la trazabilidad de cada pago.
+export const financeInstallmentPlans = sqliteTable("finance_installment_plans", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  type: text("type", { enum: ["INCOME", "EXPENSE"] }).default("EXPENSE").notNull(),
+  concept: text("concept").notNull(),
+  category: text("category").default("").notNull(),
+  totalAmountCents: integer("total_amount_cents").notNull(),
+  installmentsCount: integer("installments_count").notNull(),
+  notes: text("notes").default("").notNull(),
+  createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Cada cuota de un plan: importe, vencimiento y estado de pago (quién y cuándo).
+export const financeInstallments = sqliteTable("finance_installments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  planId: integer("plan_id").notNull().references(() => financeInstallmentPlans.id, { onDelete: 'cascade' }),
+  number: integer("number").notNull(),                 // 1..N dentro del plan
+  amountCents: integer("amount_cents").notNull(),
+  dueDate: text("due_date"),                           // vencimiento (ISO "YYYY-MM-DD") o null
+  isPaid: integer("is_paid", { mode: 'boolean' }).default(false).notNull(),
+  paidAt: text("paid_at"),
+  paidBy: integer("paid_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
