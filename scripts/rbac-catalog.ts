@@ -23,6 +23,8 @@ export const systemPermissions = [
   { key: "tasks.write", label: "Escribir/Modificar Tareas", section: "tasks", description: "Crear, completar y eliminar tareas." },
   { key: "finance.read", label: "Leer Economía", section: "finance", description: "Ver ingresos, egresos, balance y planes de pago en cuotas." },
   { key: "finance.write", label: "Escribir/Modificar Economía", section: "finance", description: "Registrar/editar/eliminar movimientos y planes de cuotas; marcar cuotas pagadas." },
+  { key: "menu.read", label: "Leer Menú", section: "menu", description: "Ver el menú de la boda: pasapalos, platos, bebidas y en qué momento se sirven." },
+  { key: "menu.write", label: "Escribir/Modificar Menú", section: "menu", description: "Crear, editar, reordenar y eliminar ítems del menú; asignarlos a un momento del cronograma." },
   { key: "whiteboard.read", label: "Leer Pizarra", section: "whiteboard", description: "Ver la pizarra de notas." },
   { key: "whiteboard.write", label: "Escribir/Modificar Pizarra", section: "whiteboard", description: "Editar la pizarra de notas." },
   { key: "rsvp.confirm_own_family", label: "Confirmar RSVP de Familia Propia", section: "rsvp", description: "Confirmar la asistencia de su propia familia." },

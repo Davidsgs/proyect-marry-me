@@ -11,6 +11,7 @@ import {
   Armchair,
   CalendarClock,
   Wallet,
+  UtensilsCrossed,
   MoreHorizontal,
   Mail,
   LogOut,
@@ -41,6 +42,9 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
   }
   if (permissions?.includes("calendar.read")) {
     items.push({ href: "/admin/cronograma", icon: CalendarClock, label: "Cronograma" });
+  }
+  if (permissions?.includes("menu.read")) {
+    items.push({ href: "/admin/menu", icon: UtensilsCrossed, label: "Menú" });
   }
   if (permissions?.includes("finance.read")) {
     items.push({ href: "/admin/finance", icon: Wallet, label: "Economía" });

@@ -132,6 +132,37 @@ export const scheduleTasks = sqliteTable("schedule_tasks", {
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
+// ─── Menú ────────────────────────────────────────────────────────────────────
+// Qué se sirve y en qué momento de la boda. El "momento" es una actividad del
+// cronograma (schedule_activities): así el menú y la cronología no divergen.
+// activityId nulo = ítem aún sin momento asignado ("Por asignar").
+export const menuItems = sqliteTable("menu_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  activityId: integer("activity_id").references((): AnySQLiteColumn => scheduleActivities.id, { onDelete: 'set null' }),
+  name: text("name").notNull(),
+  type: text("type", {
+    enum: ["PASAPALO", "ENTRADA", "PRINCIPAL", "POSTRE", "BEBIDA", "TORTA", "OTRO"],
+  }).default("OTRO").notNull(),
+  description: text("description").default("").notNull(),
+  // Cantidad estimada a servir (porciones, unidades, botellas…). null = sin definir.
+  quantity: integer("quantity"),
+  unit: text("unit").default("").notNull(),           // "porciones", "botellas"…
+  supplier: text("supplier").default("").notNull(),   // catering, bodega, pastelería…
+  notes: text("notes").default("").notNull(),
+  // Etiquetas dietéticas, para responder rápido a invitados con restricciones.
+  isVegetarian: integer("is_vegetarian", { mode: 'boolean' }).default(false).notNull(),
+  isVegan: integer("is_vegan", { mode: 'boolean' }).default(false).notNull(),
+  isGlutenFree: integer("is_gluten_free", { mode: 'boolean' }).default(false).notNull(),
+  isLactoseFree: integer("is_lactose_free", { mode: 'boolean' }).default(false).notNull(),
+  allergens: text("allergens").default("").notNull(), // texto libre: "frutos secos, mariscos"
+  // Estado de cierre con el proveedor: idea → confirmado, o descartado.
+  status: text("status", { enum: ["IDEA", "CONFIRMED", "DISCARDED"] }).default("IDEA").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+  updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
 // ─── Economía ────────────────────────────────────────────────────────────────
 // Importes SIEMPRE en centavos (entero) para evitar errores de coma flotante.
 // El formateo a "$ 1.234,56" (ARS, es-AR) vive en src/lib/money.ts.
