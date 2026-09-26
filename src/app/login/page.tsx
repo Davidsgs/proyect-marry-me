@@ -1,11 +1,11 @@
-import { Pinyon_Script } from 'next/font/google';
+import Link from 'next/link';
 import { signIn } from '@/auth';
 import { SubmitButton } from '@/components/SubmitButton';
+import { Monogram, Sprig } from '@/components/Monogram';
+import { WEDDING_DATE_LABEL } from '@/lib/wedding';
 
-const pinyonScript = Pinyon_Script({
-    weight: "400",
-    subsets: ["latin"],
-});
+const SUPPORT_MAIL =
+    "mailto:soporte@davidyrocio.wedding?subject=Problema%20con%20la%20invitación&body=Hola,%20no%20puedo%20entrar%20a%20la%20invitación.%20Mi%20correo%20es:%20";
 
 export default async function LoginPage({
     searchParams,
@@ -14,43 +14,51 @@ export default async function LoginPage({
 }) {
     const resolvedParams = await searchParams;
     const error = resolvedParams?.error;
+    // Tras entrar: /welcome deja elegir a los admins y manda a los invitados a su panel.
+    const callbackUrl = typeof resolvedParams?.callbackUrl === "string" && resolvedParams.callbackUrl.startsWith("/") && !resolvedParams.callbackUrl.startsWith("//")
+        ? resolvedParams.callbackUrl
+        : "/welcome";
 
     return (
-        <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest">
-            <div
-                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90"
-                style={{ backgroundImage: "url('/background-placeholder.webp')" }}
-            ></div>
-            <div className="absolute inset-0 z-0 bg-wedding-sage-darkest/75 text-center"></div>
+        <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
+            <div className="w-full max-w-md text-center space-y-8">
+                <div className="space-y-4">
+                    <Monogram size="lg" className="text-primary" />
+                    <Sprig className="w-28 mx-auto text-wedding-olive" />
+                    <h1 className="font-serif italic text-4xl text-primary">Tu invitación</h1>
+                    <p className="text-on-surface-variant text-sm">David &amp; Rocío · {WEDDING_DATE_LABEL}</p>
+                </div>
 
-            <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-md py-12 justify-center">
-                <h1 className={`${pinyonScript.className} text-6xl md:text-7xl text-wedding-blush-light drop-shadow-xl mb-8 text-center`}>
-                    Acceso Privado
-                </h1>
+                <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(81,68,67,0.06)] space-y-5 text-left">
+                    <p className="text-base text-on-surface leading-relaxed">
+                        Entra con la <strong className="font-medium">cuenta de Google del correo al que te enviamos la invitación</strong>.
+                        Así sabremos quién eres sin necesidad de contraseñas.
+                    </p>
 
-                <form
-                    action={async () => {
-                        "use server"
-                        await signIn("google")
-                    }}
-                    className="w-full flex flex-col gap-4"
-                >
                     {error === "AccessDenied" && (
-                        <div className="text-red-300 text-sm md:text-base text-center mt-2 drop-shadow-md bg-red-900/40 p-3 rounded-md backdrop-blur-sm tracking-wide flex flex-col gap-2">
-                            <p>No pudimos reconocer tu correo.</p>
+                        <div role="alert" className="rounded-xl bg-error/10 p-4 text-sm text-error space-y-1">
+                            <p className="font-medium">No encontramos ese correo en la lista de invitados.</p>
                             <p>
-                                Si crees que esto es un error, por favor, ponte en contacto con nuestro{" "}
-                                <a
-                                    href="mailto:soporte@davidyrocio.wedding?subject=Problema%20con%20la%20invitación&body=Hola,%20estoy%20teniendo%20un%20problema%20con%20la%20invitación.%20¿Me%20darían%20una%20mano%20para%20acceder?%20Gracias."
-                                    className="underline font-medium hover:text-red-100 transition-colors"
-                                >
-                                    equipo de soporte
-                                </a>.
+                                Prueba con otra cuenta de Google o{" "}
+                                <a href={SUPPORT_MAIL} className="underline underline-offset-4 font-medium">escríbenos</a>{" "}
+                                y lo revisamos.
                             </p>
                         </div>
                     )}
-                    <SubmitButton />
-                </form>
+
+                    <form
+                        action={async () => {
+                            "use server"
+                            await signIn("google", { redirectTo: callbackUrl })
+                        }}
+                    >
+                        <SubmitButton />
+                    </form>
+                </div>
+
+                <Link href="/" className="inline-block text-sm text-on-surface-variant hover:text-primary underline underline-offset-4">
+                    Volver a la portada
+                </Link>
             </div>
         </main>
     );

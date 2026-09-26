@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { WEDDING_DATE_LABEL } from "@/lib/wedding";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { getTables } from "@/app/actions/tables";
@@ -11,7 +12,8 @@ const AGE_TAG: Record<string, string> = { CHILD: "niño", BABY: "bebé" };
 
 export default async function SeatingChartPage() {
     const session = await auth();
-    if (!hasPermission(session?.user?.permissions, "tables.read")) {
+    const perms = session?.user?.permissions;
+    if (!hasPermission(perms, "tables.read")) {
         redirect("/");
     }
 
@@ -30,7 +32,7 @@ export default async function SeatingChartPage() {
                 <div className="flex items-start justify-between gap-4 mb-8 print:mb-6">
                     <div>
                         <h1 className="font-serif italic text-3xl text-neutral-900">Distribución de Mesas</h1>
-                        <p className="text-sm text-neutral-500 mt-1">David &amp; Rocio · 03 de Abril, 2026</p>
+                        <p className="text-sm text-neutral-500 mt-1">David &amp; Rocío · {WEDDING_DATE_LABEL}</p>
                     </div>
                     <PrintButton />
                 </div>

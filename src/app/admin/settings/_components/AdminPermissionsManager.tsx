@@ -12,16 +12,14 @@ interface Props {
 
 // Etiquetas legibles por sección para agrupar los permisos en el editor.
 const SECTION_LABELS: Record<string, string> = {
-  users: "Invitados",
   families: "Familias",
+  users: "Invitados",
+  tasks: "Tareas",
   tables: "Mesas",
   calendar: "Cronograma",
-  tasks: "Tareas",
+  menu: "Menú",
   finance: "Economía",
-  whiteboard: "Pizarra",
-  rsvp: "RSVP",
   settings: "Ajustes",
-  admin: "Administración",
 };
 
 export default function AdminPermissionsManager({ admins, permissions, currentUserId }: Props) {
@@ -90,7 +88,7 @@ export default function AdminPermissionsManager({ admins, permissions, currentUs
   return (
     <div className="space-y-4">
       {error && (
-        <div className="flex items-start gap-3 p-4 rounded-xl text-sm font-sans bg-wedding-blush-light bg-opacity-10 text-wedding-blush-darkest border border-wedding-blush-light border-opacity-30">
+        <div className="flex items-start gap-3 p-4 rounded-xl text-sm font-sans bg-error/10 text-error" role="alert">
           <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>
@@ -115,7 +113,7 @@ export default function AdminPermissionsManager({ admins, permissions, currentUs
                 <p className="font-serif text-lg text-on-surface truncate">
                   {admin.fullname}
                   {admin.id === currentUserId && (
-                    <span className="ml-2 text-xs font-sans text-primary/70 align-middle">(tú)</span>
+                    <span className="ml-2 text-xs font-sans text-primary align-middle">(tú)</span>
                   )}
                 </p>
                 <p className="text-xs font-sans text-on-surface-variant truncate">
@@ -131,7 +129,7 @@ export default function AdminPermissionsManager({ admins, permissions, currentUs
               <div className="px-4 sm:px-5 pb-5 space-y-6">
                 {grouped.map(([section, perms]) => (
                   <div key={section} className="space-y-1">
-                    <h4 className="text-[11px] font-sans tracking-widest uppercase font-semibold text-on-surface-variant/80 pt-2">
+                    <h4 className="text-sm font-sans font-semibold text-on-surface pt-2">
                       {SECTION_LABELS[section] ?? section}
                     </h4>
                     {perms.map((perm) => {
@@ -144,7 +142,7 @@ export default function AdminPermissionsManager({ admins, permissions, currentUs
                       return (
                         <div
                           key={perm.key}
-                          className="flex items-start gap-4 py-3 border-b border-surface-container/40 last:border-b-0"
+                          className="flex items-start gap-4 py-3"
                         >
                           <div className="min-w-0 flex-1">
                             <p className="font-sans text-sm font-medium text-on-surface">{perm.label}</p>

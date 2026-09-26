@@ -3,6 +3,7 @@
 import { createTask } from "@/app/actions/tasks";
 import { Plus } from "lucide-react";
 import { useRef } from "react";
+import { btnPrimary } from "@/app/admin/_components/ui";
 
 export default function TaskForm() {
     const formRef = useRef<HTMLFormElement>(null);
@@ -22,7 +23,7 @@ export default function TaskForm() {
         >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
                 <div className="md:col-span-5">
-                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
+                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
                         Título
                     </label>
                     <input
@@ -34,8 +35,8 @@ export default function TaskForm() {
                     />
                 </div>
                 <div className="md:col-span-4">
-                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
-                        Descripción <span className="text-on-surface-variant/50">(opcional)</span>
+                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
+                        Descripción <span className="font-normal text-on-surface-variant/80">(opcional)</span>
                     </label>
                     <input
                         type="text"
@@ -44,8 +45,8 @@ export default function TaskForm() {
                         placeholder="Detalles adicionales..."
                     />
                 </div>
-                <div className="md:col-span-2">
-                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
+                <div className="md:col-span-3">
+                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
                         Fecha límite
                     </label>
                     <input
@@ -54,12 +55,10 @@ export default function TaskForm() {
                         className="w-full px-4 py-3 border-none rounded-xl bg-surface-container-low focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface shadow-sm"
                     />
                 </div>
-                <div className="md:col-span-1">
-                    <button
-                        type="submit"
-                        className="w-full bg-primary hover:bg-primary/90 text-on-primary py-3 rounded-xl transition-colors shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-1 h-[48px] border-none"
-                    >
+                <div className="md:col-span-12 flex justify-end">
+                    <button type="submit" className={btnPrimary}>
                         <Plus className="w-4 h-4" />
+                        Añadir tarea
                     </button>
                 </div>
             </div>

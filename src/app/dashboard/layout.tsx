@@ -1,7 +1,8 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
-import { LogOut, ArrowLeft } from "lucide-react";
+import { LogOut, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
+import { Monogram } from "@/components/Monogram";
 
 export default async function DashboardLayout({
   children,
@@ -14,32 +15,32 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  return (
-    <div className="min-h-screen bg-wedding-sage-darkest text-wedding-cream flex flex-col font-sans relative overflow-hidden">
-      {/* Botanical backdrop glows */}
-      <div className="absolute inset-0 pointer-events-none opacity-70"
-        style={{
-          background: "radial-gradient(circle at 12% 0%, rgba(175,195,177,0.20), transparent 45%), radial-gradient(circle at 90% 100%, rgba(231,198,193,0.18), transparent 50%)",
-        }}
-      ></div>
+  const firstName = session.user.name?.split(" ")[0] ?? "";
+  const isAdmin = session.user.permissions?.includes("admin.dashboard");
 
-      <header className="bg-wedding-sage-darkest/80 backdrop-blur-sm border-b border-wedding-sage/15 relative z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-1.5 text-wedding-cream/40 hover:text-wedding-cream/80 transition-colors text-xs uppercase tracking-[0.2em] font-light">
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Volver</span>
-            </Link>
-            <h1 className="text-2xl font-serif italic text-wedding-blush tracking-wide">David & Rocio</h1>
-          </div>
+  return (
+    <div className="min-h-screen bg-surface text-on-surface flex flex-col font-sans">
+      <header className="bg-surface-container-low">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center gap-4">
+          <Link href="/" className="flex items-center gap-3 text-primary rounded-lg" aria-label="Volver a la portada">
+            <Monogram size="sm" />
+            <span className="hidden sm:block font-serif text-lg text-on-surface">David &amp; Rocío</span>
+          </Link>
           <div className="flex items-center gap-4 text-sm">
-            <span className="hidden sm:inline-block text-wedding-cream/60 font-light">Hola, {session.user.name}</span>
+            {isAdmin ? (
+              <Link href="/admin" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-primary hover:bg-surface-container transition-colors font-medium">
+                <LayoutDashboard className="w-4 h-4" />
+                <span>Panel</span>
+              </Link>
+            ) : (
+              firstName && <span className="text-on-surface-variant">Hola, {firstName}</span>
+            )}
             <form action={async () => {
               "use server"
               await signOut({ redirectTo: "/" })
             }}>
-              <button className="flex items-center gap-1.5 text-wedding-terracotta hover:text-wedding-blush transition-colors font-light text-xs uppercase tracking-[0.2em]">
-                <LogOut className="w-3.5 h-3.5" />
+              <button className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-on-surface-variant hover:text-primary hover:bg-surface-container transition-colors">
+                <LogOut className="w-4 h-4" />
                 <span>Salir</span>
               </button>
             </form>
@@ -47,7 +48,7 @@ export default async function DashboardLayout({
         </div>
       </header>
 
-      <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14 w-full relative z-10">
+      <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-14 w-full">
         {children}
       </main>
     </div>
