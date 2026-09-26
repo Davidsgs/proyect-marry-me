@@ -1,9 +1,9 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @theme {
   --font-sans: var(--font-inter);
   --font-serif: var(--font-cormorant);
-  --font-cursive: var(--font-pinyon-script);
 
   /* Brand palette — style-guide.md */
   --color-wedding-cream: #f2eee8;        /* Crema/Beige claro */
@@ -16,9 +16,11 @@
   --color-wedding-sage-dark: #6f7f6a;    /* Verde oliva/musgo (legacy alias) */
   --color-wedding-olive: #6f7f6a;        /* Verde oliva/musgo */
   --color-wedding-sage-darkest: #1E2419; /* Hero dark backdrop only */
+  --color-wedding-blush-darkest: #7f5351; /* Texto sobre fondos rosados (= primary) */
 
   /* DESIGN.md theme colors */
   --color-surface: #fdf9f3;
+  --color-surface-container: #f1ede7;
   --color-surface-container-low: #f7f3ed;
   --color-surface-container-lowest: #ffffff;
   --color-primary: #7f5351;
@@ -30,6 +32,10 @@
   --color-secondary-container: #d3e8d5;
   --color-on-secondary-container: #56695a;
   --color-outline-variant: rgba(81, 68, 67, 0.15);
+  /* Rojo terracota apagado: acciones destructivas, vencidos, sobre capacidad.
+     ~5.9:1 sobre blanco, legible como texto y como fondo de botón. */
+  --color-error: #a8423a;
+  --color-on-error: #ffffff;
 }
 
 /* Reset image behaviors that might cause horizontal lines */
@@ -45,7 +51,24 @@ object {
 }
 
 body {
-  background-color: var(--color-wedding-sage-darkest);
-  color: var(--color-wedding-cream);
+  background-color: var(--color-surface);
+  color: var(--color-on-surface);
   font-family: var(--font-sans), sans-serif;
+}
+/* Superficies del navegador tematizadas con la paleta (selección, foco,
+   controles nativos, scrollbars). */
+@layer base {
+  :root {
+    accent-color: var(--color-primary);
+    caret-color: var(--color-primary);
+    scrollbar-color: rgba(81, 68, 67, 0.25) transparent;
+  }
+  ::selection {
+    background-color: var(--color-wedding-blush);
+    color: var(--color-on-surface);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
 }

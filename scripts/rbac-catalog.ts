@@ -4,7 +4,7 @@
 
 export const systemRoles = [
   { key: "admin", label: "Administrador", isSystem: true },
-  { key: "main_guest", label: "Invitado Principal (Delegado)", isSystem: true },
+  { key: "main_guest", label: "Delegado", isSystem: true },
   { key: "guest", label: "Invitado", isSystem: true },
 ];
 
@@ -15,7 +15,7 @@ export const systemPermissions = [
   { key: "users.write", label: "Escribir/Modificar Usuarios", section: "users", description: "Crear, editar y eliminar invitados." },
   { key: "families.read", label: "Leer Familias", section: "families", description: "Ver las familias y su estado de confirmación." },
   { key: "families.write", label: "Escribir/Modificar Familias", section: "families", description: "Crear, editar y eliminar familias; asignar delegados." },
-  { key: "tables.read", label: "Leer Mesas", section: "tables", description: "Ver el plano de mesas y su distribución." },
+  { key: "tables.read", label: "Leer Mesas", section: "tables", description: "Ver el plano de mesas y su distribución. Incluye ver invitados y familias." },
   { key: "tables.write", label: "Escribir/Modificar Mesas", section: "tables", description: "Crear, editar y reorganizar mesas; asignar invitados." },
   { key: "calendar.read", label: "Leer Calendario", section: "calendar", description: "Ver el cronograma del día de la boda." },
   { key: "calendar.write", label: "Escribir/Modificar Calendario", section: "calendar", description: "Crear, editar y reordenar actividades del cronograma." },

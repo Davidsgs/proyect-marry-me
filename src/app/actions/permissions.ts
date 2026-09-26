@@ -26,6 +26,7 @@ export interface AdminWithPermissions {
 // Permisos base (no editables): se conceden vía el rol `admin` y siempre están
 // activos. Se ocultan de los toggles para evitar bloquear el acceso al panel.
 const BASELINE = new Set(BASELINE_ADMIN_PERMS);
+const ADMIN_SECTION_ORDER = ["families", "users", "tasks", "tables", "calendar", "menu", "finance", "settings"];
 
 /** Catálogo de permisos editables, ordenado por sección. Gated por settings.write. */
 export async function getEditablePermissions(): Promise<PermissionDef[]> {
@@ -34,9 +35,12 @@ export async function getEditablePermissions(): Promise<PermissionDef[]> {
     throw new Error("Sin permisos");
   }
   const all = await db.select().from(permissions).all();
+  // Solo secciones del panel, en el orden de la navegación. Se ocultan los
+  // permisos de invitado (rsvp.*) y los de secciones que no existen (pizarra).
+  const order = (section: string) => ADMIN_SECTION_ORDER.indexOf(section);
   return all
-    .filter((p) => !BASELINE.has(p.key))
-    .sort((a, b) => a.section.localeCompare(b.section) || a.key.localeCompare(b.key));
+    .filter((p) => !BASELINE.has(p.key) && order(p.section) !== -1)
+    .sort((a, b) => order(a.section) - order(b.section) || a.key.localeCompare(b.key));
 }
 
 /** Lista de administradores con sus permisos directos. Gated por settings.write. */

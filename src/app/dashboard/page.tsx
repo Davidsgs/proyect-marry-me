@@ -6,6 +6,8 @@ import { getRsvpDeadline } from "@/app/actions/config";
 import RsvpForm from "./_components/RsvpForm";
 import ReadOnlyRsvp from "./_components/ReadOnlyRsvp";
 import MyTableCard from "./_components/MyTableCard";
+import EventDetails from "./_components/EventDetails";
+import { Sprig } from "@/components/Monogram";
 
 export const dynamic = 'force-dynamic';
 
@@ -15,9 +17,9 @@ export default async function DashboardPage() {
 
     if (!familyId) {
         return (
-            <div className="bg-white/5 border border-wedding-sage/20 p-8 rounded-2xl text-center space-y-4">
-                <h2 className="text-2xl font-serif text-wedding-cream">Aún no estás asignado a una familia</h2>
-                <p className="text-wedding-cream/60 font-light">Por favor contacta con David o Rocio para que vinculen tu usuario a una invitación.</p>
+            <div className="bg-surface-container-lowest p-8 rounded-3xl text-center space-y-3 shadow-[0_4px_24px_rgba(81,68,67,0.06)]">
+                <h1 className="text-3xl font-serif italic text-primary">Aún no estás en ninguna invitación</h1>
+                <p className="text-on-surface-variant">Escríbeles a David o Rocío para que vinculen tu correo a tu familia.</p>
             </div>
         )
     }
@@ -26,7 +28,7 @@ export default async function DashboardPage() {
     const familyMembers = await db.select().from(users).where(eq(users.familyId, familyId)).all();
 
     if (!family) {
-        return <p className="text-wedding-cream/60">Familia no encontrada.</p>;
+        return <p className="text-on-surface-variant">No encontramos tu invitación. Escríbeles a David o Rocío.</p>;
     }
 
     const deadline = await getRsvpDeadline();
@@ -51,29 +53,21 @@ export default async function DashboardPage() {
     const isDelegate = session?.user?.id === family.delegateUserId || session?.user?.permissions?.includes('admin.dashboard');
 
     return (
-        <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-1000">
-            <div className="text-center space-y-5 mb-4">
-                <div className="flex items-center justify-center gap-3">
-                    <span className="h-px w-10 bg-wedding-sage/40"></span>
-                    <span className="text-wedding-sage text-[11px] font-light tracking-[0.35em] uppercase">Tu invitación</span>
-                    <span className="h-px w-10 bg-wedding-sage/40"></span>
-                </div>
-                <h2 className="text-5xl md:text-6xl font-serif italic text-wedding-cream leading-tight">
+        <div className="space-y-8">
+            <div className="text-center space-y-4">
+                <Sprig className="w-28 mx-auto text-wedding-olive" />
+                <h1 className="text-5xl md:text-6xl font-serif italic text-primary leading-tight text-balance">
                     {family.name}
-                </h2>
-                <p className="text-wedding-cream/60 max-w-xl mx-auto font-light text-base leading-relaxed">
-                    Estamos muy felices de compartir este día tan especial con ustedes.
+                </h1>
+                <p className="text-on-surface-variant max-w-lg mx-auto text-base leading-relaxed text-pretty">
+                    Nos hace muy felices compartir este día con ustedes.
                     {isDelegate
-                        ? " Por favor, confirma la asistencia de cada miembro a continuación."
-                        : " Otra persona de tu familia es responsable de confirmar tu asistencia."}
+                        ? " Cuéntanos quiénes vendrán."
+                        : ""}
                 </p>
             </div>
 
-            <div className="bg-white/[0.06] backdrop-blur-sm p-6 md:p-10 rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.3)] border border-wedding-sage/20 relative overflow-hidden">
-                {/* Botanical decorative accents */}
-                <div className="absolute -top-6 -right-6 w-40 h-40 rounded-full bg-wedding-sage/10 blur-3xl pointer-events-none"></div>
-                <div className="absolute -bottom-10 -left-10 w-48 h-48 rounded-full bg-wedding-blush/10 blur-3xl pointer-events-none"></div>
-
+            <section aria-label="Confirmación de asistencia" className="bg-surface-container-lowest p-6 md:p-10 rounded-3xl shadow-[0_4px_24px_rgba(81,68,67,0.06)]">
                 {isDelegate ? (
                     <RsvpForm
                         family={family}
@@ -85,7 +79,9 @@ export default async function DashboardPage() {
                 ) : (
                     <ReadOnlyRsvp family={family} members={familyMembers} delegate={delegate} />
                 )}
-            </div>
+            </section>
+
+            <EventDetails />
 
             {session?.user?.id && <MyTableCard currentUserId={session.user.id} />}
         </div>

@@ -1,7 +1,5 @@
-"use client";
-
 import type { families, users } from "@/db/schema";
-import { Check, X } from "lucide-react";
+import { Check, Clock, Heart } from "lucide-react";
 
 interface Props {
     family: typeof families.$inferSelect;
@@ -9,82 +7,93 @@ interface Props {
     delegate: { name: string; lastName: string; email: string | null } | null;
 }
 
+// Vista para miembros que no son delegados: ven la respuesta de su familia,
+// pero la confirma el delegado.
 export default function ReadOnlyRsvp({ family, members, delegate }: Props) {
-    const isDeclined = family.globalRsvpStatus === 'DECLINED';
+    const status = family.globalRsvpStatus;
+    const delegateName = delegate ? `${delegate.name} ${delegate.lastName}` : null;
 
-    return (
-        <div className="space-y-10 relative">
-            <div className="text-center p-8 md:p-10 bg-white/[0.04] rounded-3xl border border-wedding-sage/20 relative overflow-hidden">
-                <div className="absolute -right-16 -top-16 w-40 h-40 rounded-full bg-wedding-sage/10 blur-3xl pointer-events-none"></div>
-                <h3 className="text-[11px] font-light text-wedding-sage tracking-[0.35em] uppercase mb-4 relative">
-                    Estado actual
-                </h3>
-                <div className="relative">
-                    {family.globalRsvpStatus === 'PENDING' ? (
-                        <span className="inline-block px-5 py-2 bg-wedding-blush/15 text-wedding-blush rounded-full font-light tracking-[0.25em] text-xs uppercase border border-wedding-blush/30">
-                            Pendiente de confirmación
-                        </span>
-                    ) : isDeclined ? (
-                        <span className="inline-block px-5 py-2 bg-wedding-terracotta/15 text-wedding-terracotta rounded-full font-light tracking-[0.25em] text-xs uppercase border border-wedding-terracotta/30">
-                            Han declinado
-                        </span>
-                    ) : (
-                        <span className="inline-block px-5 py-2 bg-wedding-sage/20 text-wedding-sage rounded-full font-light tracking-[0.25em] text-xs uppercase border border-wedding-sage/35">
-                            Asistencia confirmada
-                        </span>
-                    )}
-                </div>
-            </div>
-
-            {!isDeclined && members.length > 0 && (
-                <div className="space-y-4 relative">
-                    <div className="flex items-center gap-3">
-                        <span className="h-px flex-1 bg-wedding-sage/25"></span>
-                        <h3 className="text-[11px] font-light text-wedding-sage/80 tracking-[0.3em] uppercase">
-                            Lista de invitados
-                        </h3>
-                        <span className="h-px flex-1 bg-wedding-sage/25"></span>
+    if (status === "PENDING") {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                    <span className="w-12 h-12 rounded-full bg-surface-container-low text-primary flex items-center justify-center shrink-0">
+                        <Clock className="w-6 h-6" />
+                    </span>
+                    <div className="space-y-2">
+                        <h2 className="font-serif italic text-3xl text-primary">Tu familia aún no ha respondido</h2>
+                        <p className="text-base text-on-surface-variant leading-relaxed">
+                            {delegateName ? (
+                                <>
+                                    <strong className="font-medium text-on-surface">{delegateName}</strong> confirma la asistencia por toda la familia
+                                    {delegate?.email ? <> entrando con <span className="text-on-surface">{delegate.email}</span></> : null}.
+                                    Si vas a venir (o no), avísale.
+                                </>
+                            ) : (
+                                "Todavía no hay una persona encargada de confirmar por tu familia. Escríbeles a David o Rocío."
+                            )}
+                        </p>
                     </div>
-                    <ul className="space-y-2.5">
-                        {members.map(m => (
-                            <li key={m.id} className="flex items-center justify-between p-4 rounded-2xl border border-wedding-sage/20 bg-white/[0.04]">
-                                <span className={`font-medium ${m.isConfirmed ? 'text-wedding-cream' : 'text-wedding-cream/30 line-through'}`}>
-                                    {m.name}
-                                </span>
-                                {m.isConfirmed ? (
-                                    <span className="flex items-center text-[10px] uppercase tracking-[0.2em] text-wedding-sage bg-wedding-sage/15 px-3 py-1 rounded-full">
-                                        <Check className="w-3 h-3 mr-1.5" /> Asistirá
-                                    </span>
-                                ) : (
-                                    <span className="flex items-center text-[10px] uppercase tracking-[0.2em] text-wedding-cream/30 bg-white/[0.03] px-3 py-1 rounded-full">
-                                        <X className="w-3 h-3 mr-1.5" /> No asistirá
-                                    </span>
-                                )}
-                            </li>
-                        ))}
+                </div>
+                {members.length > 1 && (
+                    <div>
+                        <h3 className="text-sm font-medium text-on-surface-variant mb-2">En esta invitación</h3>
+                        <ul className="flex flex-wrap gap-2">
+                            {members.map((m) => (
+                                <li key={m.id} className="px-3 py-1.5 rounded-full bg-surface-container-low text-on-surface text-sm">
+                                    {m.name} {m.lastName}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    if (status === "DECLINED") {
+        return (
+            <div className="text-center space-y-3">
+                <span className="mx-auto w-14 h-14 rounded-full bg-surface-container text-on-surface-variant flex items-center justify-center">
+                    <Heart className="w-6 h-6" />
+                </span>
+                <h2 className="font-serif italic text-3xl text-primary">Tu familia avisó que no podrá venir</h2>
+                <p className="text-base text-on-surface-variant">
+                    {delegateName ? `Si algo cambia, habla con ${delegateName} o con David y Rocío.` : "Si algo cambia, escríbeles a David o Rocío."}
+                </p>
+            </div>
+        );
+    }
+
+    const attending = members.filter((m) => m.isConfirmed);
+    const notAttending = members.filter((m) => !m.isConfirmed);
+    return (
+        <div className="space-y-6">
+            <div className="text-center space-y-3">
+                <span className="mx-auto w-14 h-14 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+                    <Check className="w-7 h-7" strokeWidth={2.5} />
+                </span>
+                <h2 className="font-serif italic text-3xl text-primary">¡Tu familia ya confirmó!</h2>
+                {delegateName && (
+                    <p className="text-base text-on-surface-variant">Respondió {delegateName}. Si algo cambia, avísale.</p>
+                )}
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+                <div className="rounded-2xl bg-secondary-container/50 p-5">
+                    <h3 className="text-sm font-medium text-on-secondary-container mb-2">Vienen</h3>
+                    <ul className="space-y-1 text-base text-on-surface">
+                        {attending.map((m) => <li key={m.id}>{m.name} {m.lastName}</li>)}
                     </ul>
                 </div>
-            )}
-
-            {delegate ? (
-                <div className="p-6 rounded-2xl bg-wedding-blush/10 border border-wedding-blush/20 text-wedding-cream/70 text-sm font-light flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500 relative">
-                    <div className="p-2.5 bg-white/[0.06] border border-wedding-blush/25 rounded-xl text-wedding-terracotta shrink-0">
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
+                {notAttending.length > 0 && (
+                    <div className="rounded-2xl bg-surface-container-low p-5">
+                        <h3 className="text-sm font-medium text-on-surface-variant mb-2">No vienen</h3>
+                        <ul className="space-y-1 text-base text-on-surface-variant">
+                            {notAttending.map((m) => <li key={m.id}>{m.name} {m.lastName}</li>)}
+                        </ul>
                     </div>
-                    <div>
-                        <span className="font-serif italic text-wedding-blush block mb-1 text-base">Confirmación a través de tu delegado</span>
-                        <span className="text-wedding-cream/60 leading-relaxed">
-                            Para confirmar tu asistencia, <span className="font-medium text-wedding-cream/80">{delegate.name} {delegate.lastName}</span>{delegate.email ? <> ({delegate.email})</> : null} debe ingresar y hacerlo por todo el grupo.
-                        </span>
-                    </div>
-                </div>
-            ) : (
-                <p className="text-center text-xs font-light text-wedding-cream/40 italic pt-4 border-t border-wedding-sage/20">
-                    Si deseas modificar tu asistencia, por favor contacta al representante de tu familia o a los novios.
-                </p>
-            )}
+                )}
+            </div>
         </div>
-    )
+    );
 }

@@ -31,9 +31,11 @@ function fallbackPos(index: number) {
 export default function TablePlan({
     tables,
     membersByTable,
+    canWrite,
 }: {
     tables: Table[];
     membersByTable: Map<number, User[]>;
+    canWrite: boolean;
 }) {
     const [, startTransition] = useTransition();
 
@@ -78,8 +80,8 @@ export default function TablePlan({
 
     return (
         <div>
-            <p className="text-[11px] text-on-surface-variant mb-3 flex items-center gap-1.5">
-                <Move className="w-3.5 h-3.5" /> Arrastra cada mesa para recrear la distribución del salón. La posición se guarda sola.
+            <p className="text-xs text-on-surface-variant mb-3 flex items-center gap-1.5">
+                <Move className="w-3.5 h-3.5" /> {canWrite ? "Arrastra cada mesa (en el móvil, mantenla pulsada) para recrear la distribución del salón. La posición se guarda sola." : "Distribución del salón (solo lectura)."}
             </p>
             <div className="overflow-auto rounded-2xl bg-surface-container-low/40 shadow-inner">
                 <DndContext id="tables-plan" sensors={sensors} onDragEnd={onDragEnd}>
@@ -90,6 +92,7 @@ export default function TablePlan({
                                 table={table}
                                 pos={posOf(table.id)}
                                 count={membersByTable.get(table.id)?.length ?? 0}
+                                canWrite={canWrite}
                             />
                         ))}
                     </div>
@@ -99,8 +102,8 @@ export default function TablePlan({
     );
 }
 
-function PlanNode({ table, pos, count }: { table: Table; pos: { x: number; y: number }; count: number }) {
-    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `plan-${table.id}` });
+function PlanNode({ table, pos, count, canWrite }: { table: Table; pos: { x: number; y: number }; count: number; canWrite: boolean }) {
+    const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `plan-${table.id}`, disabled: !canWrite });
     const over = count > table.capacity;
 
     const style: React.CSSProperties = {
@@ -118,17 +121,17 @@ function PlanNode({ table, pos, count }: { table: Table; pos: { x: number; y: nu
             style={style}
             {...listeners}
             {...attributes}
-            className={`select-none touch-none cursor-grab active:cursor-grabbing bg-surface-container-lowest rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}
+            className={`select-none ${canWrite ? "touch-none cursor-grab active:cursor-grabbing" : ""} bg-surface-container-lowest rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${isDragging ? "ring-2 ring-primary/50 shadow-lg" : ""}`}
         >
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                     <h4 className="font-serif text-base text-on-surface leading-tight truncate">Mesa {table.number}</h4>
-                    {table.name && <p className="text-[11px] text-on-surface-variant italic truncate">{table.name}</p>}
+                    {table.name && <p className="text-xs text-on-surface-variant italic truncate">{table.name}</p>}
                 </div>
                 <GripVertical className="w-3.5 h-3.5 text-on-surface-variant/40 flex-shrink-0 mt-1" />
             </div>
             <div className="mt-3 flex items-center justify-center">
-                <span className={`text-[11px] font-sans tracking-widest uppercase font-medium px-3 py-1 rounded-full ${over ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
+                <span className={`text-xs font-sans tracking-widest uppercase font-medium px-3 py-1 rounded-full ${over ? "bg-error/10 text-error" : "bg-primary/10 text-primary"}`}>
                     {count}/{table.capacity} asientos
                 </span>
             </div>

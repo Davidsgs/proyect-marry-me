@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { WEDDING_DATE_ISO } from "@/lib/wedding";
 
 export default function Countdown() {
     const [timeLeft, setTimeLeft] = useState({
@@ -12,7 +13,7 @@ export default function Countdown() {
 
     useEffect(() => {
         // 3 de Abril de 2027 00:00:00 en UTC-3 (Argentina)
-        const targetDate = new Date("2027-04-03T00:00:00-03:00").getTime();
+        const targetDate = new Date(WEDDING_DATE_ISO).getTime();
 
         const updateTimer = () => {
             const now = new Date().getTime();

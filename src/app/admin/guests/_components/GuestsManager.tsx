@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState, useTransition } from "react";
+import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
 import type { families as familiesTable, users as usersTable } from "@/db/schema";
-import { createFamily, deleteFamily, updateFamily, createUser, createManyUsers, deleteUser, updateUser } from "@/app/actions/admin";
+import { createFamily, createManyUsers, deleteUser, updateUser } from "@/app/actions/admin";
 import {
     Plus,
     Search,
@@ -10,7 +11,9 @@ import {
     UserCheck,
     UserCircle,
     Crown,
-    ShieldAlert,
+    ShieldCheck,
+    AlertTriangle,
+    MailQuestion,
     CheckCircle2,
     Pencil,
     X,
@@ -20,12 +23,20 @@ import {
     Baby,
     Smile,
 } from "lucide-react";
+import { StatCard, Tabs, btnPrimary, btnSecondary } from "@/app/admin/_components/ui";
+import FamilyDialog from "./FamilyDialog";
 
 type Family = typeof familiesTable.$inferSelect;
 type User = typeof usersTable.$inferSelect;
 type RsvpStatus = "PENDING" | "CONFIRMED" | "DECLINED";
 type Role = "ADMIN" | "MAIN_GUEST" | "GUEST";
 type AgeCategory = "BABY" | "CHILD" | "ADULT";
+
+const RSVP_LABEL: Record<RsvpStatus, string> = {
+    PENDING: "Pendiente",
+    CONFIRMED: "Confirmada",
+    DECLINED: "No asiste",
+};
 
 const AGE_LABEL: Record<AgeCategory, string> = {
     ADULT: "Adulto",
@@ -36,20 +47,30 @@ const AGE_LABEL: Record<AgeCategory, string> = {
 interface Props {
     families: Family[];
     users: User[];
+    canWriteFamilies: boolean;
+    canWriteUsers: boolean;
+    initialTab?: "families" | "users";
+    initialFamilyFilter?: FamilyFilter;
 }
 
-export default function GuestsManager({ families, users }: Props) {
-    const [tab, setTab] = useState<"families" | "users">("families");
+export type FamilyFilter = "all" | "pending" | "no-delegate";
+
+export default function GuestsManager({ families, users, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all" }: Props) {
+    const confirm = useConfirm();
+    const [tab, setTab] = useState<"families" | "users">(initialTab);
+    const [familyStatus, setFamilyStatus] = useState<FamilyFilter>(initialFamilyFilter);
+    const [openFamilyId, setOpenFamilyId] = useState<number | null>(null);
+    const openFamily = openFamilyId != null ? families.find((f) => f.id === openFamilyId) ?? null : null;
     const [query, setQuery] = useState("");
     const [showFamilyForm, setShowFamilyForm] = useState(false);
-    const [showUserForm, setShowUserForm] = useState(false);
     const [showBulkForm, setShowBulkForm] = useState(false);
     const [editingUserId, setEditingUserId] = useState<number | null>(null);
     const [familyFilter, setFamilyFilter] = useState<number | "all">("all");
     const [, startTransition] = useTransition();
 
     const totalFamilies = families.length;
-    const familiesWithDelegate = families.filter((f) => f.delegateUserId != null).length;
+    const withoutDelegate = families.filter((f) => f.delegateUserId == null).length;
+    const pendingFamilies = families.filter((f) => f.globalRsvpStatus === "PENDING").length;
     const guestUsers = users.filter((u) => u.familyId != null);
     const totalGuests = guestUsers.length;
     const confirmedGuests = guestUsers.filter((u) => u.isConfirmed).length;
@@ -58,11 +79,13 @@ export default function GuestsManager({ families, users }: Props) {
 
     const filteredFamilies = useMemo(() => {
         const q = query.trim().toLowerCase();
-        if (!q) return families;
-        return families.filter(
-            (f) => f.name.toLowerCase().includes(q) || (f.alias ?? "").toLowerCase().includes(q)
-        );
-    }, [families, query]);
+        return families.filter((f) => {
+            if (familyStatus === "pending" && f.globalRsvpStatus !== "PENDING") return false;
+            if (familyStatus === "no-delegate" && f.delegateUserId != null) return false;
+            if (!q) return true;
+            return f.name.toLowerCase().includes(q) || (f.alias ?? "").toLowerCase().includes(q);
+        });
+    }, [families, query, familyStatus]);
 
     const filteredUsers = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -81,35 +104,34 @@ export default function GuestsManager({ families, users }: Props) {
     return (
         <div className="space-y-8">
             {/* Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                <StatCard label="Familias" value={totalFamilies} icon={<Home className="w-4 h-4" />} />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    label="Con delegado"
-                    value={`${familiesWithDelegate}/${totalFamilies}`}
-                    icon={<UserCheck className="w-4 h-4" />}
+                    label="Familias"
+                    value={totalFamilies}
+                    icon={Home}
+                    tone={withoutDelegate > 0 ? "warn" : "default"}
+                    hint={withoutDelegate > 0 ? `${withoutDelegate} sin delegado` : "Todas con delegado"}
                 />
-                <StatCard label="Invitados" value={totalGuests} icon={<UsersIcon className="w-4 h-4" />} />
+                <StatCard label="Sin responder" value={pendingFamilies} icon={MailQuestion} hint={pendingFamilies === 1 ? "familia" : "familias"} />
                 <StatCard
-                    label="Adultos / Menores"
-                    value={`${adultGuests} / ${minorGuests}`}
-                    icon={<Baby className="w-4 h-4" />}
+                    label="Invitados"
+                    value={totalGuests}
+                    icon={UsersIcon}
+                    hint={`${adultGuests} ${adultGuests === 1 ? "adulto" : "adultos"} · ${minorGuests} ${minorGuests === 1 ? "menor" : "menores"}`}
                 />
-                <StatCard
-                    label="Asistirán"
-                    value={`${confirmedGuests}/${totalGuests}`}
-                    icon={<CheckCircle2 className="w-4 h-4" />}
-                />
+                <StatCard label="Asisten" value={<>{confirmedGuests}<span className="text-lg text-on-surface-variant"> / {totalGuests}</span></>} icon={CheckCircle2} tone="good" />
             </div>
 
             {/* Tabs */}
-            <div className="flex items-center gap-1 border-b border-outline-variant/30">
-                <TabButton active={tab === "families"} onClick={() => { setTab("families"); setQuery(""); }}>
-                    Familias <span className="text-on-surface-variant/70">({totalFamilies})</span>
-                </TabButton>
-                <TabButton active={tab === "users"} onClick={() => { setTab("users"); setQuery(""); }}>
-                    Invitados <span className="text-on-surface-variant/70">({totalGuests})</span>
-                </TabButton>
-            </div>
+            <Tabs
+                label="Ver familias o invitados"
+                value={tab}
+                onChange={(t) => { setTab(t); setQuery(""); }}
+                options={[
+                    { value: "families", label: "Familias", icon: Home, count: totalFamilies },
+                    { value: "users", label: "Invitados", icon: UsersIcon, count: totalGuests },
+                ]}
+            />
 
             {/* Action bar */}
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
@@ -122,11 +144,29 @@ export default function GuestsManager({ families, users }: Props) {
                         className="w-full pl-11 pr-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface placeholder-on-surface-variant/50 shadow-sm text-sm"
                     />
                 </div>
+                {tab === "families" && (
+                    <div className="relative sm:w-56">
+                        <select
+                            value={familyStatus}
+                            onChange={(e) => setFamilyStatus(e.target.value as FamilyFilter)}
+                            aria-label="Filtrar familias"
+                            className="w-full px-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface appearance-none shadow-sm text-sm cursor-pointer"
+                        >
+                            <option value="all">Todas las familias</option>
+                            <option value="pending">Sin responder ({pendingFamilies})</option>
+                            <option value="no-delegate">Sin delegado ({withoutDelegate})</option>
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-on-surface-variant">
+                            <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
+                        </div>
+                    </div>
+                )}
                 {tab === "users" && (
                     <div className="relative sm:w-56">
                         <select
                             value={familyFilter === "all" ? "all" : familyFilter.toString()}
                             onChange={(e) => setFamilyFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
+                            aria-label="Filtrar por familia"
                             className="w-full px-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface appearance-none shadow-sm text-sm cursor-pointer"
                         >
                             <option value="all">Todas las familias</option>
@@ -139,41 +179,36 @@ export default function GuestsManager({ families, users }: Props) {
                         </div>
                     </div>
                 )}
-                {tab === "users" && (
+                {(tab === "families" ? canWriteFamilies : canWriteUsers) && (
                     <button
-                        onClick={() => {
-                            setShowBulkForm((v) => !v);
-                            setShowUserForm(false);
-                        }}
-                        className="flex items-center justify-center gap-2 bg-surface-container text-on-surface px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
+                        onClick={() => (tab === "families" ? setShowFamilyForm((v) => !v) : setShowBulkForm((v) => !v))}
+                        className={(tab === "families" ? showFamilyForm : showBulkForm) ? btnSecondary : btnPrimary}
                     >
-                        {showBulkForm ? <X className="w-4 h-4" /> : <UsersIcon className="w-4 h-4" />}
-                        {showBulkForm ? "Cerrar" : "Cargar familia"}
+                        {(tab === "families" ? showFamilyForm : showBulkForm) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        {(tab === "families" ? showFamilyForm : showBulkForm)
+                            ? "Cerrar"
+                            : tab === "families" ? "Nueva familia" : "Añadir invitados"}
                     </button>
                 )}
-                <button
-                    onClick={() => {
-                        if (tab === "families") setShowFamilyForm((v) => !v);
-                        else { setShowUserForm((v) => !v); setShowBulkForm(false); }
-                    }}
-                    className="flex items-center justify-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
-                >
-                    {(tab === "families" ? showFamilyForm : showUserForm) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                    {tab === "families"
-                        ? showFamilyForm ? "Cerrar" : "Nueva familia"
-                        : showUserForm ? "Cerrar" : "Nuevo invitado"}
-                </button>
             </div>
 
             {/* Inline forms */}
             {tab === "families" && showFamilyForm && (
                 <FamilyFormInline onDone={() => setShowFamilyForm(false)} />
             )}
-            {tab === "users" && showUserForm && (
-                <UserFormInline families={families} onDone={() => setShowUserForm(false)} />
-            )}
             {tab === "users" && showBulkForm && (
                 <BulkUserFormInline families={families} onDone={() => setShowBulkForm(false)} />
+            )}
+
+            {openFamily && (
+                <FamilyDialog
+                    key={openFamily.id}
+                    family={openFamily}
+                    users={users}
+                    canWriteFamilies={canWriteFamilies}
+                    canWriteUsers={canWriteUsers}
+                    onClose={() => setOpenFamilyId(null)}
+                />
             )}
 
             {/* Content */}
@@ -182,21 +217,14 @@ export default function GuestsManager({ families, users }: Props) {
                     families={filteredFamilies}
                     users={users}
                     isEmpty={families.length === 0}
-                    onDelegateChange={(id, delegateId) => startTransition(() => updateFamily(id, { delegateUserId: delegateId }))}
-                    onStatusChange={(id, status) => startTransition(() => updateFamily(id, { globalRsvpStatus: status }))}
-                    onDelete={(family) => {
-                        const familyUsers = users.filter((u) => u.familyId === family.id);
-                        const msg = familyUsers.length > 0
-                            ? `Eliminar "${family.name}" también borrará a sus ${familyUsers.length} invitado(s). ¿Continuar?`
-                            : `¿Eliminar la familia "${family.name}"?`;
-                        if (confirm(msg)) startTransition(() => deleteFamily(family.id));
-                    }}
+                    onOpen={(family) => setOpenFamilyId(family.id)}
                 />
             ) : (
                 <UsersGrid
                     users={filteredUsers}
                     families={families}
                     isEmpty={users.length === 0}
+                    canWrite={canWriteUsers}
                     editingId={editingUserId}
                     onEdit={(id) => setEditingUserId(id)}
                     onCancelEdit={() => setEditingUserId(null)}
@@ -204,10 +232,13 @@ export default function GuestsManager({ families, users }: Props) {
                         await updateUser(id, data);
                         setEditingUserId(null);
                     })}
-                    onDelete={(user) => {
-                        if (confirm(`¿Eliminar a ${user.fullname || user.email}?`)) {
-                            startTransition(() => deleteUser(user.id));
-                        }
+                    onDelete={async (user) => {
+                        const ok = await confirm({
+                            title: `¿Eliminar a ${user.fullname || user.email}?`,
+                            description: "Perderá el acceso a la invitación y se quitará de su mesa.",
+                            confirmLabel: "Eliminar",
+                        });
+                        if (ok) startTransition(() => deleteUser(user.id));
                     }}
                 />
             )}
@@ -215,31 +246,7 @@ export default function GuestsManager({ families, users }: Props) {
     );
 }
 
-function StatCard({ label, value, icon }: { label: string; value: number | string; icon: React.ReactNode }) {
-    return (
-        <div className="bg-surface-container-lowest p-4 rounded-2xl shadow-[0_4px_20px_rgba(81,68,67,0.03)]">
-            <div className="flex items-center justify-between mb-2">
-                <p className="text-[10px] tracking-widest text-on-surface-variant uppercase font-medium">{label}</p>
-                <span className="text-on-surface-variant opacity-60">{icon}</span>
-            </div>
-            <span className="text-2xl font-serif text-primary">{value}</span>
-        </div>
-    );
-}
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`px-5 py-3 text-sm font-sans tracking-wide font-medium transition-colors relative -mb-px ${active
-                ? "text-primary border-b-2 border-primary"
-                : "text-on-surface-variant hover:text-on-surface border-b-2 border-transparent"
-                }`}
-        >
-            {children}
-        </button>
-    );
-}
 
 function FamilyFormInline({ onDone }: { onDone: () => void }) {
     const [pending, startTransition] = useTransition();
@@ -258,23 +265,23 @@ function FamilyFormInline({ onDone }: { onDone: () => void }) {
             className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 items-end"
         >
             <div className="md:col-span-4">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Nombre</label>
+                <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Nombre</label>
                 <input required name="name" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm" placeholder="Familia García López" />
             </div>
             <div className="md:col-span-3">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Alias</label>
+                <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Alias</label>
                 <input name="alias" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm" placeholder="Tíos paternos" />
             </div>
             <div className="md:col-span-3">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Estado</label>
+                <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Estado</label>
                 <select name="globalRsvpStatus" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none shadow-sm cursor-pointer">
                     <option value="PENDING">Pendiente</option>
                     <option value="CONFIRMED">Confirmada</option>
-                    <option value="DECLINED">Rechazada</option>
+                    <option value="DECLINED">No asiste</option>
                 </select>
             </div>
             <div className="md:col-span-2">
-                <button disabled={pending} type="submit" className="w-full bg-primary text-on-primary py-3 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-2 h-[48px] disabled:opacity-60">
+                <button disabled={pending} type="submit" className={`${btnPrimary} w-full h-[48px]`}>
                     {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                     Añadir
                 </button>
@@ -283,91 +290,6 @@ function FamilyFormInline({ onDone }: { onDone: () => void }) {
     );
 }
 
-function UserFormInline({ families, onDone }: { families: Family[]; onDone: () => void }) {
-    const [pending, startTransition] = useTransition();
-    const [ageCategory, setAgeCategory] = useState<AgeCategory>("ADULT");
-    const isMinor = ageCategory !== "ADULT";
-
-    return (
-        <form
-            action={(formData) => {
-                startTransition(async () => {
-                    await createUser({
-                        email: (formData.get("email") as string) || null,
-                        name: formData.get("name") as string,
-                        lastName: formData.get("lastName") as string,
-                        familyId: Number(formData.get("familyId")),
-                        role: ((formData.get("role") as Role) || "GUEST"),
-                        ageCategory,
-                    });
-                    onDone();
-                });
-            }}
-            className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4"
-        >
-            <div className="md:col-span-6">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Nombre(s)</label>
-                <input required name="name" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm" placeholder="David" />
-            </div>
-            <div className="md:col-span-6">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Apellidos</label>
-                <input required name="lastName" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm" placeholder="García" />
-            </div>
-            <div className="md:col-span-6">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
-                    Correo <span className="text-on-surface-variant/60 normal-case tracking-normal">{isMinor ? "(opcional para menores)" : ""}</span>
-                </label>
-                <input
-                    type="email"
-                    name="email"
-                    required={!isMinor}
-                    disabled={isMinor}
-                    className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                    placeholder={isMinor ? "Los menores no inician sesión" : "correo@gmail.com"}
-                />
-            </div>
-            <div className="md:col-span-6">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Categoría de edad</label>
-                <div className="grid grid-cols-3 gap-2">
-                    {(["ADULT", "CHILD", "BABY"] as AgeCategory[]).map((cat) => (
-                        <button
-                            key={cat}
-                            type="button"
-                            onClick={() => setAgeCategory(cat)}
-                            className={`py-3 rounded-xl text-xs font-sans tracking-widest uppercase font-medium transition-all border-none ${ageCategory === cat
-                                ? "bg-primary text-on-primary shadow-sm"
-                                : "bg-surface text-on-surface-variant hover:bg-primary/10"
-                                }`}
-                        >
-                            {AGE_LABEL[cat]}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div className="md:col-span-6">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Familia</label>
-                <select required name="familyId" defaultValue="" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none shadow-sm cursor-pointer">
-                    <option value="" disabled>Selecciona...</option>
-                    {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-                </select>
-            </div>
-            <div className="md:col-span-6">
-                <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Rol</label>
-                <select name="role" defaultValue="GUEST" disabled={isMinor} className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none shadow-sm cursor-pointer disabled:opacity-50">
-                    <option value="GUEST">Invitado</option>
-                    <option value="ADMIN">Administrador</option>
-                </select>
-                <p className="text-[10px] text-on-surface-variant/70 italic mt-1.5">El titular se asigna desde la tarjeta de la familia.</p>
-            </div>
-            <div className="md:col-span-12 flex justify-end mt-2">
-                <button disabled={pending} type="submit" className="bg-primary text-on-primary px-6 py-3 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center gap-2 disabled:opacity-60">
-                    {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Registrar invitado
-                </button>
-            </div>
-        </form>
-    );
-}
 
 type BulkRow = {
     key: number;
@@ -386,9 +308,9 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
     const [pending, startTransition] = useTransition();
     const [familyId, setFamilyId] = useState<string>("");
     const [sharedLastName, setSharedLastName] = useState("");
-    const [rows, setRows] = useState<BulkRow[]>([makeBulkRow(0), makeBulkRow(1)]);
+    const [rows, setRows] = useState<BulkRow[]>([makeBulkRow(0)]);
     const [error, setError] = useState<string | null>(null);
-    const nextKey = useRef(2);
+    const nextKey = useRef(1);
 
     const addRow = () => setRows((rs) => [...rs, makeBulkRow(nextKey.current++)]);
     const removeRow = (key: number) => setRows((rs) => (rs.length > 1 ? rs.filter((r) => r.key !== key) : rs));
@@ -444,12 +366,12 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
         <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm space-y-5">
             <div className="flex items-center gap-2">
                 <UsersIcon className="w-4 h-4 text-primary" />
-                <p className="text-xs font-sans tracking-widest uppercase font-medium text-primary">Cargar varios invitados de una familia</p>
+                <p className="text-sm font-sans font-medium text-primary">Añadir invitados a una familia</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Familia</label>
+                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Familia</label>
                     <select
                         value={familyId}
                         onChange={(e) => setFamilyId(e.target.value)}
@@ -460,8 +382,8 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
-                        Apellido común <span className="text-on-surface-variant/60 normal-case tracking-normal">(opcional, se aplica a filas sin apellido)</span>
+                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
+                        Apellido común <span className="text-on-surface-variant/80 normal-case tracking-normal">(opcional, se aplica a filas sin apellido)</span>
                     </label>
                     <input
                         value={sharedLastName}
@@ -487,7 +409,7 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
                             <input
                                 value={row.lastName}
                                 onChange={(e) => updateRow(row.key, { lastName: e.target.value })}
-                                className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm"
+                                className="md:col-span-2 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm"
                                 placeholder={sharedLastName ? `Apellido (${sharedLastName})` : "Apellido"}
                             />
                             <input
@@ -498,20 +420,21 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
                                 className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
                                 placeholder={isMinor ? "Sin correo (menor)" : "Correo"}
                             />
-                            <div className="md:col-span-2 flex items-center gap-1">
-                                <div className="flex-1 grid grid-cols-3 gap-1">
+                            <div className="md:col-span-3 flex items-center gap-1">
+                                <div className="flex-1 grid grid-cols-3 gap-1" role="radiogroup" aria-label="Edad">
                                     {(["ADULT", "CHILD", "BABY"] as AgeCategory[]).map((cat) => (
                                         <button
                                             key={cat}
                                             type="button"
-                                            title={AGE_LABEL[cat]}
+                                            role="radio"
+                                            aria-checked={row.ageCategory === cat}
                                             onClick={() => updateRow(row.key, { ageCategory: cat })}
-                                            className={`py-2 rounded-lg text-[10px] font-sans uppercase font-medium transition-all border-none ${row.ageCategory === cat
+                                            className={`py-2 rounded-lg text-xs font-sans font-medium transition-all border-none ${row.ageCategory === cat
                                                 ? "bg-primary text-on-primary shadow-sm"
                                                 : "bg-surface-container text-on-surface-variant hover:bg-primary/10"
                                                 }`}
                                         >
-                                            {AGE_LABEL[cat].charAt(0)}
+                                            {AGE_LABEL[cat]}
                                         </button>
                                     ))}
                                 </div>
@@ -534,7 +457,7 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
                 <button
                     type="button"
                     onClick={addRow}
-                    className="flex items-center justify-center gap-2 bg-surface-container text-on-surface px-4 py-2.5 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
+                    className={btnSecondary}
                 >
                     <Plus className="w-4 h-4" /> Añadir fila
                 </button>
@@ -544,14 +467,14 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
                         disabled={pending}
                         type="button"
                         onClick={handleSubmit}
-                        className="bg-primary text-on-primary px-6 py-2.5 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-2 disabled:opacity-60"
+                        className={btnPrimary}
                     >
                         {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                         Registrar {validCount > 0 ? `(${validCount})` : ""}
                     </button>
                 </div>
             </div>
-            <p className="text-[10px] text-on-surface-variant/70 italic">Las iniciales A/N/B indican Adulto, Niño o Bebé. El titular se asigna luego desde la tarjeta de la familia.</p>
+            <p className="text-xs text-on-surface-variant">Los niños y bebés no necesitan correo porque no inician sesión. El delegado se elige luego en la tarjeta de la familia.</p>
         </div>
     );
 }
@@ -560,16 +483,12 @@ function FamiliesGrid({
     families,
     users,
     isEmpty,
-    onDelegateChange,
-    onStatusChange,
-    onDelete,
+    onOpen,
 }: {
     families: Family[];
     users: User[];
     isEmpty: boolean;
-    onDelegateChange: (id: number, delegateId: number | null) => void;
-    onStatusChange: (id: number, status: RsvpStatus) => void;
-    onDelete: (family: Family) => void;
+    onOpen: (family: Family) => void;
 }) {
     if (isEmpty) {
         return <EmptyState message="No hay familias registradas aún." />;
@@ -582,82 +501,55 @@ function FamiliesGrid({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {families.map((family) => {
                 const familyUsers = users.filter((u) => u.familyId === family.id);
-                const eligibleDelegates = familyUsers.filter((u) => u.ageCategory === "ADULT");
-                const hasDelegate = family.delegateUserId != null;
+                const delegate = familyUsers.find((u) => u.id === family.delegateUserId);
+                const status = family.globalRsvpStatus as RsvpStatus;
                 const statusBadge =
-                    family.globalRsvpStatus === "CONFIRMED"
-                        ? "bg-primary/10 text-primary"
-                        : family.globalRsvpStatus === "DECLINED"
-                            ? "bg-error/10 text-error"
-                            : "bg-surface-container text-on-surface-variant";
+                    status === "CONFIRMED"
+                        ? "bg-secondary-container text-on-secondary-container"
+                        : status === "DECLINED"
+                            ? "bg-surface-container text-on-surface-variant"
+                            : "bg-primary/10 text-primary";
+                const names = familyUsers.map((u) => u.name);
 
                 return (
-                    <div
+                    <button
                         key={family.id}
-                        className="flex flex-col gap-3 bg-surface-container-lowest p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow group relative"
+                        type="button"
+                        onClick={() => onOpen(family)}
+                        className="group text-left flex flex-col gap-3 bg-surface-container-lowest p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
+                        aria-label={`Abrir la familia ${family.name}`}
                     >
-                        <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary/30 to-transparent rounded-l-2xl pointer-events-none"></div>
-
-                        <div className="pr-8">
-                            <h3 className="font-serif text-lg text-on-surface truncate">{family.name}</h3>
-                            {family.alias && (
-                                <p className="text-xs text-on-surface-variant italic mt-0.5 truncate">{family.alias}</p>
-                            )}
-                            <div className="flex gap-2 flex-wrap mt-2">
-                                <span className={`text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full ${statusBadge}`}>
-                                    {family.globalRsvpStatus === "CONFIRMED" ? "Confirmada" : family.globalRsvpStatus === "DECLINED" ? "Rechazada" : "Pendiente"}
-                                </span>
-                                <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant">
-                                    {familyUsers.length} {familyUsers.length === 1 ? "miembro" : "miembros"}
-                                </span>
+                        <div className="flex items-start justify-between gap-2 w-full">
+                            <div className="min-w-0">
+                                <h3 className="font-serif text-lg text-on-surface truncate">{family.name}</h3>
+                                {family.alias && <p className="text-xs text-on-surface-variant italic truncate">{family.alias}</p>}
                             </div>
+                            <Pencil className="w-4 h-4 shrink-0 mt-1 text-on-surface-variant/80 group-hover:text-primary transition-colors" aria-hidden />
                         </div>
 
-                        <div className="space-y-2 mt-1">
-                            <label className="flex items-center gap-1.5 text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant">
-                                <UserCheck className={`w-3 h-3 ${hasDelegate ? "text-primary" : ""}`} /> Delegado
-                            </label>
-                            {eligibleDelegates.length > 0 ? (
-                                <select
-                                    value={family.delegateUserId?.toString() ?? ""}
-                                    onChange={(e) => onDelegateChange(family.id, e.target.value === "" ? null : Number(e.target.value))}
-                                    className="w-full px-3 py-2 text-xs border-none rounded-lg bg-surface-container-low focus:bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none cursor-pointer"
-                                >
-                                    <option value="">Sin delegado</option>
-                                    {eligibleDelegates.map((u) => (
-                                        <option key={u.id} value={u.id.toString()}>
-                                            {u.name} {u.lastName}
-                                        </option>
-                                    ))}
-                                </select>
-                            ) : (
-                                <p className="text-[10px] text-on-surface-variant/60 italic">
-                                    {familyUsers.length === 0 ? "Sin invitados asignados" : "Sin adultos asignados"}
-                                </p>
-                            )}
+                        <div className="flex gap-2 flex-wrap">
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge}`}>{RSVP_LABEL[status]}</span>
+                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant">
+                                {familyUsers.length} {familyUsers.length === 1 ? "integrante" : "integrantes"}
+                            </span>
                         </div>
 
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant block">Estado RSVP</label>
-                            <select
-                                value={family.globalRsvpStatus}
-                                onChange={(e) => onStatusChange(family.id, e.target.value as RsvpStatus)}
-                                className="w-full px-3 py-2 text-xs border-none rounded-lg bg-surface-container-low focus:bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none cursor-pointer"
-                            >
-                                <option value="PENDING">Pendiente</option>
-                                <option value="CONFIRMED">Confirmada</option>
-                                <option value="DECLINED">Rechazada</option>
-                            </select>
-                        </div>
+                        {names.length > 0 && (
+                            <p className="text-sm text-on-surface-variant line-clamp-2">{names.join(", ")}</p>
+                        )}
 
-                        <button
-                            onClick={() => onDelete(family)}
-                            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
-                            aria-label="Eliminar familia"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
+                        {delegate ? (
+                            <p className="flex items-center gap-1.5 text-xs text-on-surface-variant">
+                                <UserCheck className="w-3.5 h-3.5 text-primary" />
+                                Delegado: <span className="text-on-surface">{delegate.name} {delegate.lastName}</span>
+                            </p>
+                        ) : status === "PENDING" ? (
+                            <p className="flex items-start gap-1.5 text-xs text-error">
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                                Sin delegado: nadie puede confirmar por esta familia.
+                            </p>
+                        ) : null}
+                    </button>
                 );
             })}
         </div>
@@ -668,6 +560,7 @@ function UsersGrid({
     users,
     families,
     isEmpty,
+    canWrite,
     editingId,
     onEdit,
     onCancelEdit,
@@ -677,6 +570,7 @@ function UsersGrid({
     users: User[];
     families: Family[];
     isEmpty: boolean;
+    canWrite: boolean;
     editingId: number | null;
     onEdit: (id: number) => void;
     onCancelEdit: () => void;
@@ -711,7 +605,7 @@ function UsersGrid({
 
                 let RoleIcon = UserCircle;
                 let roleColor = "text-on-surface-variant";
-                if (isAdmin) { RoleIcon = ShieldAlert; roleColor = "text-error"; }
+                if (isAdmin) { RoleIcon = ShieldCheck; roleColor = "text-primary"; }
                 else if (user.role === "MAIN_GUEST") { RoleIcon = Crown; roleColor = "text-primary"; }
                 if (ageCategory === "BABY") { RoleIcon = Baby; roleColor = "text-on-surface-variant"; }
                 else if (ageCategory === "CHILD") { RoleIcon = Smile; roleColor = "text-on-surface-variant"; }
@@ -739,13 +633,13 @@ function UsersGrid({
                                 ) : (
                                     <>
                                         {isAdmin && (
-                                            <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-error/10 text-error">
+                                            <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
                                                 Admin
                                             </span>
                                         )}
                                         {isDelegate && (
                                             <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                                Titular
+                                                Delegado
                                             </span>
                                         )}
                                         {!isAdmin && !isDelegate && (
@@ -762,7 +656,7 @@ function UsersGrid({
                                 )}
                             </div>
                         </div>
-                        <div className="absolute top-4 right-4 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        {canWrite && <div className="absolute top-4 right-4 flex items-center gap-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                             <button
                                 onClick={() => onEdit(user.id)}
                                 className="w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors"
@@ -777,7 +671,7 @@ function UsersGrid({
                             >
                                 <Trash2 className="w-4 h-4" />
                             </button>
-                        </div>
+                        </div>}
                     </div>
                 );
             })}
@@ -855,7 +749,7 @@ function UserEditCard({
                 <option value="GUEST">Invitado</option>
                 <option value="ADMIN">Administrador</option>
             </select>
-            <button disabled={pending} type="submit" className="col-span-2 bg-primary text-on-primary py-2 rounded-lg shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-2 mt-1 disabled:opacity-60">
+            <button disabled={pending} type="submit" className={`${btnPrimary} col-span-2 mt-1`}>
                 {pending && <Loader2 className="w-3 h-3 animate-spin" />}
                 Guardar cambios
             </button>

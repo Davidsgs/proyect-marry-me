@@ -2,7 +2,9 @@
 
 import { toggleTask, deleteTask, updateTask } from "@/app/actions/tasks";
 import type { tasks } from "@/db/schema";
-import { Trash2, Check, Calendar, Pencil, X, Save, MoreVertical, User, Clock, AlertTriangle, Loader2 } from "lucide-react";
+import { parseLocalDate, todayLocalISO } from "@/lib/dates";
+import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
+import { Trash2, Check, Calendar, Pencil, X, Save, MoreVertical, User, Clock } from "lucide-react";
 import { useState, useRef, useEffect, useTransition } from "react";
 
 type Task = typeof tasks.$inferSelect & { completedByName?: string | null };
@@ -66,7 +68,7 @@ function CompletionMenu({ task }: { task: Task }) {
 
             {open && (
                 <div className="absolute right-0 top-10 z-50 w-56 bg-white rounded-2xl shadow-xl border border-surface-container p-3 space-y-2.5">
-                    <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant/60">
+                    <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant/80">
                         Finalizada por
                     </p>
                     <div className="flex items-center gap-2">
@@ -105,22 +107,27 @@ export default function TaskItem({ task, canWrite }: Props) {
     const [editDate, setEditDate] = useState(task.dueDate ?? "");
     const [saving, setSaving] = useState(false);
     const [showDetail, setShowDetail] = useState(false);
-    const [confirmOpen, setConfirmOpen] = useState(false);
-    const [deleting, startDelete] = useTransition();
+    const confirm = useConfirm();
+    const [, startDelete] = useTransition();
 
-    function handleDelete() {
+    async function handleDelete() {
+        const ok = await confirm({
+            title: `¿Eliminar la tarea «${task.title}»?`,
+            description: "No se puede deshacer.",
+            confirmLabel: "Eliminar",
+        });
+        if (!ok) return;
         startDelete(async () => {
             await deleteTask(task.id);
-            setConfirmOpen(false);
             setShowDetail(false);
         });
     }
 
     const formattedDate = task.dueDate
-        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" }).format(new Date(task.dueDate))
+        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" }).format(parseLocalDate(task.dueDate))
         : null;
 
-    const isPastDue = task.dueDate && !task.isCompleted && new Date(task.dueDate) < new Date();
+    const isPastDue = task.dueDate && !task.isCompleted && task.dueDate < todayLocalISO();
 
     async function handleSave() {
         if (!editTitle.trim()) return;
@@ -230,7 +237,7 @@ export default function TaskItem({ task, canWrite }: Props) {
                         {task.title}
                     </p>
                     {task.description && (
-                        <p className="text-xs text-on-surface-variant/70 font-light truncate mt-0.5">
+                        <p className="text-xs text-on-surface-variant/80 font-light truncate mt-0.5">
                             {task.description}
                         </p>
                     )}
@@ -253,7 +260,7 @@ export default function TaskItem({ task, canWrite }: Props) {
             {canWrite && !task.isCompleted && (
                 <button
                     onClick={() => setIsEditing(true)}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
+                    className="w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-all pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
@@ -267,8 +274,8 @@ export default function TaskItem({ task, canWrite }: Props) {
             {/* Delete button — outside opacity wrapper */}
             {canWrite && (
                 <button
-                    onClick={() => setConfirmOpen(true)}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
+                    onClick={handleDelete}
+                    className="w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
@@ -282,18 +289,10 @@ export default function TaskItem({ task, canWrite }: Props) {
                 onClose={() => setShowDetail(false)}
                 onEdit={() => { setShowDetail(false); setIsEditing(true); }}
                 onToggle={() => toggleTask(task.id)}
-                onDelete={() => setConfirmOpen(true)}
+                onDelete={handleDelete}
             />
         )}
 
-        {confirmOpen && (
-            <ConfirmDeleteModal
-                taskTitle={task.title}
-                deleting={deleting}
-                onCancel={() => setConfirmOpen(false)}
-                onConfirm={handleDelete}
-            />
-        )}
         </>
     );
 }
@@ -314,9 +313,9 @@ function TaskDetailModal({
     onDelete: () => void;
 }) {
     const formattedDate = task.dueDate
-        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric" }).format(new Date(task.dueDate))
+        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric" }).format(parseLocalDate(task.dueDate))
         : null;
-    const isPastDue = task.dueDate && !task.isCompleted && new Date(task.dueDate) < new Date();
+    const isPastDue = task.dueDate && !task.isCompleted && task.dueDate < todayLocalISO();
     const completedDate = task.completedAt
         ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(task.completedAt))
         : null;
@@ -351,7 +350,7 @@ function TaskDetailModal({
                         {task.description ? (
                             <p className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed">{task.description}</p>
                         ) : (
-                            <p className="text-sm text-on-surface-variant/50 italic">Sin descripción.</p>
+                            <p className="text-sm text-on-surface-variant/80 italic">Sin descripción.</p>
                         )}
                     </section>
 
@@ -415,48 +414,3 @@ function TaskDetailModal({
     );
 }
 
-function ConfirmDeleteModal({
-    taskTitle,
-    deleting,
-    onCancel,
-    onConfirm,
-}: {
-    taskTitle: string;
-    deleting: boolean;
-    onCancel: () => void;
-    onConfirm: () => void;
-}) {
-    return (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onCancel} aria-hidden />
-            <div className="relative w-full max-w-sm bg-surface-container-lowest rounded-3xl shadow-xl p-6 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex flex-col items-center text-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-error/10 text-error flex items-center justify-center">
-                        <AlertTriangle className="w-6 h-6" />
-                    </div>
-                    <h3 className="font-serif text-xl text-on-surface">¿Eliminar tarea?</h3>
-                    <p className="text-sm text-on-surface-variant">
-                        Vas a eliminar <span className="font-medium text-on-surface">«{taskTitle}»</span>. Esta acción no se puede deshacer.
-                    </p>
-                </div>
-                <div className="flex gap-2 mt-6">
-                    <button
-                        onClick={onCancel}
-                        disabled={deleting}
-                        className="flex-1 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium hover:bg-surface-container transition-all border-none cursor-pointer disabled:opacity-50"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={onConfirm}
-                        disabled={deleting}
-                        className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-error text-white text-sm font-medium hover:bg-error/90 transition-all border-none cursor-pointer disabled:opacity-60"
-                    >
-                        {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                        Eliminar
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-}
