@@ -73,6 +73,7 @@ export async function getMenu(): Promise<MenuData> {
 // Resumen para el dashboard: cuántos ítems hay, cuántos cerrados con el
 // proveedor y cuántos siguen sin momento asignado.
 export async function getMenuSummary() {
+  await requireRead();
   const { items } = await fetchMenu();
   const active = items.filter((i) => i.status !== "DISCARDED");
   return {

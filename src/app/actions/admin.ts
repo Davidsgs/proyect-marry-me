@@ -264,8 +264,30 @@ export async function updateUser(id: number, data: { email?: string | null; name
         prevRole = before?.role;
     }
 
+    // Si cambia de familia y era delegado de la anterior, esa familia se queda sin
+    // delegado (y la persona deja de ser MAIN_GUEST, salvo que sea admin).
+    let lostDelegation = false;
+    if (data.familyId !== undefined) {
+        const before = await db.select({ familyId: users.familyId, role: users.role }).from(users).where(eq(users.id, id)).get();
+        if (before && before.familyId !== data.familyId && before.familyId != null) {
+            const res = await db.update(families)
+                .set({ delegateUserId: null })
+                .where(and(eq(families.id, before.familyId), eq(families.delegateUserId, id)))
+                .returning({ id: families.id });
+            lostDelegation = res.length > 0;
+            if (lostDelegation && before.role === "MAIN_GUEST" && data.role === undefined) {
+                updateSet.role = "GUEST";
+            }
+        }
+    }
+
     if (Object.keys(updateSet).length > 0) {
         await db.update(users).set(updateSet).where(eq(users.id, id));
+    }
+
+    if (lostDelegation) {
+        if (updateSet.role === "GUEST") await syncSystemRole(id, "GUEST");
+        invalidateFamilies();
     }
 
     if (data.role !== undefined) {

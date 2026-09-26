@@ -6,6 +6,7 @@ import { eq, asc, desc } from "drizzle-orm";
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
+import { todayLocalISO } from "@/lib/dates";
 
 type TxType = "INCOME" | "EXPENSE";
 
@@ -96,8 +97,9 @@ export async function getPlans() {
 // Resumen agregado para el dashboard. Una cuota solo cuenta en el balance cuando
 // está pagada; las no pagadas se reportan como pendientes/vencidas.
 export async function getFinanceSummary() {
+  await requireRead();
   const [txs, plans] = await Promise.all([fetchTransactions(), fetchPlans()]);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocalISO();
 
   let incomeCents = 0;
   let expenseCents = 0;
@@ -107,7 +109,8 @@ export async function getFinanceSummary() {
   }
 
   let pendingCount = 0;
-  let pendingCents = 0;
+  let toPayCents = 0;      // cuotas de egresos sin pagar
+  let toCollectCents = 0;  // cuotas de ingresos sin cobrar
   let overdueCount = 0;
   for (const p of plans) {
     for (const c of p.installments) {
@@ -116,7 +119,8 @@ export async function getFinanceSummary() {
         else expenseCents += c.amountCents;
       } else {
         pendingCount += 1;
-        pendingCents += c.amountCents;
+        if (p.type === "INCOME") toCollectCents += c.amountCents;
+        else toPayCents += c.amountCents;
         if (c.dueDate && c.dueDate < today) overdueCount += 1;
       }
     }
@@ -127,7 +131,8 @@ export async function getFinanceSummary() {
     expenseCents,
     balanceCents: incomeCents - expenseCents,
     pendingCount,
-    pendingCents,
+    toPayCents,
+    toCollectCents,
     overdueCount,
   };
 }
