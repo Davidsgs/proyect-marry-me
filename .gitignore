@@ -40,10 +40,13 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local IDE / tooling
+# local IDE / tooling & plugins
 .vscode/
 .idea/
 .claude/
+.impeccable/
+.markdown-collab/
+.agents/
 
 # local databases & build artifacts
 *.db
@@ -53,6 +56,14 @@ next-env.d.ts
 build-log.txt
 *.log
 
-PLAN.md
+# OS & temporary files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.tmp
+*.bak
+*.swp
+*.swo
+*~
 
-/.agents
+PLAN.md
