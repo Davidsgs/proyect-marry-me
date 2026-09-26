@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
+import { btnPrimary, btnSecondary, btnGhost } from "@/app/admin/_components/ui";
 import {
   DndContext,
   DragOverlay,
@@ -20,9 +22,9 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Plus, X, Trash2, Pencil, Save, Loader2, GripVertical, Clock, Check,
-  UtensilsCrossed, Wine, Cake, Soup, Salad, CookingPot, Sparkles, HelpCircle,
-  Ban, Leaf, WheatOff, MilkOff, AlertTriangle,
+  Plus, X, Trash2, Pencil, Save, Loader2, GripVertical, Clock,
+  UtensilsCrossed, Wine, Cake, IceCreamCone, Salad, CookingPot, Sparkles, HelpCircle,
+  Leaf, WheatOff, MilkOff, AlertTriangle,
 } from "lucide-react";
 import {
   createMenuItem, updateMenuItem, deleteMenuItem, setMenuItemStatus, moveMenuItem,
@@ -39,7 +41,7 @@ const TYPES: { value: MenuType; label: string; icon: typeof UtensilsCrossed }[] 
   { value: "PASAPALO", label: "Pasapalo", icon: Sparkles },
   { value: "ENTRADA", label: "Entrada", icon: Salad },
   { value: "PRINCIPAL", label: "Principal", icon: CookingPot },
-  { value: "POSTRE", label: "Postre", icon: Soup },
+  { value: "POSTRE", label: "Postre", icon: IceCreamCone },
   { value: "BEBIDA", label: "Bebida", icon: Wine },
   { value: "TORTA", label: "Torta", icon: Cake },
   { value: "OTRO", label: "Otro", icon: UtensilsCrossed },
@@ -47,9 +49,11 @@ const TYPES: { value: MenuType; label: string; icon: typeof UtensilsCrossed }[] 
 
 const TYPE_META = Object.fromEntries(TYPES.map((t) => [t.value, t])) as Record<MenuType, (typeof TYPES)[number]>;
 
+// Idea = en estudio; Confirmado = cerrado con el proveedor; Descartado = no va,
+// pero se conserva por si se recupera.
 const STATUS_META: Record<MenuStatus, { label: string; cls: string }> = {
   IDEA: { label: "Idea", cls: "bg-surface-container text-on-surface-variant" },
-  CONFIRMED: { label: "Confirmado", cls: "bg-on-secondary-container/10 text-on-secondary-container" },
+  CONFIRMED: { label: "Confirmado", cls: "bg-secondary-container text-on-secondary-container" },
   DISCARDED: { label: "Descartado", cls: "bg-error/10 text-error" },
 };
 
@@ -91,6 +95,7 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
     (i) => (filter === "ALL" || i.type === filter) && (showDiscarded || i.status !== "DISCARDED"),
   );
   const itemsOf = (activityId: number | null) => visible.filter((i) => i.activityId === activityId);
+  const discardedCount = items.filter((i) => i.status === "DISCARDED").length;
 
   // El drag reordena el listado completo: con un filtro activo el orden mostrado
   // no es el real, así que solo se arrastra en la vista sin filtrar.
@@ -147,42 +152,43 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
 
   return (
     <div className="space-y-6">
-      {/* Toolbar: filtros + nuevo ítem */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <FilterChip active={filter === "ALL"} onClick={() => setFilter("ALL")} label="Todo" />
-          {TYPES.map((t) => (
-            <FilterChip
-              key={t.value}
-              active={filter === t.value}
-              onClick={() => setFilter(t.value)}
-              label={t.label}
-              icon={t.icon}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => setShowDiscarded((v) => !v)}
-            className={`flex items-center gap-2 px-4 py-3 rounded-xl transition-all font-sans text-xs tracking-widest uppercase font-medium border-none cursor-pointer ${
-              showDiscarded ? "bg-surface-container text-primary" : "text-on-surface-variant hover:text-primary"
-            }`}
+      {/* Toolbar: filtro por tipo, descartados y alta */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <div className="flex flex-wrap items-center gap-3 flex-1">
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as MenuType | "ALL")}
+            aria-label="Filtrar por tipo"
+            className="px-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-on-surface text-sm shadow-sm cursor-pointer"
           >
-            <Ban className="w-4 h-4" />
-            Descartados
-          </button>
-          {canWrite && (
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium border-none cursor-pointer"
-            >
-              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-              {showForm ? "Cerrar" : "Nuevo ítem"}
-            </button>
-          )}
+            <option value="ALL">Todos los tipos</option>
+            {TYPES.map((t) => (
+              <option key={t.value} value={t.value}>{t.label}</option>
+            ))}
+          </select>
+          <label className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={showDiscarded}
+              onChange={(e) => setShowDiscarded(e.target.checked)}
+              className="w-4 h-4 rounded cursor-pointer"
+            />
+            Mostrar descartados{discardedCount > 0 ? ` (${discardedCount})` : ""}
+          </label>
         </div>
+        {canWrite && (
+          <button onClick={() => setShowForm((v) => !v)} className={showForm ? btnSecondary : btnPrimary}>
+            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+            {showForm ? "Cerrar" : "Nuevo ítem"}
+          </button>
+        )}
       </div>
+
+      {canWrite && !dragEnabled && visible.length > 0 && (
+        <p className="text-xs text-on-surface-variant">
+          Para reordenar o mover ítems entre momentos arrastrándolos, quita el filtro y oculta los descartados.
+        </p>
+      )}
 
       {showForm && canWrite && <ItemForm moments={moments} onDone={() => setShowForm(false)} />}
 
@@ -193,7 +199,7 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
         </p>
       )}
 
-      {visible.length === 0 && (
+      {(items.length === 0 || (visible.length === 0 && !dragEnabled)) && (
         <div className="bg-surface-container-lowest rounded-2xl p-10 text-center shadow-sm">
           <p className="text-on-surface-variant font-sans text-sm">
             {items.length === 0
@@ -221,6 +227,8 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
               canWrite={canWrite}
               dragEnabled={dragEnabled}
               isUnassigned={g.activityId === null}
+              // Con el arrastre activo, los momentos vacíos se muestran como destino.
+              showWhenEmpty={dragEnabled && g.activityId !== null}
             />
           ))}
         </div>
@@ -240,7 +248,7 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
 // ─── Grupo (momento de la boda) ──────────────────────────────────────────────
 
 function MomentGroup({
-  groupId, title, time, items, moments, canWrite, dragEnabled, isUnassigned,
+  groupId, title, time, items, moments, canWrite, dragEnabled, isUnassigned, showWhenEmpty,
 }: {
   groupId: string;
   title: string;
@@ -250,14 +258,11 @@ function MomentGroup({
   canWrite: boolean;
   dragEnabled: boolean;
   isUnassigned: boolean;
+  showWhenEmpty: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: groupId });
 
-  // Solo se listan los momentos que ya tienen comida cargada: un momento del
-  // cronograma sin ítems no aporta nada al menú. El primer ítem de un momento
-  // se asigna con el select "Momento" del formulario; el drag & drop mueve
-  // entre momentos ya visibles.
-  if (items.length === 0) return null;
+  if (items.length === 0 && !showWhenEmpty) return null;
 
   return (
     <section
@@ -274,16 +279,21 @@ function MomentGroup({
         )}
         <h2 className={`font-serif text-lg ${isUnassigned ? "text-error" : "text-primary"}`}>{title}</h2>
         {time && (
-          <span className="text-[11px] font-medium text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full tabular-nums">
+          <span className="text-xs font-medium text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full tabular-nums">
             {time}
           </span>
         )}
-        <span className="text-[11px] text-on-surface-variant/60 ml-auto">
-          {items.length} ítem{items.length === 1 ? "" : "s"}
+        <span className="text-xs text-on-surface-variant ml-auto">
+          {items.length === 0 ? "Vacío" : `${items.length} ${items.length === 1 ? "ítem" : "ítems"}`}
         </span>
       </header>
 
       <div className="px-4 pb-4 space-y-2">
+        {items.length === 0 && (
+          <p className="text-xs text-on-surface-variant rounded-xl bg-surface-container-low/60 px-4 py-3">
+            Arrastra aquí un ítem, o elige este momento al crearlo.
+          </p>
+        )}
         <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
           {items.map((item) => (
             <ItemRow
@@ -310,6 +320,7 @@ function ItemRow({
   canWrite: boolean;
   dragEnabled: boolean;
 }) {
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -344,7 +355,7 @@ function ItemRow({
         <button
           {...attributes}
           {...listeners}
-          className="shrink-0 mt-0.5 text-on-surface-variant/40 hover:text-primary cursor-grab active:cursor-grabbing touch-none border-none bg-transparent"
+          className="shrink-0 mt-0.5 text-on-surface-variant/80 hover:text-primary cursor-grab active:cursor-grabbing touch-none border-none bg-transparent"
           aria-label="Reordenar / mover de momento"
         >
           <GripVertical className="w-4 h-4" />
@@ -360,24 +371,22 @@ function ItemRow({
           <p className={`font-sans text-sm font-medium text-on-surface ${discarded ? "line-through" : ""}`}>
             {item.name}
           </p>
-          <span className="text-[10px] tracking-widest uppercase font-medium text-on-surface-variant/70">
-            {TYPE_META[item.type].label}
-          </span>
-          <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>
+          <span className="text-xs text-on-surface-variant">{TYPE_META[item.type].label}</span>
+          {!canWrite && <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>}
         </div>
 
         {item.description && (
-          <p className="text-xs text-on-surface-variant/70 mt-1">{item.description}</p>
+          <p className="text-xs text-on-surface-variant mt-1">{item.description}</p>
         )}
 
         <div className="flex items-center gap-2 flex-wrap mt-1.5">
           {item.quantity != null && (
-            <span className="text-[11px] font-medium text-on-surface-variant">
+            <span className="text-xs font-medium text-on-surface-variant">
               {item.quantity} {item.unit || "un."}
             </span>
           )}
           {item.supplier && (
-            <span className="text-[11px] text-on-surface-variant/70">· {item.supplier}</span>
+            <span className="text-xs text-on-surface-variant">· {item.supplier}</span>
           )}
           {item.isVegan && <DietTag icon={Leaf} label="Vegano" />}
           {item.isVegetarian && !item.isVegan && <DietTag icon={Leaf} label="Vegetariano" />}
@@ -390,49 +399,34 @@ function ItemRow({
           )}
         </div>
 
-        {item.notes && <p className="text-xs text-on-surface-variant/60 italic mt-1.5">{item.notes}</p>}
+        {item.notes && <p className="text-xs text-on-surface-variant italic mt-1.5">{item.notes}</p>}
       </div>
 
       {canWrite && (
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={() =>
-              startTransition(() =>
-                setMenuItemStatus(item.id, item.status === "CONFIRMED" ? "IDEA" : "CONFIRMED"),
-              )
-            }
+          <select
+            value={item.status}
+            onChange={(e) => startTransition(() => setMenuItemStatus(item.id, e.target.value as MenuStatus))}
             disabled={pending}
-            className={`w-8 h-8 flex items-center justify-center rounded-xl transition-all border-none cursor-pointer ${
-              item.status === "CONFIRMED"
-                ? "bg-on-secondary-container/10 text-on-secondary-container"
-                : "text-on-surface-variant hover:bg-surface-container"
-            }`}
-            aria-label={item.status === "CONFIRMED" ? "Marcar como idea" : "Confirmar con el proveedor"}
+            aria-label={`Estado de ${item.name}`}
+            className={`text-xs font-medium pl-2.5 pr-1 py-1.5 rounded-lg border-none outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
           >
-            <Check className="w-4 h-4" />
-          </button>
-          <button
-            onClick={() =>
-              startTransition(() =>
-                setMenuItemStatus(item.id, discarded ? "IDEA" : "DISCARDED"),
-              )
-            }
-            disabled={pending}
-            className={iconBtn}
-            aria-label={discarded ? "Recuperar" : "Descartar"}
-          >
-            <Ban className="w-4 h-4" />
-          </button>
-          <button onClick={() => setEditing(true)} className={iconBtn} aria-label="Editar">
+            <option value="IDEA">Idea</option>
+            <option value="CONFIRMED">Confirmado</option>
+            <option value="DISCARDED">Descartado</option>
+          </select>
+          <button onClick={() => setEditing(true)} className={iconBtn} aria-label={`Editar ${item.name}`} title="Editar">
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            onClick={() => {
-              if (confirm(`¿Eliminar "${item.name}" del menú?`)) startTransition(() => deleteMenuItem(item.id));
+            onClick={async () => {
+              if (await confirm({ title: `¿Eliminar «${item.name}» del menú?`, description: "Si solo lo estás descartando, usa «Descartar» y podrás recuperarlo.", confirmLabel: "Eliminar" }))
+                startTransition(() => deleteMenuItem(item.id));
             }}
             disabled={pending}
             className={iconBtnDanger}
-            aria-label="Eliminar"
+            aria-label={`Eliminar ${item.name}`}
+            title="Eliminar"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -539,7 +533,7 @@ function ItemForm({
         <Field label="Estado" className="md:col-span-3">
           <select name="status" defaultValue={item?.status ?? "IDEA"} className={inputCls}>
             <option value="IDEA">Idea</option>
-            <option value="CONFIRMED">Confirmado</option>
+            <option value="CONFIRMED">Confirmado con proveedor</option>
             <option value="DISCARDED">Descartado</option>
           </select>
         </Field>
@@ -590,30 +584,10 @@ function ItemForm({
 
 // ─── Compartidos ─────────────────────────────────────────────────────────────
 
-function FilterChip({
-  active, onClick, label, icon: Icon,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  icon?: typeof UtensilsCrossed;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-sans tracking-widest uppercase font-medium transition-all border-none cursor-pointer ${
-        active ? "bg-primary text-on-primary shadow-sm" : "bg-surface-container-low text-on-surface-variant hover:text-primary"
-      }`}
-    >
-      {Icon && <Icon className="w-3.5 h-3.5" />}
-      {label}
-    </button>
-  );
-}
 
 function Checkbox({ name, label, defaultChecked }: { name: string; label: string; defaultChecked?: boolean }) {
   return (
-    <label className="flex items-center gap-2 text-xs font-medium text-on-surface-variant cursor-pointer">
+    <label className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer">
       <input
         type="checkbox"
         name={name}
@@ -628,8 +602,8 @@ function Checkbox({ name, label, defaultChecked }: { name: string; label: string
 function Field({ label, optional, className, children }: { label: string; optional?: boolean; className?: string; children: React.ReactNode }) {
   return (
     <div className={className}>
-      <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
-        {label} {optional && <span className="text-on-surface-variant/50">(opcional)</span>}
+      <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
+        {label} {optional && <span className="font-normal text-on-surface-variant/80">(opcional)</span>}
       </label>
       {children}
     </div>
@@ -637,7 +611,5 @@ function Field({ label, optional, className, children }: { label: string; option
 }
 
 const inputCls = "w-full px-4 py-3 border-none rounded-xl bg-surface-container-low focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface placeholder-on-surface-variant/50 shadow-sm";
-const btnPrimary = "flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium disabled:opacity-60 border-none cursor-pointer";
-const btnGhost = "flex items-center gap-2 px-5 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container transition-all font-sans tracking-widest uppercase text-xs font-medium border-none cursor-pointer";
 const iconBtn = "w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-all border-none cursor-pointer shrink-0 disabled:opacity-50";
 const iconBtnDanger = "w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all border-none cursor-pointer shrink-0 disabled:opacity-50";

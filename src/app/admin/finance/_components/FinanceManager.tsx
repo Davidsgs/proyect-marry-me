@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
+import { Tabs, btnPrimary, btnGhost } from "@/app/admin/_components/ui";
 import {
   Plus, X, Trash2, Pencil, Save, Check, Loader2, TrendingUp, TrendingDown,
   CalendarClock, ChevronDown, Wallet, AlertTriangle,
@@ -33,10 +35,15 @@ export default function FinanceManager({ initialTransactions, initialPlans, canW
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex items-center gap-2 p-1 bg-surface-container-low rounded-2xl w-fit mx-auto">
-        <TabButton active={tab === "movimientos"} onClick={() => setTab("movimientos")} icon={Wallet} label="Movimientos" />
-        <TabButton active={tab === "cuotas"} onClick={() => setTab("cuotas")} icon={CalendarClock} label="Pagos en cuotas" />
-      </div>
+      <Tabs
+        label="Ver movimientos o cuotas"
+        value={tab}
+        onChange={setTab}
+        options={[
+          { value: "movimientos", label: "Movimientos", icon: Wallet },
+          { value: "cuotas", label: "Pagos en cuotas", icon: CalendarClock },
+        ]}
+      />
 
       {tab === "movimientos"
         ? <TransactionsTab transactions={initialTransactions} canWrite={canWrite} />
@@ -45,19 +52,6 @@ export default function FinanceManager({ initialTransactions, initialPlans, canW
   );
 }
 
-function TabButton({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: typeof Wallet; label: string }) {
-  return (
-    <button
-      onClick={onClick}
-      className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-sans tracking-widest uppercase font-medium transition-all border-none cursor-pointer ${
-        active ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
-      }`}
-    >
-      <Icon className="w-4 h-4" />
-      <span className="hidden sm:inline">{label}</span>
-    </button>
-  );
-}
 
 // ─── Movimientos ─────────────────────────────────────────────────────────────
 
@@ -70,7 +64,7 @@ function TransactionsTab({ transactions, canWrite }: { transactions: Transaction
         <div className="flex justify-end">
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium border-none cursor-pointer"
+            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-sm font-medium border-none cursor-pointer"
           >
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {showForm ? "Cerrar" : "Nuevo movimiento"}
@@ -159,6 +153,7 @@ function TransactionForm({ onDone }: { onDone: () => void }) {
 }
 
 function TransactionItem({ tx, canWrite }: { tx: TransactionRow; canWrite: boolean }) {
+  const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
   const [type, setType] = useState<TxType>(tx.type);
   const [pending, startTransition] = useTransition();
@@ -212,7 +207,7 @@ function TransactionItem({ tx, canWrite }: { tx: TransactionRow; canWrite: boole
       </div>
       <div className="flex-1 min-w-0">
         <p className="font-sans text-sm font-medium text-on-surface truncate">{tx.concept}</p>
-        <p className="text-xs text-on-surface-variant/70 truncate mt-0.5">
+        <p className="text-xs text-on-surface-variant/80 truncate mt-0.5">
           {tx.category && <span className="font-medium">{tx.category} · </span>}{fmtDate(tx.date)}
           {tx.notes && <span> · {tx.notes}</span>}
         </p>
@@ -226,7 +221,10 @@ function TransactionItem({ tx, canWrite }: { tx: TransactionRow; canWrite: boole
             <Pencil className="w-4 h-4" />
           </button>
           <button
-            onClick={() => { if (confirm("¿Eliminar este movimiento?")) startTransition(() => deleteTransaction(tx.id)); }}
+            onClick={async () => {
+              if (await confirm({ title: `¿Eliminar «${tx.concept}»?`, description: "El movimiento se borrará del registro.", confirmLabel: "Eliminar" }))
+                startTransition(() => deleteTransaction(tx.id));
+            }}
             disabled={pending}
             className={iconBtnDanger}
             aria-label="Eliminar"
@@ -250,7 +248,7 @@ function PlansTab({ plans, canWrite }: { plans: PlanWithInstallments[]; canWrite
         <div className="flex justify-end">
           <button
             onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium border-none cursor-pointer"
+            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-sm font-medium border-none cursor-pointer"
           >
             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
             {showForm ? "Cerrar" : "Nuevo plan de cuotas"}
@@ -354,6 +352,7 @@ function PlanForm({ onDone }: { onDone: () => void }) {
 }
 
 function PlanCard({ plan, canWrite }: { plan: PlanWithInstallments; canWrite: boolean }) {
+  const confirm = useConfirm();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const isIncome = plan.type === "INCOME";
@@ -371,16 +370,19 @@ function PlanCard({ plan, canWrite }: { plan: PlanWithInstallments; canWrite: bo
         </div>
         <button onClick={() => setOpen((v) => !v)} className="flex-1 min-w-0 text-left border-none bg-transparent cursor-pointer">
           <p className="font-sans text-sm font-medium text-on-surface truncate">{plan.concept}</p>
-          <p className="text-xs text-on-surface-variant/70 truncate mt-0.5">
+          <p className="text-xs text-on-surface-variant/80 truncate mt-0.5">
             {plan.category && <span className="font-medium">{plan.category} · </span>}
             {paidCount}/{plan.installmentsCount} cuotas · {formatMoney(paidCents)} de {formatMoney(plan.totalAmountCents)}
           </p>
         </button>
         <div className="shrink-0 flex items-center gap-2">
-          <span className="text-[11px] font-medium text-on-surface-variant tabular-nums">{pct}%</span>
+          <span className="text-xs font-medium text-on-surface-variant tabular-nums">{pct}%</span>
           {canWrite && (
             <button
-              onClick={() => { if (confirm("¿Eliminar este plan y todas sus cuotas?")) startTransition(() => deleteInstallmentPlan(plan.id)); }}
+              onClick={async () => {
+                if (await confirm({ title: `¿Eliminar el plan «${plan.concept}»?`, description: "Se borrarán también todas sus cuotas, pagadas o no.", confirmLabel: "Eliminar plan" }))
+                  startTransition(() => deleteInstallmentPlan(plan.id));
+              }}
               disabled={pending}
               className={iconBtnDanger}
               aria-label="Eliminar plan"
@@ -470,18 +472,18 @@ function InstallmentRow({ cuota, canWrite, today }: { cuota: PlanWithInstallment
       </span>
 
       {cuota.isPaid ? (
-        <span className="shrink-0 text-[11px] text-on-surface-variant">Pagada {fmtDate(cuota.paidAt)}</span>
+        <span className="shrink-0 text-xs text-on-surface-variant">Pagada {fmtDate(cuota.paidAt)}</span>
       ) : cuota.dueDate ? (
-        <span className={`shrink-0 text-[11px] font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${overdue ? "bg-error/10 text-error" : "bg-surface-container text-on-surface-variant"}`}>
+        <span className={`shrink-0 text-xs font-medium px-2 py-0.5 rounded-full flex items-center gap-1 ${overdue ? "bg-error/10 text-error" : "bg-surface-container text-on-surface-variant"}`}>
           {overdue ? <AlertTriangle className="w-3 h-3" /> : <CalendarClock className="w-3 h-3" />}
           {fmtDate(cuota.dueDate)}
         </span>
       ) : (
-        <span className="shrink-0 text-[11px] text-on-surface-variant/50">Sin vencimiento</span>
+        <span className="shrink-0 text-xs text-on-surface-variant/80">Sin vencimiento</span>
       )}
 
       {canWrite && !cuota.isPaid && (
-        <button onClick={() => setEditing(true)} className={`${iconBtn} opacity-0 group-hover:opacity-100 focus:opacity-100`} aria-label="Editar cuota">
+        <button onClick={() => setEditing(true)} className={`${iconBtn} pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100`} aria-label="Editar cuota">
           <Pencil className="w-3.5 h-3.5" />
         </button>
       )}
@@ -520,7 +522,7 @@ function Field({ label, optional, className, children }: { label: string; option
   return (
     <div className={className}>
       <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">
-        {label} {optional && <span className="text-on-surface-variant/50">(opcional)</span>}
+        {label} {optional && <span className="text-on-surface-variant/80">(opcional)</span>}
       </label>
       {children}
     </div>
@@ -537,8 +539,6 @@ function EmptyState({ message }: { message: string }) {
 
 const inputCls = "w-full px-4 py-3 border-none rounded-xl bg-surface-container-low focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface placeholder-on-surface-variant/50 shadow-sm";
 const inputSm = "px-3 py-2 rounded-lg bg-surface-container-low text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/50 border-none";
-const btnPrimary = "flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium disabled:opacity-60 border-none cursor-pointer";
-const btnGhost = "flex items-center gap-2 px-5 py-3 rounded-xl text-on-surface-variant hover:bg-surface-container transition-all font-sans tracking-widest uppercase text-xs font-medium border-none cursor-pointer";
 const btnPrimarySm = "flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-on-primary hover:bg-primary/90 transition-all disabled:opacity-50 border-none cursor-pointer";
 const btnGhostSm = "flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-container transition-all border-none cursor-pointer";
 const iconBtn = "w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-all border-none cursor-pointer shrink-0";

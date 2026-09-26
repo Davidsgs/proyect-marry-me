@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
 import {
     DndContext,
     DragOverlay,
@@ -36,7 +37,9 @@ import {
     CalendarClock,
     Users,
     User,
+    AlertTriangle,
 } from "lucide-react";
+import { btnPrimary, btnSecondary, btnGhost } from "@/app/admin/_components/ui";
 import {
     createActivity,
     updateActivity,
@@ -60,6 +63,7 @@ interface Props {
 }
 
 export default function CronogramaManager({ initialActivities, initialLocked, canWrite }: Props) {
+    const confirm = useConfirm();
     const [activities, setActivities] = useState(initialActivities);
     const [synced, setSynced] = useState(initialActivities);
     const [locked, setLocked] = useState(initialLocked);
@@ -86,11 +90,33 @@ export default function CronogramaManager({ initialActivities, initialLocked, ca
 
     const selected = selectedId != null ? activities.find((a) => a.id === selectedId) ?? null : null;
 
-    function handleToggleLock() {
+    async function handleToggleLock() {
         if (!canWrite) return;
         const next = !locked;
+        if (next) {
+            const ok = await confirm({
+                title: "¿Activar el modo día del evento?",
+                description: "Se congela el cronograma: nadie podrá mover, añadir, editar ni borrar actividades. Solo se podrán marcar actividades y tareas como hechas.",
+                confirmLabel: "Activar",
+                tone: "default",
+            });
+            if (!ok) return;
+        }
         setLocked(next);
         startTransition(() => setScheduleLocked(next));
+    }
+
+    // Ordena por hora (las actividades sin hora quedan al final, en su orden actual).
+    function handleSortByTime() {
+        if (!editable) return;
+        const next = [...activities].sort((a, b) => {
+            if (!a.time && !b.time) return 0;
+            if (!a.time) return 1;
+            if (!b.time) return -1;
+            return a.time.localeCompare(b.time);
+        });
+        setActivities(next);
+        startTransition(() => reorderActivities(next.map((a) => a.id)));
     }
 
     function handleToggleActivity(id: number) {
@@ -129,9 +155,14 @@ export default function CronogramaManager({ initialActivities, initialLocked, ca
         startTransition(() => assignTaskResponsible(taskId, responsibleId));
     }
 
-    function handleDelete(id: number) {
+    async function handleDelete(id: number) {
         if (!editable) return;
-        if (!confirm("¿Eliminar esta actividad y sus tareas?")) return;
+        const ok = await confirm({
+            title: "¿Eliminar esta actividad?",
+            description: "También se borrarán sus pasos, responsables y notas. No se puede deshacer.",
+            confirmLabel: "Eliminar",
+        });
+        if (!ok) return;
         if (selectedId === id) setSelectedId(null);
         startTransition(() => deleteActivity(id));
     }
@@ -153,44 +184,63 @@ export default function CronogramaManager({ initialActivities, initialLocked, ca
     }
 
     const completedCount = activities.filter((a) => a.isCompleted).length;
+    // El orden es manual (arrastre): avisar si ya no coincide con las horas.
+    const timed = activities.filter((a) => a.time);
+    const outOfOrder = timed.some((a, i) => i > 0 && a.time! < timed[i - 1].time!);
     const activeDrag = activeId != null ? activities.find((a) => a.id === activeId) ?? null : null;
 
     return (
         <div className="space-y-6">
-            {/* Toolbar: progreso + candado + nueva actividad */}
+            {/* Toolbar: progreso + modo día del evento + nueva actividad */}
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2 text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant">
+                <p className="flex items-center gap-2 text-sm font-sans text-on-surface-variant">
                     <CalendarClock className="w-4 h-4 opacity-60" />
-                    {activities.length} actividad{activities.length === 1 ? "" : "es"}
-                    <span className="text-on-surface-variant/50">· {completedCount} completada{completedCount === 1 ? "" : "s"}</span>
-                </div>
+                    {activities.length} {activities.length === 1 ? "actividad" : "actividades"}
+                    <span className="text-on-surface-variant/80">· {completedCount} {completedCount === 1 ? "hecha" : "hechas"}</span>
+                </p>
 
-                <div className="flex items-center gap-2">
-                    {canWrite && (
-                        <button
-                            onClick={handleToggleLock}
-                            title={locked ? "Desbloquear edición" : "Bloquear edición (modo día del evento)"}
-                            className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium ${
-                                locked
-                                    ? "bg-primary text-on-primary"
-                                    : "bg-surface-container-low text-on-surface-variant hover:text-primary"
-                            }`}
-                        >
-                            {locked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                            {locked ? "Bloqueado" : "Editable"}
+                <div className="flex flex-wrap items-center gap-2">
+                    {canWrite && !locked && (
+                        <button onClick={handleToggleLock} className={btnSecondary}>
+                            <Lock className="w-4 h-4" />
+                            Activar modo día del evento
                         </button>
                     )}
                     {editable && (
-                        <button
-                            onClick={() => setShowForm((v) => !v)}
-                            className="flex items-center gap-2 bg-primary text-on-primary px-5 py-3 rounded-xl shadow-sm hover:shadow-md transition-all font-sans text-xs tracking-widest uppercase font-medium"
-                        >
+                        <button onClick={() => setShowForm((v) => !v)} className={showForm ? btnSecondary : btnPrimary}>
                             {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                             {showForm ? "Cerrar" : "Nueva actividad"}
                         </button>
                     )}
                 </div>
             </div>
+
+            {locked && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-primary-container/40 px-5 py-4">
+                    <Lock className="w-5 h-5 text-on-primary-container shrink-0" />
+                    <p className="text-sm text-on-primary-container flex-1">
+                        <span className="font-medium">Modo día del evento activado.</span> El cronograma está congelado: solo se pueden marcar actividades y tareas como hechas.
+                    </p>
+                    {canWrite && (
+                        <button onClick={handleToggleLock} className={btnGhost}>
+                            <Unlock className="w-4 h-4" />
+                            Desactivar
+                        </button>
+                    )}
+                </div>
+            )}
+
+            {outOfOrder && (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-2xl bg-surface-container-low px-5 py-4">
+                    <AlertTriangle className="w-5 h-5 text-error shrink-0" />
+                    <p className="text-sm text-on-surface flex-1">Hay actividades fuera de orden según su hora.</p>
+                    {editable && (
+                        <button onClick={handleSortByTime} className={btnSecondary}>
+                            Ordenar por hora
+                        </button>
+                    )}
+                </div>
+            )}
 
             {showForm && editable && <NewActivityForm onDone={() => setShowForm(false)} />}
 
@@ -217,7 +267,6 @@ export default function CronogramaManager({ initialActivities, initialLocked, ca
                                             canWrite={canWrite}
                                             onSelect={() => setSelectedId(a.id)}
                                             onToggle={() => handleToggleActivity(a.id)}
-                                            onDelete={() => handleDelete(a.id)}
                                         />
                                     ))}
                                 </div>
@@ -239,6 +288,7 @@ export default function CronogramaManager({ initialActivities, initialLocked, ca
                             canWrite={canWrite}
                             onToggleTask={(taskId) => handleToggleTask(taskId, selected.id)}
                             onAssignTask={(taskId, rid) => handleAssignTask(taskId, selected.id, rid)}
+                            onDelete={() => handleDelete(selected.id)}
                         />
                     ) : (
                         <DetailPlaceholder />
@@ -258,6 +308,7 @@ export default function CronogramaManager({ initialActivities, initialLocked, ca
                         onClose={() => setSelectedId(null)}
                         onToggleTask={(taskId) => handleToggleTask(taskId, selected.id)}
                         onAssignTask={(taskId, rid) => handleAssignTask(taskId, selected.id, rid)}
+                        onDelete={() => handleDelete(selected.id)}
                     />
                 </div>
             )}
@@ -274,7 +325,6 @@ function ActivityRow({
     canWrite,
     onSelect,
     onToggle,
-    onDelete,
 }: {
     activity: ActivityWithTasks;
     selected: boolean;
@@ -282,9 +332,7 @@ function ActivityRow({
     canWrite: boolean;
     onSelect: () => void;
     onToggle: () => void;
-    onDelete: () => void;
 }) {
-    const [showResp, setShowResp] = useState(false);
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: activity.id,
         disabled: !editable,
@@ -361,16 +409,26 @@ function ActivityRow({
                     >
                         {activity.title}
                     </p>
-                    {taskCount > 0 && (
-                        <p className="text-[11px] text-on-surface-variant/70 mt-0.5 flex items-center gap-1">
-                            <ListChecks className="w-3 h-3" />
-                            {taskDone}/{taskCount}
+                    {(taskCount > 0 || activity.responsibles.length > 0) && (
+                        <p className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-3">
+                            {taskCount > 0 && (
+                                <span className="flex items-center gap-1">
+                                    <ListChecks className="w-3 h-3" />
+                                    {taskDone}/{taskCount} pasos
+                                </span>
+                            )}
+                            {activity.responsibles.length > 0 && (
+                                <span className="flex items-center gap-1 truncate">
+                                    <Users className="w-3 h-3 shrink-0" />
+                                    <span className="truncate">{activity.responsibles.map((r) => r.name).join(", ")}</span>
+                                </span>
+                            )}
                         </p>
                     )}
                 </div>
                 {activity.time && (
                     <span
-                        className={`shrink-0 text-[11px] font-sans tracking-wider font-medium px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                        className={`shrink-0 text-xs font-sans font-medium tabular-nums px-2.5 py-1 rounded-full flex items-center gap-1 ${
                             done ? "bg-surface-container text-on-surface-variant/60" : "bg-primary/10 text-primary"
                         }`}
                     >
@@ -381,72 +439,10 @@ function ActivityRow({
                 <ChevronRight className="w-4 h-4 shrink-0 text-on-surface-variant/40" />
             </button>
 
-            {/* Responsables: icono + modal (resumen) */}
-            {activity.responsibles.length > 0 && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        setShowResp(true);
-                    }}
-                    aria-label="Ver responsables"
-                    title="Responsables"
-                    className="shrink-0 flex items-center gap-1 px-2 h-8 rounded-xl text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-all border-none cursor-pointer"
-                >
-                    <Users className="w-4 h-4" />
-                    <span className="text-[11px] font-medium">{activity.responsibles.length}</span>
-                </button>
-            )}
-
-            {/* Eliminar */}
-            {editable && (
-                <button
-                    onClick={onDelete}
-                    aria-label="Eliminar actividad"
-                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 border-none cursor-pointer"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            )}
-
-            {showResp && <ResponsiblesModal activity={activity} onClose={() => setShowResp(false)} />}
         </div>
     );
 }
 
-function ResponsiblesModal({ activity, onClose }: { activity: ActivityWithTasks; onClose: () => void }) {
-    return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" role="dialog" aria-modal="true">
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} aria-hidden />
-            <div className="relative w-full max-w-xs bg-surface-container-lowest rounded-3xl shadow-xl p-6 animate-in fade-in zoom-in-95 duration-150">
-                <div className="flex items-start justify-between gap-2 mb-4">
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant">
-                            Responsables
-                        </p>
-                        <h3 className="font-serif text-lg text-primary truncate">{activity.title}</h3>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        aria-label="Cerrar"
-                        className="shrink-0 w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors border-none cursor-pointer"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-                <ul className="space-y-2">
-                    {activity.responsibles.map((r) => (
-                        <li key={r.id} className="flex items-center gap-3 bg-surface rounded-xl px-3 py-2 shadow-sm">
-                            <span className="shrink-0 w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                                <User className="w-4 h-4" />
-                            </span>
-                            <span className="text-sm text-on-surface truncate">{r.name}</span>
-                        </li>
-                    ))}
-                </ul>
-            </div>
-        </div>
-    );
-}
 
 // Ghost mostrado bajo el cursor durante el drag.
 function ActivityRowBody({ activity, dragging }: { activity: ActivityWithTasks; dragging?: boolean }) {
@@ -462,7 +458,7 @@ function ActivityRowBody({ activity, dragging }: { activity: ActivityWithTasks; 
             <span className="w-6 h-6 rounded-lg bg-surface-container-low shrink-0" />
             <span className="font-serif text-base text-on-surface truncate flex-1">{activity.title}</span>
             {activity.time && (
-                <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary flex items-center gap-1">
+                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-primary/10 text-primary flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     {activity.time}
                 </span>
@@ -481,12 +477,14 @@ function ActivityDetail({
     onClose,
     onToggleTask,
     onAssignTask,
+    onDelete,
 }: {
     activity: ActivityWithTasks;
     editable: boolean;
     canWrite: boolean;
     mobile?: boolean;
     onClose?: () => void;
+    onDelete: () => void;
     onToggleTask: (taskId: number) => void;
     onAssignTask: (taskId: number, responsibleId: number | null) => void;
 }) {
@@ -509,9 +507,13 @@ function ActivityDetail({
         startTransition(() => addResponsible(activity.id, name));
     }
 
+    const [notesSaved, setNotesSaved] = useState(false);
     function handleSaveNotes(value: string) {
         if (value === activity.notes) return;
-        startTransition(() => updateActivity(activity.id, { notes: value }));
+        startTransition(async () => {
+            await updateActivity(activity.id, { notes: value });
+            setNotesSaved(true);
+        });
     }
 
     const done = activity.isCompleted;
@@ -555,13 +557,24 @@ function ActivityDetail({
                                 )}
                             </div>
                             {editable && (
-                                <button
-                                    onClick={() => setEditingHeader(true)}
-                                    aria-label="Editar actividad"
-                                    className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors border-none cursor-pointer"
-                                >
-                                    <Pencil className="w-4 h-4" />
-                                </button>
+                                <div className="shrink-0 flex items-center gap-1">
+                                    <button
+                                        onClick={() => setEditingHeader(true)}
+                                        aria-label="Editar actividad"
+                                        title="Editar"
+                                        className="w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors border-none cursor-pointer"
+                                    >
+                                        <Pencil className="w-4 h-4" />
+                                    </button>
+                                    <button
+                                        onClick={onDelete}
+                                        aria-label="Eliminar actividad"
+                                        title="Eliminar"
+                                        className="w-9 h-9 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-colors border-none cursor-pointer"
+                                    >
+                                        <Trash2 className="w-4 h-4" />
+                                    </button>
+                                </div>
                             )}
                         </>
                     )}
@@ -572,14 +585,14 @@ function ActivityDetail({
             <div className="flex-1 overflow-y-auto p-5 space-y-6 min-h-0">
                 {/* Responsables */}
                 <section>
-                    <h3 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant flex items-center gap-2 mb-3">
+                    <h3 className="text-sm font-sans font-medium text-on-surface flex items-center gap-2 mb-3">
                         <Users className="w-3.5 h-3.5" />
                         Responsables
-                        <span className="text-on-surface-variant/50">({activity.responsibles.length})</span>
+                        <span className="text-on-surface-variant font-normal">({activity.responsibles.length})</span>
                     </h3>
 
                     {activity.responsibles.length === 0 ? (
-                        <p className="text-xs text-on-surface-variant/50 italic py-1">Sin responsables todavía.</p>
+                        <p className="text-xs text-on-surface-variant py-1">Sin responsables todavía.</p>
                     ) : (
                         <div className="flex flex-wrap gap-2">
                             {activity.responsibles.map((r) => (
@@ -631,14 +644,14 @@ function ActivityDetail({
 
                 {/* Lista de tareas */}
                 <section>
-                    <h3 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant flex items-center gap-2 mb-3">
+                    <h3 className="text-sm font-sans font-medium text-on-surface flex items-center gap-2 mb-3">
                         <ListChecks className="w-3.5 h-3.5" />
-                        Lista de tareas
-                        <span className="text-on-surface-variant/50">({activity.tasks.length})</span>
+                        Pasos
+                        <span className="text-on-surface-variant font-normal">({activity.tasks.length})</span>
                     </h3>
 
                     {activity.tasks.length === 0 ? (
-                        <p className="text-xs text-on-surface-variant/50 italic py-2">Sin tareas todavía.</p>
+                        <p className="text-xs text-on-surface-variant py-2">Sin pasos todavía. Ej.: «Llevar los anillos».</p>
                     ) : (
                         <div className="space-y-1.5">
                             {activity.tasks.map((t) => (
@@ -666,14 +679,14 @@ function ActivityDetail({
                                         handleAddTask();
                                     }
                                 }}
-                                placeholder="Añadir tarea…"
+                                placeholder="Añadir paso…"
                                 className="flex-1 px-3 py-2 rounded-lg bg-surface text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40 border-none shadow-sm"
                             />
                             <button
                                 onClick={handleAddTask}
                                 disabled={!newTask.trim() || isPending}
                                 className="shrink-0 w-9 h-9 flex items-center justify-center rounded-lg bg-primary text-on-primary disabled:opacity-40 transition-all border-none cursor-pointer"
-                                aria-label="Añadir tarea"
+                                aria-label="Añadir paso"
                             >
                                 {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                             </button>
@@ -683,24 +696,30 @@ function ActivityDetail({
 
                 {/* Notas */}
                 <section>
-                    <h3 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant flex items-center gap-2 mb-3">
+                    <h3 className="text-sm font-sans font-medium text-on-surface flex items-center gap-2 mb-3">
                         <StickyNote className="w-3.5 h-3.5" />
                         Notas
                     </h3>
                     {editable ? (
+                        <>
                         <textarea
                             defaultValue={activity.notes}
+                            onChange={() => setNotesSaved(false)}
                             onBlur={(e) => handleSaveNotes(e.target.value)}
                             placeholder="Detalles importantes, contactos, recordatorios…"
                             rows={5}
                             className="w-full px-3 py-2.5 rounded-xl bg-surface text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/40 border-none shadow-sm resize-y leading-relaxed"
                         />
+                        <p className="text-xs text-on-surface-variant mt-1.5" aria-live="polite">
+                            {notesSaved ? "Notas guardadas." : "Se guardan solas al salir del campo."}
+                        </p>
+                        </>
                     ) : activity.notes ? (
                         <p className="text-sm text-on-surface-variant whitespace-pre-wrap leading-relaxed bg-surface rounded-xl p-3 shadow-sm">
                             {activity.notes}
                         </p>
                     ) : (
-                        <p className="text-xs text-on-surface-variant/50 italic">Sin notas.</p>
+                        <p className="text-xs text-on-surface-variant">Sin notas.</p>
                     )}
                 </section>
             </div>
@@ -759,7 +778,7 @@ function TaskRow({
                 <select
                     value={task.responsibleId ?? ""}
                     onChange={(e) => onAssign(e.target.value === "" ? null : Number(e.target.value))}
-                    className="shrink-0 max-w-[110px] text-[11px] py-1 pl-2 pr-5 rounded-md bg-surface-container-low border-none outline-none text-on-surface-variant appearance-none cursor-pointer focus:ring-2 focus:ring-primary/40"
+                    className="shrink-0 max-w-[110px] text-xs py-1 pl-2 pr-5 rounded-md bg-surface-container-low border-none outline-none text-on-surface-variant appearance-none cursor-pointer focus:ring-2 focus:ring-primary/40"
                     aria-label="Asignar responsable"
                     title={assignee?.name ?? "Sin responsable"}
                 >
@@ -772,7 +791,7 @@ function TaskRow({
                 </select>
             ) : assignee ? (
                 <span
-                    className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-[11px] font-medium max-w-[120px]"
+                    className="shrink-0 flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-medium max-w-[120px]"
                     title={assignee.name}
                 >
                     <User className="w-3 h-3 shrink-0" />
@@ -785,7 +804,7 @@ function TaskRow({
                     onClick={() => startTransition(() => deleteScheduleTask(task.id))}
                     disabled={isPending}
                     aria-label="Eliminar tarea"
-                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-on-surface-variant/50 hover:text-error hover:bg-error/10 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 border-none cursor-pointer"
+                    className="shrink-0 w-7 h-7 flex items-center justify-center rounded-lg text-on-surface-variant/50 hover:text-error hover:bg-error/10 transition-all pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100 border-none cursor-pointer"
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>
@@ -886,7 +905,7 @@ function NewActivityForm({ onDone }: { onDone: () => void }) {
                 <button
                     disabled={pending}
                     type="submit"
-                    className="w-full bg-primary text-on-primary py-3 rounded-xl shadow-sm font-sans tracking-widest uppercase text-xs font-medium flex items-center justify-center gap-2 h-[48px] disabled:opacity-60"
+                    className="w-full bg-primary text-on-primary py-3 rounded-xl shadow-sm font-sans text-sm font-medium flex items-center justify-center gap-2 h-[48px] disabled:opacity-60"
                 >
                     {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                     Añadir
@@ -898,10 +917,10 @@ function NewActivityForm({ onDone }: { onDone: () => void }) {
 
 function DetailPlaceholder() {
     return (
-        <div className="rounded-3xl bg-surface-container-lowest/60 border border-dashed border-outline-variant/40 p-10 text-center flex flex-col items-center justify-center gap-3 min-h-[300px]">
+        <div className="rounded-3xl bg-surface-container-low p-10 text-center flex flex-col items-center justify-center gap-3 min-h-[300px]">
             <CalendarClock className="w-8 h-8 text-on-surface-variant/40" />
             <p className="text-sm text-on-surface-variant max-w-[220px]">
-                Selecciona una actividad para ver y editar sus tareas y notas.
+                Selecciona una actividad para ver sus pasos, responsables y notas.
             </p>
         </div>
     );
