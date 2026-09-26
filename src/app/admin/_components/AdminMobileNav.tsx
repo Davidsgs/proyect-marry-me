@@ -31,9 +31,13 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
   const [moreOpen, setMoreOpen] = useState(false);
 
   const items: NavItem[] = [
-    { href: "/admin", icon: LayoutDashboard, label: "Inicio" },
-    { href: "/admin/guests", icon: Users, label: "Invitados" },
+    { href: "/admin", icon: LayoutDashboard, label: "Resumen" },
   ];
+
+  const canReadGuests = !!permissions?.includes("families.read") && !!permissions?.includes("users.read");
+  if (canReadGuests) {
+    items.push({ href: "/admin/guests", icon: Users, label: "Invitados" });
+  }
   if (permissions?.includes("tasks.read")) {
     items.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
   }
@@ -64,11 +68,11 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
       {moreOpen && (
         <>
           <div
-            className="lg:hidden fixed inset-0 z-50 bg-black/30 backdrop-blur-sm"
+            className="lg:hidden fixed inset-0 z-50 bg-on-surface/30"
             onClick={() => setMoreOpen(false)}
             aria-hidden
           />
-          <div className="lg:hidden fixed bottom-0 left-0 w-full z-50 bg-surface-container-low rounded-t-[1.5rem] shadow-[0_-8px_30px_rgba(0,0,0,0.12)] p-6 pb-10 animate-in slide-in-from-bottom duration-200">
+          <div className="lg:hidden fixed bottom-0 left-0 w-full z-50 bg-surface-container-low rounded-t-[1.5rem] shadow-[0_-8px_30px_rgba(81,68,67,0.12)] p-6 pb-10 animate-in slide-in-from-bottom duration-200">
             <div className="flex items-center justify-between mb-4">
               <span className="text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant">Menú</span>
               <button onClick={() => setMoreOpen(false)} aria-label="Cerrar" className="text-on-surface-variant hover:text-on-surface border-none">
@@ -114,7 +118,7 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
         </>
       )}
 
-      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-40 flex justify-around items-center px-2 pb-8 pt-4 bg-surface-container-low/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(0,0,0,0.04)] rounded-t-[1.5rem] border-none">
+      <nav className="lg:hidden fixed bottom-0 left-0 w-full z-40 flex justify-around items-center px-2 pb-8 pt-4 bg-surface-container-low/95 backdrop-blur-xl shadow-[0_-4px_20px_rgba(81,68,67,0.06)] rounded-t-[1.5rem] border-none">
         {barItems.map((item) => {
           const isActive = pathname === item.href;
           return (
