@@ -1,4 +1,6 @@
 import Countdown from "@/components/Countdown";
+import { Monogram } from "@/components/Monogram";
+import { VENUE, WEDDING_DATE_LABEL } from "@/lib/wedding";
 import { MapPin } from "lucide-react";
 import { Pinyon_Script } from "next/font/google";
 import Link from "next/link";
@@ -9,90 +11,70 @@ const pinyonScript = Pinyon_Script({
   subsets: ["latin"],
 });
 
+// Portada: se mantiene oscura sobre la foto (decisión de marca); el resto de
+// pantallas de invitados van en claro.
 export default async function Home() {
   const session = await auth();
+  const isAdmin = session?.user?.permissions?.includes("admin.dashboard");
+
   return (
-    <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest">
-      {/* Background Image Container */}
+    <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest text-wedding-cream">
       <div
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90"
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/background-placeholder.webp')" }}
-      ></div>
+        aria-hidden
+      />
+      <div className="absolute inset-0 bg-wedding-sage-darkest/75" aria-hidden />
 
-      {/* Dark sage overlay to ensure the bright image background doesn't consume the text */}
-      <div className="absolute inset-0 z-0 bg-wedding-sage-darkest/75"></div>
+      <div className="relative z-10 flex flex-col items-center text-center px-4 w-full max-w-3xl py-16 min-h-screen justify-center gap-10 md:gap-14">
+        <div className="space-y-6">
+          <Monogram size="md" className="text-wedding-blush-light/90" />
+          <h1 className={`${pinyonScript.className} text-6xl sm:text-7xl md:text-8xl text-wedding-blush-light leading-tight`}>
+            David &amp; Rocío
+          </h1>
+          <p className="text-lg md:text-xl text-wedding-cream/90 text-balance">
+            Te invitamos a celebrar nuestra boda
+          </p>
+        </div>
 
-      {/* Subtle colorful glows to match the floral theme */}
-      <div className="absolute inset-0 z-0 mix-blend-soft-light opacity-40"
-        style={{
-          background: "radial-gradient(circle at 20% 30%, var(--color-wedding-blush-light), transparent 60%), radial-gradient(circle at 80% 70%, var(--color-wedding-sage-light), transparent 60%)",
-        }}
-      ></div>
-
-      {/* Content */}
-      <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-5xl py-12 min-h-screen justify-center">
-        <h1 className={`${pinyonScript.className} text-6xl md:text-8xl text-wedding-blush-light drop-shadow-xl mb-6 text-center`}>
-          David & Rocio
-        </h1>
-
-        <p className="text-sm md:text-xl font-light tracking-[0.2em] md:tracking-[0.3em] uppercase text-wedding-cream/90 mb-12 text-center text-balance drop-shadow-md">
-          Te invitamos a nuestro momento especial
-        </p>
-
-        <div className="mb-12 md:mb-16 w-full">
+        <div className="w-full">
           <Countdown />
         </div>
 
-        <div className="flex flex-col items-center gap-6 text-center">
-          <p className="text-2xl md:text-3xl font-serif text-wedding-cream drop-shadow-md tracking-wider">
-            03 de Abril, 2027
+        <div className="flex flex-col items-center gap-5">
+          <p className="text-2xl md:text-3xl font-serif text-wedding-cream">
+            Sábado {WEDDING_DATE_LABEL}
           </p>
-
           <a
-            href="https://maps.app.goo.gl/YBEZj9J8gLLBycu39"
+            href={VENUE.mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex items-center gap-4 px-6 py-4 rounded-2xl border border-wedding-cream/15 hover:border-wedding-blush-light/40 bg-white/5 hover:bg-white/10 transition-all duration-300 backdrop-blur-sm"
+            className="group flex items-center gap-3 px-5 py-3 rounded-2xl bg-wedding-cream/10 hover:bg-wedding-cream/15 transition-colors"
           >
-            <div className="shrink-0 w-10 h-10 rounded-xl bg-wedding-blush-light/15 group-hover:bg-wedding-blush-light/25 flex items-center justify-center transition-colors">
-              <MapPin className="w-5 h-5 text-wedding-blush-light" strokeWidth={1.5} />
-            </div>
-            <div className="text-left">
-              <p className="text-base md:text-lg font-light tracking-wide text-wedding-cream drop-shadow-sm leading-snug">
-                Tomás de Anchorena 2347
-              </p>
-              <p className="text-xs text-wedding-cream/50 tracking-widest uppercase mt-0.5">
-                Ituzaingó · Buenos Aires · Ver en mapa →
-              </p>
-            </div>
+            <MapPin className="w-5 h-5 text-wedding-blush-light shrink-0" strokeWidth={1.5} />
+            <span className="text-left">
+              <span className="block text-base md:text-lg text-wedding-cream">{VENUE.address}</span>
+              <span className="block text-sm text-wedding-cream/80">
+                {VENUE.area} · <span className="underline underline-offset-4 group-hover:no-underline">Ver en el mapa</span>
+              </span>
+            </span>
           </a>
         </div>
 
-        <div className="mt-16 md:mt-24 flex flex-col sm:flex-row items-center justify-center gap-4">
-          {!session ? (
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <Link
+            href={session ? "/dashboard" : "/login"}
+            className="inline-flex items-center justify-center px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-medium text-base shadow-[0_8px_24px_rgba(30,36,25,0.35)] hover:bg-wedding-blush transition-colors"
+          >
+            Ver mi invitación
+          </Link>
+          {isAdmin && (
             <Link
-              href="/login?callbackUrl=/dashboard"
-              className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
+              href="/admin"
+              className="inline-flex items-center justify-center px-8 py-4 rounded-full text-wedding-cream font-medium text-base hover:bg-wedding-cream/10 transition-colors"
             >
-              Ver mi invitación
+              Panel de organización
             </Link>
-          ) : (
-            <>
-              <Link
-                href="/dashboard"
-                className="inline-flex items-center gap-3 px-10 py-4 rounded-full bg-wedding-blush-light text-wedding-sage-darkest font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-blush transition-all"
-              >
-                Ver mi invitación
-              </Link>
-              {session.user?.permissions?.includes("admin.dashboard") && (
-                <Link
-                  href="/admin"
-                  className="inline-flex items-center gap-3 px-10 py-4 rounded-full border border-wedding-cream/40 text-wedding-cream font-serif tracking-widest uppercase text-sm shadow-lg hover:bg-wedding-cream/10 transition-all"
-                >
-                  Panel de admin
-                </Link>
-              )}
-            </>
           )}
         </div>
       </div>

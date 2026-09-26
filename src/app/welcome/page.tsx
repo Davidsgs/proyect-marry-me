@@ -1,16 +1,12 @@
 import { auth, signOut } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Mail, LogOut, Timer } from "lucide-react";
-import { Pinyon_Script } from "next/font/google";
-
-const pinyonScript = Pinyon_Script({
-    weight: "400",
-    subsets: ["latin"],
-});
+import { LayoutDashboard, Mail, LogOut, ChevronRight } from "lucide-react";
+import { Monogram } from "@/components/Monogram";
 
 export const dynamic = "force-dynamic";
 
+// Solo para administradores: elegir entre el panel y su propia invitación.
 export default async function WelcomePage() {
     const session = await auth();
 
@@ -26,60 +22,29 @@ export default async function WelcomePage() {
     const firstName = session.user.name?.split(" ")[0] ?? "";
 
     return (
-        <main className="relative min-h-screen flex items-center justify-center overflow-hidden bg-wedding-sage-darkest">
-            <div
-                className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-90"
-                style={{ backgroundImage: "url('/background-placeholder.webp')" }}
-            ></div>
-            <div className="absolute inset-0 z-0 bg-wedding-sage-darkest/75"></div>
+        <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
+            <div className="w-full max-w-xl space-y-8">
+                <div className="text-center space-y-3">
+                    <Monogram size="md" className="text-primary" />
+                    <h1 className="font-serif italic text-4xl text-primary">
+                        {firstName ? `Hola, ${firstName}` : "Hola"}
+                    </h1>
+                    <p className="text-on-surface-variant">¿A dónde quieres ir?</p>
+                </div>
 
-            <div className="relative z-10 flex flex-col items-center px-4 md:px-8 w-full max-w-3xl py-12">
-                <h1 className={`${pinyonScript.className} text-5xl md:text-7xl text-wedding-blush-light drop-shadow-xl mb-4 text-center`}>
-                    {firstName ? `Hola, ${firstName}` : "Bienvenido"}
-                </h1>
-                <p className="text-sm md:text-base font-light tracking-[0.2em] uppercase text-wedding-cream/90 mb-12 text-center drop-shadow-md">
-                    ¿Cómo quieres continuar?
-                </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                    <Link
+                <div className="grid gap-3">
+                    <Choice
                         href="/admin"
-                        className="group bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center text-center gap-4 border border-wedding-sage/10"
-                    >
-                        <div className="w-14 h-14 rounded-2xl bg-wedding-sage-darkest/10 flex items-center justify-center group-hover:bg-wedding-sage-darkest/20 transition-colors">
-                            <LayoutDashboard className="w-7 h-7 text-wedding-sage-darkest" strokeWidth={1.5} />
-                        </div>
-                        <h2 className="text-2xl font-serif text-wedding-sage-darkest">Panel de administración</h2>
-                        <p className="text-sm text-gray-600 font-light">
-                            Gestiona invitados, tareas y ajustes de la boda.
-                        </p>
-                    </Link>
-
-                    <Link
+                        icon={LayoutDashboard}
+                        title="Panel de organización"
+                        text="Invitados, mesas, cronograma, menú y más."
+                    />
+                    <Choice
                         href="/dashboard"
-                        className="group bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center text-center gap-4 border border-wedding-sage/10"
-                    >
-                        <div className="w-14 h-14 rounded-2xl bg-wedding-blush-light/30 flex items-center justify-center group-hover:bg-wedding-blush-light/50 transition-colors">
-                            <Mail className="w-7 h-7 text-wedding-sage-darkest" strokeWidth={1.5} />
-                        </div>
-                        <h2 className="text-2xl font-serif text-wedding-sage-darkest">Ver mi invitación</h2>
-                        <p className="text-sm text-gray-600 font-light">
-                            Revisa el estado de tu invitación como un invitado más.
-                        </p>
-                    </Link>
-
-                    <Link
-                        href="/"
-                        className="group bg-white/95 backdrop-blur-sm p-8 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all flex flex-col items-center text-center gap-4 border border-wedding-sage/10"
-                    >
-                        <div className="w-14 h-14 rounded-2xl bg-wedding-sage/20 flex items-center justify-center group-hover:bg-wedding-sage/30 transition-colors">
-                            <Timer className="w-7 h-7 text-wedding-sage-darkest" strokeWidth={1.5} />
-                        </div>
-                        <h2 className="text-2xl font-serif text-wedding-sage-darkest">Cuenta atrás</h2>
-                        <p className="text-sm text-gray-600 font-light">
-                            Ver el contador hasta el gran día.
-                        </p>
-                    </Link>
+                        icon={Mail}
+                        title="Mi invitación"
+                        text="Lo que ven los invitados: confirmación, datos del día y mesa."
+                    />
                 </div>
 
                 <form
@@ -87,14 +52,32 @@ export default async function WelcomePage() {
                         "use server";
                         await signOut({ redirectTo: "/" });
                     }}
-                    className="mt-10"
+                    className="text-center"
                 >
-                    <button className="flex items-center gap-2 text-wedding-cream/80 hover:text-wedding-cream transition-colors text-xs tracking-widest uppercase font-medium">
+                    <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors">
                         <LogOut className="w-4 h-4" />
-                        <span>Cerrar sesión</span>
+                        Cerrar sesión
                     </button>
                 </form>
             </div>
         </main>
+    );
+}
+
+function Choice({ href, icon: Icon, title, text }: { href: string; icon: typeof Mail; title: string; text: string }) {
+    return (
+        <Link
+            href={href}
+            className="group flex items-center gap-4 p-5 rounded-2xl bg-surface-container-lowest shadow-[0_4px_24px_rgba(81,68,67,0.06)] hover:shadow-[0_8px_28px_rgba(81,68,67,0.09)] transition-shadow"
+        >
+            <span className="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center shrink-0">
+                <Icon className="w-6 h-6" strokeWidth={1.5} />
+            </span>
+            <span className="flex-1 min-w-0">
+                <span className="block font-serif text-2xl text-on-surface">{title}</span>
+                <span className="block text-sm text-on-surface-variant">{text}</span>
+            </span>
+            <ChevronRight className="w-5 h-5 text-on-surface-variant/80 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+        </Link>
     );
 }
