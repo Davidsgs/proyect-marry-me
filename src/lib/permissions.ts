@@ -7,6 +7,12 @@ import { eq } from "drizzle-orm";
 // en user_permissions y SÍ son editables. Mantener en sync con scripts/rbac-catalog.ts.
 export const BASELINE_ADMIN_PERMS = ["admin.dashboard"];
 
+// Permisos que otorgan otros de forma implícita. Mesas muestra nombres de
+// invitados y familias, así que leer mesas implica poder leerlos.
+const IMPLIED_PERMS: Record<string, string[]> = {
+  "tables.read": ["families.read", "users.read"],
+};
+
 /**
  * Recupera todas las claves de permisos efectivas de un usuario: las heredadas
  * por sus roles MÁS las concedidas directamente al usuario (user_permissions).
@@ -39,7 +45,8 @@ export async function getUserPermissions(userId: number): Promise<string[]> {
 
     // Deduplicar permisos de ambas fuentes (rol + directos)
     const permKeys = [...rolePerms, ...directPerms].map((r) => r.permissionKey);
-    return Array.from(new Set(permKeys));
+    const implied = permKeys.flatMap((k) => IMPLIED_PERMS[k] ?? []);
+    return Array.from(new Set([...permKeys, ...implied]));
   } catch (error) {
     console.error("Error fetching user permissions:", error);
     return [];
