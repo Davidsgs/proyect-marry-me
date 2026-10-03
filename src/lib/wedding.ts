@@ -10,16 +10,22 @@ export function daysUntilWedding(): number {
 export const COUPLE_NAMES = "David & Rocío";
 
 export const VENUE = {
-  address: "Tomás de Anchorena 2347",
-  area: "Ituzaingó, Buenos Aires",
-  mapsUrl: "https://maps.app.goo.gl/YBEZj9J8gLLBycu39",
+  address: "Salón SUM · Quinta Vaccarezza",
+  area: "Villa Udaondo, Ituzaingó, Provincia de Buenos Aires",
+  mapsUrl: "https://maps.app.goo.gl/NtcHnWBP3NwRZx4J9",
 };
+
+export type AvoidColor = { name: string; hex: string };
 
 export const DRESS_CODE = {
   style: "Elegante",
   // Colores reservados para evitar coincidir con la decoración y los novios.
-  women: "Evitar rosa, verde y blanco",
-  men: "Evitar gris",
+  women: [
+    { name: "Rosa", hex: "#e7c6c1" },
+    { name: "Verde", hex: "#afc3b1" },
+    { name: "Blanco", hex: "#f2eee8" },
+  ] as AvoidColor[],
+  men: [{ name: "Gris", hex: "#53565A" }] as AvoidColor[],
 };
 
 // Evento de día completo: el horario aún no está definido.
