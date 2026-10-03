@@ -46,17 +46,17 @@ No es una plataforma de bodas genérica: está hecha a medida para una sola boda
 - Nombres: David y Rocío. Dominio: www.davidyrocio.wedding.
 - Personalidad: romántico, botánico, pastel, sutil, minimalista, etéreo (`.agents/rules/style-guide.md`).
 - Paleta de marca: #f2eee8, #e7c6c1, #afc3b1, #6f7f6a, #d9a3a0. Sin colores vibrantes ni neón.
-- Monograma «DR» entrelazado como logotipo.
+- Monograma «DR» entrelazado como logotipo: `public/monograma-DR-centrado.svg` (D oliva #828A6C, R rosa #DF8E86).
 - Tipografías: se mantienen Inter (texto) y Cormorant (títulos) por decisión explícita.
 - Tono visual de invitados: **mixto**. La landing conserva la foto con fondo oscuro; login, panel y RSVP van en claro (crema/botánico).
 - Idioma: español neutro que entiendan venezolanos y argentinos; evitar regionalismos fuertes en textos para invitados («pasapalo» se mantiene como término del menú interno).
 
 ## Evidence on Hand
 
-- Lugar: Tomás de Anchorena 2347, Ituzaingó, Buenos Aires (mapa: https://maps.app.goo.gl/YBEZj9J8gLLBycu39).
+- Lugar: Salón SUM, Quinta Vaccarezza, Villa Udaondo, Ituzaingó, Provincia de Buenos Aires (mapa: https://share.google/ltOFm0PLDVjL1RZdF).
 - Código de vestimenta: Elegante. Mujeres: no usar rosa, verde ni blanco. Varones: no usar gris.
 - Imagen de fondo de la landing: `public/background-placeholder.webp` (placeholder).
-- No hay fotos de la pareja, monograma vectorial ni testimonios en el repo: no fabricarlos.
+- No hay fotos de la pareja ni testimonios en el repo: no fabricarlos.
 
 ## Product Principles
 
