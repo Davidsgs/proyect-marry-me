@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { WEDDING_DATE_LABEL } from "@/lib/wedding";
+import { Monogram } from "@/components/Monogram";
 import { redirect } from "next/navigation";
 import AdminSidebar from "./_components/AdminSidebar";
 import AdminMobileNav from "./_components/AdminMobileNav";
@@ -23,13 +24,16 @@ export default async function AdminLayout({
 
       {/* Mobile Top Header (only visible on small screens) */}
       <header className="lg:hidden bg-surface-container-low/90 backdrop-blur-md px-6 py-4 w-full sticky top-0 z-50 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-3">
+        <Monogram size="sm" />
         <div className="flex flex-col">
           <span className="font-serif text-xl tracking-wide text-primary leading-tight">
             David &amp; Rocío
           </span>
-          <span className="font-sans text-[10px] tracking-[0.2em] uppercase text-on-surface-variant font-medium">
+          <span className="font-sans text-xs text-on-surface-variant">
             {WEDDING_DATE_LABEL}
           </span>
+        </div>
         </div>
         <AdminMobileHeaderActions />
       </header>

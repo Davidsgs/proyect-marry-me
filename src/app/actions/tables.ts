@@ -2,16 +2,13 @@
 
 import { db } from "@/db";
 import { tables, users } from "@/db/schema";
-import { eq, asc, inArray } from "drizzle-orm";
-import { revalidatePath, updateTag, unstable_cache } from "next/cache";
+import { eq, inArray } from "drizzle-orm";
+import { revalidatePath, updateTag } from "next/cache";
+import { cachedTables, cachedUsers } from "@/lib/data";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 
-const fetchAllTables = unstable_cache(
-    async () => db.select().from(tables).orderBy(asc(tables.number)).all(),
-    ["all-tables"],
-    { tags: ["tables"] }
-);
+const fetchAllTables = cachedTables;
 
 function invalidateTables() {
     updateTag("tables");
@@ -149,12 +146,14 @@ export async function getMyTable() {
     const userId = session?.user?.id;
     if (!userId) return null;
 
-    const me = await db.select().from(users).where(eq(users.id, userId)).get();
+    // Desde caché: sin viajes a la base salvo que cambien mesas o invitados.
+    const [allUsers, allTables] = await Promise.all([cachedUsers(), cachedTables()]);
+    const me = allUsers.find((u) => u.id === userId);
     if (!me?.tableId) return null;
 
-    const table = await db.select().from(tables).where(eq(tables.id, me.tableId)).get();
+    const table = allTables.find((t) => t.id === me.tableId);
     if (!table) return null;
 
-    const tablemates = await db.select().from(users).where(eq(users.tableId, me.tableId)).all();
+    const tablemates = allUsers.filter((u) => u.tableId === me.tableId);
     return { table, members: tablemates };
 }

@@ -25,7 +25,7 @@ export default async function WelcomePage() {
         <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-xl space-y-8">
                 <div className="text-center space-y-3">
-                    <Monogram size="md" className="text-primary" />
+                    <Monogram size="md" className="mx-auto" />
                     <h1 className="font-serif italic text-4xl text-primary">
                         {firstName ? `Hola, ${firstName}` : "Hola"}
                     </h1>

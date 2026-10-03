@@ -15,8 +15,7 @@ export default async function CronogramaPage() {
         redirect("/admin");
     }
 
-    const activities = await getSchedule();
-    const locked = await getScheduleLocked();
+    const [activities, locked] = await Promise.all([getSchedule(), getScheduleLocked()]);
     const canWrite = hasPermission(perms, "calendar.write");
 
     return (

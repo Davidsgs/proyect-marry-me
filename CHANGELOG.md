@@ -8,6 +8,7 @@
 - Panel de Administración protegido para crear, editar y eliminar usuarios y familias.
 - Soporte para variables de entorno para autenticación y base de datos local / de producción.
 - Componentes base de UI y sistema de diseño visual aplicando la guía de estilo (`#f2eee8`, `#e7c6c1`, `#afc3b1`, etc.) y tipografías (Glacial Indifference y Tan Pearl).
+- Páginas legales públicas de Política de Privacidad (`/privacidad`) y Términos y Condiciones (`/terminos`) con plantilla reutilizable `LegalPage` y enlaces desde el login.
 
 ### Changed
 - Refactorización de componentes Tailwind con estilo visual "Romántico y Etéreo" (Glassmorphism, animaciones sutiles fade-in, colores pasteles).

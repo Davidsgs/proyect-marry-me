@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { scheduleActivities, scheduleTasks, scheduleResponsibles, eventConfig } from "@/db/schema";
 import { eq, asc, sql } from "drizzle-orm";
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
+import { cachedConfig } from "@/lib/data";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -83,12 +84,7 @@ export async function getSchedule(): Promise<ActivityWithTasks[]> {
 }
 
 export async function getScheduleLocked(): Promise<boolean> {
-    const record = await db
-        .select({ value: eventConfig.value })
-        .from(eventConfig)
-        .where(eq(eventConfig.key, LOCK_KEY))
-        .get();
-    return record?.value === "1";
+    return (await cachedConfig(LOCK_KEY)) === "1";
 }
 
 export async function setScheduleLocked(locked: boolean): Promise<void> {
@@ -100,6 +96,7 @@ export async function setScheduleLocked(locked: boolean): Promise<void> {
     } else {
         await db.insert(eventConfig).values({ key: LOCK_KEY, value });
     }
+    updateTag("config");
     revalidatePath("/admin/cronograma");
 }
 
@@ -153,8 +150,12 @@ export async function deleteActivity(id: number) {
 /** Persiste el nuevo orden tras un drag & drop: orderedIds en su orden final. */
 export async function reorderActivities(orderedIds: number[]) {
     await requireWrite();
-    for (let i = 0; i < orderedIds.length; i++) {
-        await db.update(scheduleActivities).set({ sortOrder: i }).where(eq(scheduleActivities.id, orderedIds[i]));
+    if (orderedIds.length > 0) {
+        // Un solo viaje a la base para todo el reordenado.
+        const [first, ...rest] = orderedIds.map((activityId, i) =>
+            db.update(scheduleActivities).set({ sortOrder: i }).where(eq(scheduleActivities.id, activityId)),
+        );
+        await db.batch([first, ...rest]);
     }
     invalidate();
 }
