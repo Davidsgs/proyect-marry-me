@@ -5,7 +5,7 @@ import { families, users } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { auth } from "@/auth";
-import { getRsvpDeadline } from "@/app/actions/config";
+import { getRsvpDeadline } from "@/lib/data";
 
 export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CONFIRMED' | 'DECLINED', userUpdates: { userId: number, isConfirmed: boolean }[]) {
     // 1. Verify user authentication
@@ -52,17 +52,18 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
         throw new Error("Marca al menos a una persona que asistirá.");
     }
 
-    // 6. Update global family status
-    await db.update(families)
+    // 6-7. Estado de la familia + asistencia de cada miembro (acotado a la familia
+    // aunque el cliente envíe otros ids), en un solo viaje a la base.
+    await db.batch([
+        db.update(families)
             .set({ globalRsvpStatus: status })
-            .where(eq(families.id, familyId));
-
-    // 7. Update individual users (acotado a la familia aunque el cliente envíe otros ids)
-    for (const update of updates) {
-        await db.update(users)
+            .where(eq(families.id, familyId)),
+        ...updates.map((update) =>
+            db.update(users)
                 .set({ isConfirmed: update.isConfirmed })
-                .where(and(eq(users.id, update.userId), eq(users.familyId, familyId)));
-    }
+                .where(and(eq(users.id, update.userId), eq(users.familyId, familyId))),
+        ),
+    ]);
 
     updateTag("families");
     updateTag("users");

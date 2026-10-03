@@ -23,7 +23,7 @@ export default async function LoginPage({
         <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-md text-center space-y-8">
                 <div className="space-y-4">
-                    <Monogram size="lg" className="text-primary" />
+                    <Monogram size="lg" className="mx-auto" />
                     <Sprig className="w-28 mx-auto text-wedding-olive" />
                     <h1 className="font-serif italic text-4xl text-primary">Tu invitación</h1>
                     <p className="text-on-surface-variant text-sm">David &amp; Rocío · {WEDDING_DATE_LABEL}</p>

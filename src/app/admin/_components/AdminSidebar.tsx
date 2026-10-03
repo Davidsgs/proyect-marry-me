@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { WEDDING_DATE_LABEL } from "@/lib/wedding";
+import { Monogram } from "@/components/Monogram";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -52,6 +53,7 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
     <aside className="hidden lg:flex fixed left-0 top-0 h-full z-40 flex-col py-8 bg-surface-container-low w-72 justify-between">
       <div>
         <div className="px-8 mb-10">
+          <Monogram size="md" className="mb-3" />
           <h2 className="font-serif text-3xl text-primary mb-1">David & Rocío</h2>
           <p className="font-sans text-xs tracking-[0.2em] uppercase text-on-surface-variant font-medium">
             {WEDDING_DATE_LABEL}

@@ -32,6 +32,7 @@ Env in `.env.local` (gitignored): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUT
 - No API routes besides NextAuth. All reads/writes go through server actions in `src/app/actions/<section>.ts`.
 - Action file pattern: reads wrapped in `unstable_cache` with a section tag; writes call a local `invalidate()` that does `updateTag("<tag>")` + `revalidatePath(...)` for the section and `/admin`. Cross-section caches share tags (e.g. menu cache also tagged `schedule`, since menu items group by schedule activities). `requireRead()`/`requireWrite()` helpers throw `"Sin permisos"`.
 - Admin pages are server components (`export const dynamic = "force-dynamic"`) that check perms, fetch via actions, and pass data + `canWrite` into a client `_components/<Section>Manager.tsx`.
+- **Latency matters**: Turso is remote (~160 ms per query from Argentina). Shared cached reads live in `src/lib/data.ts` (`cachedFamilies`, `cachedUsers`, `cachedTables`, `cachedConfig`, `getRsvpDeadline`; tags `families`/`users`/`tables`/`config`) — pages read from there, never `db` directly, and writers must `updateTag` the matching tag (`config` for `event_config`). That module is not `"use server"`, so it never becomes a callable action. Multi-row writes use `db.batch([...])` (one round trip) instead of `await` in a loop; independent reads go in `Promise.all`.
 - Money is stored as integer **cents**; use `src/lib/money.ts` (ARS, es-AR formatting/parsing).
 
 **Adding a new admin section** (pattern followed by finance/menu):

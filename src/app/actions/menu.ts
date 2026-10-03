@@ -192,8 +192,12 @@ export async function assignMenuItemMoment(id: number, activityId: number | null
 // momentos concatenados), así el sortOrder queda consistente entre grupos.
 export async function reorderMenuItems(orderedIds: number[]) {
   await requireWrite();
-  for (let i = 0; i < orderedIds.length; i++) {
-    await db.update(menuItems).set({ sortOrder: i }).where(eq(menuItems.id, orderedIds[i]));
+  if (orderedIds.length > 0) {
+    // Un solo viaje a la base para todo el reordenado.
+    const [first, ...rest] = orderedIds.map((itemId, i) =>
+      db.update(menuItems).set({ sortOrder: i }).where(eq(menuItems.id, itemId)),
+    );
+    await db.batch([first, ...rest]);
   }
   invalidate();
 }
@@ -202,9 +206,11 @@ export async function reorderMenuItems(orderedIds: number[]) {
 // el orden global en una sola llamada, para no dejar estados intermedios raros.
 export async function moveMenuItem(id: number, activityId: number | null, orderedIds: number[]) {
   await requireWrite();
-  await db.update(menuItems).set({ activityId }).where(eq(menuItems.id, id));
-  for (let i = 0; i < orderedIds.length; i++) {
-    await db.update(menuItems).set({ sortOrder: i }).where(eq(menuItems.id, orderedIds[i]));
-  }
+  await db.batch([
+    db.update(menuItems).set({ activityId }).where(eq(menuItems.id, id)),
+    ...orderedIds.map((itemId, i) =>
+      db.update(menuItems).set({ sortOrder: i }).where(eq(menuItems.id, itemId)),
+    ),
+  ]);
   invalidate();
 }

@@ -3,7 +3,8 @@
 import { db } from "@/db";
 import { families, users, roles, userRoles, permissions, userPermissions } from "@/db/schema";
 import { and, eq, ne, inArray } from "drizzle-orm";
-import { revalidatePath, updateTag, unstable_cache } from "next/cache";
+import { revalidatePath, updateTag } from "next/cache";
+import { cachedFamilies, cachedUsers } from "@/lib/data";
 import { auth } from "@/auth";
 import { hasPermission, BASELINE_ADMIN_PERMS } from "@/lib/permissions";
 
@@ -59,17 +60,8 @@ async function clearUserPermissions(userId: number) {
     await db.delete(userPermissions).where(eq(userPermissions.userId, userId));
 }
 
-const fetchAllFamilies = unstable_cache(
-    async () => db.select().from(families).all(),
-    ["all-families"],
-    { tags: ["families"] }
-);
-
-const fetchAllUsers = unstable_cache(
-    async () => db.select().from(users).all(),
-    ["all-users"],
-    { tags: ["users"] }
-);
+const fetchAllFamilies = cachedFamilies;
+const fetchAllUsers = cachedUsers;
 
 function invalidateFamilies() {
     updateTag("families");
