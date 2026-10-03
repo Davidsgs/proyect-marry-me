@@ -56,9 +56,12 @@ export default async function LoginPage({
                     </form>
                 </div>
 
-                <Link href="/" className="inline-block text-sm text-on-surface-variant hover:text-primary underline underline-offset-4">
-                    Volver a la portada
-                </Link>
+                <p className="text-xs text-on-surface-variant">
+                    Al entrar aceptas los{" "}
+                    <Link href="/terminos" className="underline underline-offset-4 hover:text-primary">términos y condiciones</Link>{" "}
+                    y la{" "}
+                    <Link href="/privacidad" className="underline underline-offset-4 hover:text-primary">política de privacidad</Link>.
+                </p>
             </div>
         </main>
     );

@@ -4,6 +4,12 @@ import { auth } from '@/auth';
 export default auth((req) => {
     const isAuth = !!req.auth;
     const isLoginPage = req.nextUrl.pathname.startsWith('/login');
+    // Páginas legales: públicas (Google las revisa sin sesión).
+    const isPublicPage = ['/privacidad', '/terminos'].includes(req.nextUrl.pathname);
+
+    if (isPublicPage) {
+        return NextResponse.next();
+    }
     const permissions = req.auth?.user?.permissions;
     const hasAdminDashboard = permissions?.includes('admin.dashboard');
 
