@@ -7,7 +7,7 @@ import { getSchedule } from "@/app/actions/schedule";
 import { getFinanceSummary } from "@/app/actions/finance";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
-import { getRsvpDeadline } from "@/app/actions/config";
+import { getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { PageHeader, StatCard, btnPrimary } from "@/app/admin/_components/ui";
 import {

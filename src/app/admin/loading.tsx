@@ -1,12 +1,22 @@
-import { Loader2 } from "lucide-react";
-
+// Esqueleto con la forma de una sección (encabezado + tarjetas + contenido):
+// aparece al instante al navegar mientras el servidor prepara la página.
 export default function AdminLoading() {
     return (
-        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-            <Loader2 className="w-10 h-10 text-primary animate-spin" />
-            <p className="text-xs font-sans tracking-[0.2em] uppercase text-on-surface-variant font-medium">
-                Cargando
-            </p>
+        <div className="max-w-6xl mx-auto space-y-10 animate-pulse" aria-busy="true" aria-label="Cargando">
+            <div className="space-y-3">
+                <div className="h-10 w-56 rounded-xl bg-surface-container" />
+                <div className="h-4 w-80 max-w-full rounded-lg bg-surface-container-low" />
+            </div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }, (_, i) => (
+                    <div key={i} className="h-28 rounded-2xl bg-surface-container-low" />
+                ))}
+            </div>
+            <div className="space-y-3">
+                {Array.from({ length: 4 }, (_, i) => (
+                    <div key={i} className="h-16 rounded-2xl bg-surface-container-low" />
+                ))}
+            </div>
         </div>
     );
 }

@@ -20,7 +20,7 @@ export default function Error({
     return (
         <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
             <div className="w-full max-w-md text-center space-y-6">
-                <Monogram size="md" className="text-primary" />
+                <Monogram size="md" className="mx-auto" />
                 <h1 className="font-serif italic text-4xl text-primary">Algo no salió bien</h1>
                 <p className="text-base text-on-surface-variant leading-relaxed">
                     Puede ser un problema de conexión. Vuelve a intentarlo; si sigue pasando, escríbenos y lo resolvemos.

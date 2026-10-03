@@ -28,7 +28,7 @@ export default async function Home() {
 
       <div className="relative z-10 flex flex-col items-center text-center px-4 w-full max-w-3xl py-16 min-h-screen justify-center gap-10 md:gap-14">
         <div className="space-y-6">
-          <Monogram size="md" className="text-wedding-blush-light/90" />
+          <Monogram size="lg" tone="gold" className="mx-auto drop-shadow-[0_2px_10px_rgba(216,180,94,0.25)]" />
           <h1 className={`${pinyonScript.className} text-6xl sm:text-7xl md:text-8xl text-wedding-blush-light leading-tight`}>
             David &amp; Rocío
           </h1>

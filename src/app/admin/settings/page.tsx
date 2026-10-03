@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { PageHeader } from "@/app/admin/_components/ui";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
-import { getConfig } from "@/app/actions/config";
+import { cachedConfig } from "@/lib/data";
 import { getAdminsWithPermissions, getEditablePermissions } from "@/app/actions/permissions";
 import SettingsForm from "./_components/SettingsForm";
 import AdminPermissionsManager from "./_components/AdminPermissionsManager";
@@ -15,8 +15,8 @@ export default async function SettingsPage() {
     redirect("/admin");
   }
 
-  const rsvpDeadline = await getConfig("rsvp_deadline");
-  const [admins, editablePermissions] = await Promise.all([
+  const [rsvpDeadline, admins, editablePermissions] = await Promise.all([
+    cachedConfig("rsvp_deadline"),
     getAdminsWithPermissions(),
     getEditablePermissions(),
   ]);

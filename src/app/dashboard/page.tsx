@@ -1,8 +1,5 @@
-import { db } from "@/db";
-import { families, users } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import { auth } from "@/auth";
-import { getRsvpDeadline } from "@/app/actions/config";
+import { cachedFamilies, cachedUsers, getRsvpDeadline } from "@/lib/data";
 import RsvpForm from "./_components/RsvpForm";
 import ReadOnlyRsvp from "./_components/ReadOnlyRsvp";
 import MyTableCard from "./_components/MyTableCard";
@@ -24,14 +21,15 @@ export default async function DashboardPage() {
         )
     }
 
-    const family = await db.select().from(families).where(eq(families.id, familyId)).get();
-    const familyMembers = await db.select().from(users).where(eq(users.familyId, familyId)).all();
+    // Todo desde caché y en paralelo: antes eran 4 consultas seguidas (~160 ms cada una).
+    const [allFamilies, allUsers, deadline] = await Promise.all([cachedFamilies(), cachedUsers(), getRsvpDeadline()]);
+    const family = allFamilies.find((f) => f.id === familyId);
+    const familyMembers = allUsers.filter((u) => u.familyId === familyId);
 
     if (!family) {
         return <p className="text-on-surface-variant">No encontramos tu invitación. Escríbeles a David o Rocío.</p>;
     }
 
-    const deadline = await getRsvpDeadline();
     const now = new Date();
     const isPastDeadline = deadline ? now > deadline : false;
     const hasResponded = family.globalRsvpStatus !== 'PENDING';
@@ -40,7 +38,7 @@ export default async function DashboardPage() {
 
     let delegate: { name: string; lastName: string; email: string | null } | null = null;
     if (family.delegateUserId) {
-        const delegateUser = await db.select().from(users).where(eq(users.id, family.delegateUserId)).get();
+        const delegateUser = allUsers.find((u) => u.id === family.delegateUserId);
         if (delegateUser) {
             delegate = {
                 name: delegateUser.name,
