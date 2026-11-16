@@ -15,7 +15,7 @@ web
 
 ## Product Purpose
 
-Invitación digital privada y centro de organización de la boda de David y Rocío (3 de abril de 2027, Ituzaingó, Buenos Aires). Éxito para invitados: confirmar en menos de un minuto sin dudas y llegar al día sabiendo todo lo necesario. Éxito para el panel: que la pareja y sus ayudantes sepan en segundos qué falta (quién no respondió, quién no tiene mesa, qué vence) y lo resuelvan sin preguntar cómo funciona la app.
+Invitación digital privada y centro de organización de la boda de David y Rocío (2 de abril de 2027, Ituzaingó, Buenos Aires). Éxito para invitados: confirmar en menos de un minuto sin dudas y llegar al día sabiendo todo lo necesario. Éxito para el panel: que la pareja y sus ayudantes sepan en segundos qué falta (quién no respondió, quién no tiene mesa, qué vence) y lo resuelvan sin preguntar cómo funciona la app.
 
 ## Positioning
 
@@ -33,7 +33,10 @@ No es una plataforma de bodas genérica: está hecha a medida para una sola boda
 ## Capabilities and Constraints
 
 - Secciones admin: Resumen, Invitados (familias y personas), Tareas, Mesas (lista con arrastre + plano del salón + imprimible), Cronograma, Menú, Economía, Ajustes (evento y permisos por administrador).
-- Lado invitado: landing con cuenta atrás, login, panel con RSVP, vista de solo lectura para no delegados, «Mi mesa».
+- Lado invitado: landing con cuenta atrás, login, panel con RSVP (con restricción alimentaria por persona), vista de solo lectura para no delegados, «Tu mesa», «Nuestra historia» con fotos y «Regalos».
+- Política de niños: cada familia lleva una marca «familia directa». Las familias sin ella ven, en el RSVP, una nota amable de que la celebración es para adultos. Es solo informativa: no bloquea nada.
+- Restricciones alimentarias: opciones cerradas más «Otra», un texto corto de 20 caracteres como máximo.
+- Regalos: datos editables en Ajustes; la sección no aparece si están vacíos.
 - Vocabulario único (usar siempre estos términos):
   - **Delegado**: el adulto que confirma por su familia (no «titular» ni «invitado principal»).
   - **Acompañante**: miembro de la familia que no es delegado.
@@ -44,19 +47,22 @@ No es una plataforma de bodas genérica: está hecha a medida para una sola boda
 ## Brand Commitments
 
 - Nombres: David y Rocío. Dominio: www.davidyrocio.wedding.
-- Personalidad: romántico, botánico, pastel, sutil, minimalista, etéreo (`.agents/rules/style-guide.md`).
-- Paleta de marca: #f2eee8, #e7c6c1, #afc3b1, #6f7f6a, #d9a3a0. Sin colores vibrantes ni neón.
+- Autoridad visual: el manual de marca (`.claude/Manual de Marca de Nuestra Boda David y Rocio.pdf`). Rasgos: campos de color plenos (rosa, rubor, oliva), sombras botánicas difusas, arco crema, polaroids inclinados, banda oliva.
+- Personalidad: romántico, botánico, pastel, sutil, minimalista, etéreo.
+- Paleta de marca: #f2eee8, #e7c6c1, #afc3b1, #6f7f6a, #d9a3a0. Sin colores vibrantes ni neón. Para texto se usan tonos derivados con contraste AA (tinta #364033, oliva profundo #55634f).
 - Monograma «DR» entrelazado como logotipo: `public/monograma-DR-centrado.svg` (D oliva #828A6C, R rosa #DF8E86).
-- Tipografías: se mantienen Inter (texto) y Cormorant (títulos) por decisión explícita.
-- Tono visual de invitados: **mixto**. La landing conserva la foto con fondo oscuro; login, panel y RSVP van en claro (crema/botánico).
+- Tipografías: pareja «Inscripción serena», elegida por la pareja el 2026-11-16 en lugar de las del manual (TAN Pearl no les gustó en pantalla): Marcellus para títulos y subtítulos, Mulish para todo el texto, del invitado y del panel.
+- Tono visual: todo claro sobre campos de color de la marca, salvo la portada (`/`), que se mantiene oscura (verde noche #1e2419 sobre foto) con el monograma dorado por decisión de la pareja (2026-11-16).
+- Contacto para invitados: solo el correo de soporte. Los teléfonos no se publican.
 - Idioma: español neutro que entiendan venezolanos y argentinos; evitar regionalismos fuertes en textos para invitados («pasapalo» se mantiene como término del menú interno).
 
 ## Evidence on Hand
 
 - Lugar: Salón SUM, Quinta Vaccarezza, Villa Udaondo, Ituzaingó, Provincia de Buenos Aires (mapa: https://share.google/ltOFm0PLDVjL1RZdF).
 - Código de vestimenta: Elegante. Mujeres: no usar rosa, verde ni blanco. Varones: no usar gris.
-- Imagen de fondo de la landing: `public/background-placeholder.webp` (placeholder).
-- No hay fotos de la pareja ni testimonios en el repo: no fabricarlos.
+- «Nuestra historia» (texto del manual): se guarda en la base y se edita en Ajustes; nunca en el código ni en la documentación (el repositorio es público).
+- Fotos de la pareja e ilustración: las aporta la pareja. **Solo visibles con sesión activa**: se sirven desde `public/privado/`, protegido por `src/proxy.ts`.
+- No hay testimonios: no fabricarlos.
 
 ## Product Principles
 
