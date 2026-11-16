@@ -30,13 +30,15 @@ interface Props {
     canWriteUsers: boolean;
     initialTab?: "families" | "users";
     initialFamilyFilter?: FamilyFilter;
+    /** Plazo para responder («1 de marzo»), para el recordatorio a familias pendientes. */
+    deadlineLabel?: string | null;
 }
 
 // "minors": familias con menores que no están marcadas como «familia directa»
 // (ven la nota de celebración sin niños aunque traigan niños).
 export type FamilyFilter = "all" | "pending" | "no-delegate" | "minors";
 
-export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all" }: Props) {
+export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all", deadlineLabel = null }: Props) {
     const confirm = useConfirm();
     // Familias e invitados con cambios optimistas (ver guestsStore.tsx).
     const server = useMemo(() => ({ families: serverFamilies, users: serverUsers }), [serverFamilies, serverUsers]);
@@ -102,6 +104,7 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
             users={users}
             canWriteFamilies={canWriteFamilies}
             canWriteUsers={canWriteUsers}
+            deadlineLabel={deadlineLabel}
             onClose={() => setOpenFamilyId(null)}
             registerClose={(fn) => { requestClose.current = fn; }}
         />
