@@ -6,6 +6,7 @@ import { eq, asc } from "drizzle-orm";
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
+import { DEFAULT_PRIORITY, isPriority, type Priority } from "@/lib/priority";
 
 const fetchAllTasks = unstable_cache(
     async () => db
@@ -14,6 +15,7 @@ const fetchAllTasks = unstable_cache(
             title: tasks.title,
             description: tasks.description,
             dueDate: tasks.dueDate,
+            priority: tasks.priority,
             isCompleted: tasks.isCompleted,
             completedAt: tasks.completedAt,
             completedBy: tasks.completedBy,
@@ -44,7 +46,7 @@ export async function getTasks() {
     return await fetchAllTasks();
 }
 
-export async function createTask(data: { title: string; description?: string; dueDate?: string }) {
+export async function createTask(data: { title: string; description?: string; dueDate?: string; priority?: Priority }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "tasks.write")) {
         throw new Error("Sin permisos");
@@ -54,13 +56,15 @@ export async function createTask(data: { title: string; description?: string; du
         title: data.title,
         description: data.description || "",
         dueDate: data.dueDate || null,
+        priority: isPriority(data.priority) ? data.priority : DEFAULT_PRIORITY,
         createdBy: session?.user?.id ?? null,
     });
 
     invalidateTasks();
 }
 
-export async function updateTask(id: number, data: { title?: string; description?: string; dueDate?: string }) {
+// dueDate: string = nueva fecha, null = quitarla, undefined = no tocarla.
+export async function updateTask(id: number, data: { title?: string; description?: string; dueDate?: string | null; priority?: Priority }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "tasks.write")) {
         throw new Error("Sin permisos");
@@ -73,7 +77,11 @@ export async function updateTask(id: number, data: { title?: string; description
     const updateSet: Record<string, unknown> = {};
     if (data.title !== undefined) updateSet.title = data.title;
     if (data.description !== undefined) updateSet.description = data.description;
-    if (data.dueDate !== undefined) updateSet.dueDate = data.dueDate;
+    if (data.dueDate !== undefined) updateSet.dueDate = data.dueDate || null;
+    if (data.priority !== undefined) {
+        if (!isPriority(data.priority)) throw new Error("Importancia no válida");
+        updateSet.priority = data.priority;
+    }
 
     if (Object.keys(updateSet).length > 0) {
         await db.update(tasks).set(updateSet).where(eq(tasks.id, id));
