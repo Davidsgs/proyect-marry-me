@@ -6,7 +6,7 @@
 import { unstable_cache } from "next/cache";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { eventConfig, families, tables, users } from "@/db/schema";
+import { eventConfig, families, tables, users, weddingParty } from "@/db/schema";
 
 export const cachedFamilies = unstable_cache(
     async () => db.select().from(families).all(),
@@ -24,6 +24,13 @@ export const cachedTables = unstable_cache(
     async () => db.select().from(tables).orderBy(asc(tables.number)).all(),
     ["all-tables"],
     { tags: ["tables"] },
+);
+
+/** Padrinos y cortejo en su orden (tag "wedding-party"). */
+export const cachedWeddingParty = unstable_cache(
+    async () => db.select().from(weddingParty).orderBy(asc(weddingParty.sortOrder), asc(weddingParty.id)).all(),
+    ["wedding-party"],
+    { tags: ["wedding-party"] },
 );
 
 /** Valor de event_config (tag "config"; quien escribe debe hacer updateTag("config")). */
