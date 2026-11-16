@@ -49,5 +49,9 @@ export const config = {
          * - any static asset files (images, fonts, etc.)
          */
         '/((?!api|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:jpg|jpeg|gif|png|svg|webp|ico|woff2?|eot|ttf|otf)).*)',
+        // Fotos de la pareja e ilustración: solo con sesión. El patrón de arriba
+        // deja fuera las imágenes; este las vuelve a incluir para public/privado/.
+        // No servirlas con next/image: /_next/image queda fuera de este control.
+        '/privado/:path*',
     ],
 };
