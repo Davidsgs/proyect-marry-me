@@ -11,7 +11,7 @@ import WeddingParty from "./_components/WeddingParty";
 import { Arch } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
 import { DRESS_CODE, SUPPORT_EMAIL, VENUE, WEDDING_DATE_LABEL, WEDDING_WEEKDAY, daysUntilWedding } from "@/lib/wedding";
-import { CalendarHeart, Hourglass, MapPin, Shirt } from "lucide-react";
+import { CalendarClock, CalendarHeart, Hourglass, MapPin, Shirt } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -65,7 +65,12 @@ export default async function DashboardPage() {
     const isDelegate = session?.user?.id === family.delegateUserId || session?.user?.permissions?.includes('admin.dashboard');
     const daysLeft = daysUntilWedding();
     // Lo esencial de un vistazo, bajo el saludo; cada dato lleva a «El gran día».
-    const facts = [
+    // Delegado sin responder y con plazo: el primer dato es el plazo y lleva a la confirmación.
+    const answerBy = isDelegate && !hasResponded && deadline && !isPastDeadline
+        ? [{ icon: CalendarClock, text: `Responde antes del ${deadline.toLocaleDateString("es-AR", { day: "numeric", month: "long" })}`, href: "#confirmar" }]
+        : [];
+    const facts: { icon: typeof CalendarHeart; text: string; href?: string }[] = [
+        ...answerBy,
         { icon: CalendarHeart, text: `${WEDDING_WEEKDAY} ${WEDDING_DATE_LABEL.replace(/ de \d{4}$/, "")}` },
         ...(daysLeft > 0 ? [{ icon: Hourglass, text: daysLeft === 1 ? "¡Es mañana!" : `Faltan ${daysLeft} días` }] : []),
         { icon: MapPin, text: VENUE.address.split(" · ").pop() ?? VENUE.address },
@@ -89,9 +94,9 @@ export default async function DashboardPage() {
                             {isDelegate ? " Cuéntanos quiénes vendrán." : ""}
                         </p>
                         <ul aria-label="Lo esencial" className="mt-7 flex flex-wrap justify-center gap-2 animate-rise [animation-delay:80ms]">
-                            {facts.map(({ icon: Icon, text }) => (
+                            {facts.map(({ icon: Icon, text, href }) => (
                                 <li key={text}>
-                                    <a href="#el-dia" className="inline-flex items-center gap-2 min-h-11 px-4 rounded-full bg-crema/70 font-sans text-sm font-medium text-tinta hover:bg-crema transition-colors">
+                                    <a href={href ?? "#el-dia"} className="inline-flex items-center gap-2 min-h-11 px-4 rounded-full bg-crema/70 font-sans text-sm font-medium text-tinta hover:bg-crema transition-colors">
                                         <Icon className="w-4 h-4 text-rosa-profundo shrink-0" aria-hidden />
                                         {text}
                                     </a>
@@ -101,6 +106,7 @@ export default async function DashboardPage() {
                     </div>
 
                     <section
+                        id="confirmar"
                         aria-label="Confirmación de asistencia"
                         className="mt-10 sm:mt-14 rounded-[2rem] bg-crema p-6 sm:p-10 shadow-md animate-rise [animation-delay:120ms]"
                     >
