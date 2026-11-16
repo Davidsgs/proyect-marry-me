@@ -7,8 +7,8 @@ import GuestsManager, { type FamilyFilter } from "./_components/GuestsManager";
 
 export const dynamic = "force-dynamic";
 
-// Filtros desde la URL (enlaces del Resumen): ?tab=invitados, ?filtro=sin-responder|sin-delegado
-const FILTERS: Record<string, FamilyFilter> = { "sin-responder": "pending", "sin-delegado": "no-delegate" };
+// Filtros desde la URL (enlaces del Resumen): ?tab=invitados, ?filtro=sin-responder|sin-delegado|con-ninos
+const FILTERS: Record<string, FamilyFilter> = { "sin-responder": "pending", "sin-delegado": "no-delegate", "con-ninos": "minors" };
 
 export default async function GuestsPage({ searchParams }: { searchParams: Promise<{ tab?: string; filtro?: string }> }) {
     const { tab, filtro } = await searchParams;

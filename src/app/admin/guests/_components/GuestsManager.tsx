@@ -32,7 +32,9 @@ interface Props {
     initialFamilyFilter?: FamilyFilter;
 }
 
-export type FamilyFilter = "all" | "pending" | "no-delegate";
+// "minors": familias con menores que no están marcadas como «familia directa»
+// (ven la nota de celebración sin niños aunque traigan niños).
+export type FamilyFilter = "all" | "pending" | "no-delegate" | "minors";
 
 export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all" }: Props) {
     const confirm = useConfirm();
@@ -56,6 +58,11 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
     const totalFamilies = families.length;
     const withoutDelegate = families.filter((f) => f.delegateUserId == null).length;
     const pendingFamilies = families.filter((f) => f.globalRsvpStatus === "PENDING").length;
+    const familiesWithMinors = useMemo(
+        () => new Set(users.filter((u) => u.familyId != null && u.ageCategory !== "ADULT").map((u) => u.familyId as number)),
+        [users],
+    );
+    const minorsNotDirect = families.filter((f) => !f.isDirectFamily && familiesWithMinors.has(f.id)).length;
     const guestUsers = users.filter((u) => u.familyId != null);
     const totalGuests = guestUsers.length;
     const confirmedGuests = guestUsers.filter((u) => u.isConfirmed).length;
@@ -67,10 +74,11 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
         return families.filter((f) => {
             if (familyStatus === "pending" && f.globalRsvpStatus !== "PENDING") return false;
             if (familyStatus === "no-delegate" && f.delegateUserId != null) return false;
+            if (familyStatus === "minors" && (f.isDirectFamily || !familiesWithMinors.has(f.id))) return false;
             if (!q) return true;
             return f.name.toLowerCase().includes(q) || (f.alias ?? "").toLowerCase().includes(q);
         });
-    }, [families, query, familyStatus]);
+    }, [families, query, familyStatus, familiesWithMinors]);
 
     const filteredUsers = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -158,6 +166,9 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
                         <FilterChip active={familyStatus === "all"} onClick={() => setFamilyStatus("all")}>Todas</FilterChip>
                         <FilterChip active={familyStatus === "pending"} onClick={() => setFamilyStatus("pending")}>Sin responder · {pendingFamilies}</FilterChip>
                         <FilterChip active={familyStatus === "no-delegate"} onClick={() => setFamilyStatus("no-delegate")} warn={withoutDelegate > 0}>Sin delegado · {withoutDelegate}</FilterChip>
+                        {(minorsNotDirect > 0 || familyStatus === "minors") && (
+                            <FilterChip active={familyStatus === "minors"} onClick={() => setFamilyStatus("minors")} warn={minorsNotDirect > 0}>Con niños sin marcar · {minorsNotDirect}</FilterChip>
+                        )}
                     </div>
                 ) : (
                     <label className="lg:w-64">

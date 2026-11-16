@@ -19,6 +19,7 @@ import {
     UserX,
     MailQuestion,
     AlertTriangle,
+    Baby,
     Plus,
     type LucideIcon,
 } from "lucide-react";
@@ -121,6 +122,20 @@ export default async function AdminPage() {
             title: `${pendingFamilyList.length} ${pendingFamilyList.length === 1 ? "familia no ha respondido" : "familias no han respondido"}`,
             detail: namesPreview(pendingFamilyList.map((f) => f.name)),
             href: "/admin/guests?filtro=sin-responder",
+        });
+    }
+    // Familias con menores sin marcar como «familia directa»: ven la nota de
+    // celebración sin niños aunque sus niños estén invitados.
+    const familiesWithMinors = new Set(guestUsers.filter((u) => u.ageCategory !== "ADULT").map((u) => u.familyId));
+    const minorsNotDirect = families.filter((f) => !f.isDirectFamily && familiesWithMinors.has(f.id));
+    if (minorsNotDirect.length > 0) {
+        pending.push({
+            key: "minors-not-direct",
+            icon: Baby,
+            tone: "warn",
+            title: `${minorsNotDirect.length} ${minorsNotDirect.length === 1 ? "familia con niños ve" : "familias con niños ven"} la nota «sin niños»`,
+            detail: "Márcalas como familia directa si sus niños están invitados. " + namesPreview(minorsNotDirect.map((f) => f.name)),
+            href: "/admin/guests?filtro=con-ninos",
         });
     }
     if (overdueTasks.length > 0) {
