@@ -1,12 +1,15 @@
 import Link from 'next/link';
 import { signIn } from '@/auth';
 import { SubmitButton } from '@/components/SubmitButton';
-import { Monogram, Sprig } from '@/components/Monogram';
+import { Monogram } from '@/components/Monogram';
+import { BotanicalShadow } from '@/components/BotanicalShadow';
+import { Arch, Band } from '@/components/Brand';
 import { WEDDING_DATE_LABEL } from '@/lib/wedding';
 
 const SUPPORT_MAIL =
     "mailto:soporte@davidyrocio.wedding?subject=Problema%20con%20la%20invitación&body=Hola,%20no%20puedo%20entrar%20a%20la%20invitación.%20Mi%20correo%20es:%20";
 
+// Primer contacto del invitado (público): sin fotos, historia ni datos privados.
 export default async function LoginPage({
     searchParams,
 }: {
@@ -20,33 +23,33 @@ export default async function LoginPage({
         : "/welcome";
 
     return (
-        <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-md text-center space-y-8">
-                <div className="space-y-4">
-                    <Monogram size="lg" className="mx-auto" />
-                    <Sprig className="w-28 mx-auto text-wedding-olive" />
-                    <h1 className="font-serif italic text-4xl text-primary">Tu invitación</h1>
-                    <p className="text-on-surface-variant text-sm">David &amp; Rocío · {WEDDING_DATE_LABEL}</p>
-                </div>
+        <main className="relative min-h-dvh overflow-hidden bg-rosa text-tinta flex flex-col">
+            <BotanicalShadow variant="rama" sway className="absolute -top-16 -left-24 w-[34rem] max-w-[95vw] text-rosa-profundo/30" />
+            <BotanicalShadow variant="orquidea" sway className="absolute -bottom-24 -right-28 w-[36rem] max-w-[100vw] text-rosa-profundo/25 [animation-delay:-6s]" />
 
-                <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 shadow-[0_4px_24px_rgba(81,68,67,0.06)] space-y-5 text-left">
-                    <p className="text-base text-on-surface leading-relaxed">
-                        Entra con la <strong className="font-medium">cuenta de Google del correo al que te enviamos la invitación</strong>.
-                        Así sabremos quién eres sin necesidad de contraseñas.
+            <div className="relative flex-1 grid place-items-center px-4 pt-[max(2.5rem,env(safe-area-inset-top))] pb-10">
+                <Arch className="w-full max-w-md animate-rise" innerClassName="text-center">
+                    <Monogram size="lg" className="mx-auto" />
+                    <h1 className="mt-5 font-serif text-5xl sm:text-7xl leading-[0.95] text-oliva-profundo text-balance">Tu invitación</h1>
+                    <p className="mt-3 font-text text-lg text-balance"><span className="whitespace-nowrap">Boda de David y Rocío ·</span> <span className="whitespace-nowrap">{WEDDING_DATE_LABEL}</span></p>
+
+                    <p className="mt-8 font-text text-base leading-relaxed text-pretty">
+                        Entra con la cuenta de Google del correo al que te enviamos la invitación. No necesitas contraseña.
                     </p>
 
                     {error === "AccessDenied" && (
-                        <div role="alert" className="rounded-xl bg-error/10 p-4 text-sm text-error space-y-1">
+                        <div role="alert" className="mt-6 rounded-xl bg-error/10 p-4 text-left text-sm text-error space-y-1">
                             <p className="font-medium">No encontramos ese correo en la lista de invitados.</p>
                             <p>
                                 Prueba con otra cuenta de Google o{" "}
-                                <a href={SUPPORT_MAIL} className="underline underline-offset-4 font-medium">escríbenos</a>{" "}
+                                <a href={SUPPORT_MAIL} className="underline font-medium">escríbenos</a>{" "}
                                 y lo revisamos.
                             </p>
                         </div>
                     )}
 
                     <form
+                        className="mt-6"
                         action={async () => {
                             "use server"
                             await signIn("google", { redirectTo: callbackUrl })
@@ -54,15 +57,18 @@ export default async function LoginPage({
                     >
                         <SubmitButton />
                     </form>
-                </div>
-
-                <p className="text-xs text-on-surface-variant">
-                    Al entrar aceptas los{" "}
-                    <Link href="/terminos" className="underline underline-offset-4 hover:text-primary">términos y condiciones</Link>{" "}
-                    y la{" "}
-                    <Link href="/privacidad" className="underline underline-offset-4 hover:text-primary">política de privacidad</Link>.
-                </p>
+                </Arch>
             </div>
+
+            <Band className="relative">
+                <p>www.davidyrocio.wedding</p>
+                <p className="mt-1 text-[13px]">
+                    Al entrar aceptas los{" "}
+                    <Link href="/terminos" className="underline hover:no-underline">términos y condiciones</Link>{" "}
+                    y la{" "}
+                    <Link href="/privacidad" className="underline hover:no-underline">política de privacidad</Link>.
+                </p>
+            </Band>
         </main>
     );
 }

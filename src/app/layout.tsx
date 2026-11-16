@@ -1,13 +1,28 @@
-import type { Metadata } from "next";
-import { Cormorant, Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Marcellus, Mulish } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const cormorant = Cormorant({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-cormorant" });
+// Pareja «Inscripción serena»: Marcellus (títulos, un solo peso) + Mulish (todo el texto).
+const marcellus = Marcellus({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+  variable: "--font-marcellus",
+});
+const mulish = Mulish({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-mulish",
+});
 
 export const metadata: Metadata = {
   title: "Nuestra boda | David & Rocío",
-  description: "Te invitamos a nuestro momento especial.",
+  description: "Invitación privada a la boda de David y Rocío.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#d9a3a0",
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -16,10 +31,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body className={`${inter.variable} ${cormorant.variable} antialiased`}>
-        {children}
-      </body>
+    <html lang="es" className={`${marcellus.variable} ${mulish.variable}`}>
+      <body className="antialiased">{children}</body>
     </html>
   );
 }

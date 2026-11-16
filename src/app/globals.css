@@ -1,44 +1,58 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@theme {
-  --font-sans: var(--font-inter);
-  --font-serif: var(--font-cormorant);
-
-  /* Brand palette — style-guide.md */
-  --color-wedding-cream: #f2eee8;        /* Crema/Beige claro */
-  --color-wedding-blush: #e7c6c1;        /* Rosa empolvado claro */
-  --color-wedding-blush-light: #f1dad7;  /* Tinted lighter blush for soft fills */
-  --color-wedding-blush-dark: #d9a3a0;   /* Rosa oscuro/Terracota */
-  --color-wedding-terracotta: #d9a3a0;   /* Alias terracota */
-  --color-wedding-sage: #afc3b1;         /* Verde salvia/menta */
-  --color-wedding-sage-light: #c8d6c9;   /* Tinted lighter sage */
-  --color-wedding-sage-dark: #6f7f6a;    /* Verde oliva/musgo (legacy alias) */
-  --color-wedding-olive: #6f7f6a;        /* Verde oliva/musgo */
-  --color-wedding-sage-darkest: #1E2419; /* Hero dark backdrop only */
-  --color-wedding-blush-darkest: #7f5351; /* Texto sobre fondos rosados (= primary) */
-
-  /* DESIGN.md theme colors */
-  --color-surface: #fdf9f3;
-  --color-surface-container: #f1ede7;
-  --color-surface-container-low: #f7f3ed;
-  --color-surface-container-lowest: #ffffff;
-  --color-primary: #7f5351;
-  --color-primary-container: #d9a3a0;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #603837;
-  --color-on-surface: #1c1c18;
-  --color-on-surface-variant: #514443;
-  --color-secondary-container: #d3e8d5;
-  --color-on-secondary-container: #56695a;
-  --color-outline-variant: rgba(81, 68, 67, 0.15);
-  /* Rojo terracota apagado: acciones destructivas, vencidos, sobre capacidad.
-     ~5.9:1 sobre blanco, legible como texto y como fondo de botón. */
-  --color-error: #a8423a;
-  --color-on-error: #ffffff;
+/* Tipografías: pareja «Inscripción serena». «inline» para que var(--font-…) se
+   resuelva en cada elemento: next/font define esas variables en <html>, no en :root. */
+@theme inline {
+  --font-serif: var(--font-marcellus), Georgia, serif;     /* Marcellus: títulos y subtítulos */
+  --font-sans: var(--font-mulish), system-ui, sans-serif;  /* Mulish: interfaz y botones */
+  --font-text: var(--font-mulish), system-ui, sans-serif;  /* Mulish: texto del invitado */
 }
 
-/* Reset image behaviors that might cause horizontal lines */
+@theme {
+  /* Paleta del manual de marca */
+  --color-rosa: #d9a3a0;            /* campo de portada y login */
+  --color-rubor: #e7c6c1;           /* campo de las páginas del invitado */
+  --color-crema: #f2eee8;           /* papel */
+  --color-salvia: #afc3b1;          /* estados positivos */
+  --color-oliva: #6f7f6a;           /* bandas, marcos, títulos grandes (≥24px) */
+  /* Derivados con contraste AA medido */
+  --color-oliva-profundo: #55634f;  /* acción y bandas con texto (crema encima: 5.5:1) */
+  --color-tinta: #364033;           /* texto de lectura sobre campos claros */
+  --color-rosa-profundo: #7f5351;   /* acento de texto y enlaces sobre crema */
+
+  /* Superficies del panel y del invitado (pasos de tono desde el crema) */
+  --color-surface: #f2eee8;
+  --color-surface-container-lowest: #faf8f3; /* hoja que se apoya sobre el crema */
+  --color-surface-container-low: #eae4da;
+  --color-surface-container: #e1d9cc;
+  --color-primary: #55634f;
+  --color-on-primary: #f2eee8;
+  --color-primary-container: #e7c6c1;
+  --color-on-primary-container: #364033;
+  --color-secondary-container: #d5e2d6;
+  --color-on-secondary-container: #46594a;
+  --color-on-surface: #364033;
+  --color-on-surface-variant: #5c5f52;       /* ≥4.5:1 hasta surface-container */
+  --color-outline-variant: rgba(54, 64, 51, 0.16);
+  --color-error: #a8423a;                    /* ≥4.7:1 sobre todas las superficies */
+  --color-on-error: #faf8f3;
+
+  /* Portada: única superficie oscura (decisión de la pareja, 2026-11-16) */
+  --color-noche: #1e2419;
+
+  /* Monograma oficial */
+  --color-mono-d: #828a6c;
+  --color-mono-r: #df8e86;
+
+  /* Tres sombras, teñidas de tinta: contacto, hoja, modal */
+  --shadow-sm: 0 1px 2px rgba(54, 64, 51, 0.08), 0 1px 3px rgba(54, 64, 51, 0.06);
+  --shadow-md: 0 12px 32px -14px rgba(54, 64, 51, 0.22);
+  --shadow-xl: 0 28px 64px -24px rgba(54, 64, 51, 0.4);
+
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 img,
 svg,
 video,
@@ -53,22 +67,78 @@ object {
 body {
   background-color: var(--color-surface);
   color: var(--color-on-surface);
-  font-family: var(--font-sans), sans-serif;
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
 }
-/* Superficies del navegador tematizadas con la paleta (selección, foco,
-   controles nativos, scrollbars). */
+
 @layer base {
   :root {
     accent-color: var(--color-primary);
     caret-color: var(--color-primary);
-    scrollbar-color: rgba(81, 68, 67, 0.25) transparent;
+    scrollbar-color: rgba(54, 64, 51, 0.28) transparent;
   }
   ::selection {
-    background-color: var(--color-wedding-blush);
-    color: var(--color-on-surface);
+    background-color: var(--color-rubor);
+    color: var(--color-tinta);
   }
   :focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+  /* Marcellus solo trae Regular: sin negritas ni cursivas falsas. */
+  .font-serif {
+    font-synthesis: none;
+    font-weight: 400;
+    font-style: normal;
+  }
+  a {
+    text-underline-offset: 0.25em;
+  }
+}
+
+/* Sin capa a propósito: gana a text-sm. Evita el zoom de iOS al enfocar un campo. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* Sombras botánicas: vaivén muy lento, solo si el usuario acepta movimiento. */
+@keyframes sway {
+  0%,
+  100% {
+    transform: rotate(0deg) translate3d(0, 0, 0);
+  }
+  50% {
+    transform: rotate(1.6deg) translate3d(6px, -4px, 0);
+  }
+}
+
+/* Entrada de bloques del invitado: visibles por defecto, solo suben al cargar. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+}
+
+@utility animate-sway {
+  animation: sway 14s var(--ease-out-soft) infinite;
+  transform-origin: 0% 0%;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility animate-rise {
+  animation: rise 700ms var(--ease-out-soft) both;
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
 }
