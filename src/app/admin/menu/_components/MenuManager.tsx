@@ -1,8 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
+import { isTemp, pendingRowCls, tempId, useOptimisticState, type Patch } from "@/app/admin/_components/optimistic";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import { btnPrimary, btnSecondary, btnGhost } from "@/app/admin/_components/ui";
+import { Checkbox, EmptyState, Field, btnPrimary, btnGhost, iconBtn, iconBtnDanger, inputCls, selectCls } from "@/app/admin/_components/ui";
+import { Dialog } from "@/components/Dialog";
+import { GrowText } from "@/components/GrowText";
 import {
   DndContext,
   DragOverlay,
@@ -22,14 +25,17 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
-  Plus, X, Trash2, Pencil, Save, Loader2, GripVertical, Clock,
-  UtensilsCrossed, Wine, Cake, IceCreamCone, Salad, CookingPot, Sparkles, HelpCircle,
-  Leaf, WheatOff, MilkOff, AlertTriangle,
+  Plus, Trash2, Pencil, Save, GripVertical, Clock,
+  UtensilsCrossed, Wine, Cake, IceCreamCone, Salad, CookingPot, Sandwich, HelpCircle,
+  Leaf, WheatOff, MilkOff, AlertTriangle, Eye, EyeOff,
 } from "lucide-react";
 import {
-  createMenuItem, updateMenuItem, deleteMenuItem, setMenuItemStatus, moveMenuItem,
+  createMenuItem, updateMenuItem, deleteMenuItem, setMenuItemStatus, setMenuItemPublic, moveMenuItem,
   type MenuItem, type MenuMoment, type MenuType, type MenuStatus,
 } from "@/app/actions/menu";
+
+type Mutate = (patch: Patch<MenuItem[]>, action: () => Promise<unknown>, msg: { ok?: string; error: string }) => Promise<boolean>;
+const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 
 interface Props {
   initialItems: MenuItem[];
@@ -38,7 +44,7 @@ interface Props {
 }
 
 const TYPES: { value: MenuType; label: string; icon: typeof UtensilsCrossed }[] = [
-  { value: "PASAPALO", label: "Pasapalo", icon: Sparkles },
+  { value: "PASAPALO", label: "Pasapalo", icon: Sandwich },
   { value: "ENTRADA", label: "Entrada", icon: Salad },
   { value: "PRINCIPAL", label: "Principal", icon: CookingPot },
   { value: "POSTRE", label: "Postre", icon: IceCreamCone },
@@ -66,19 +72,13 @@ const groupActivityId = (key: string): number | null => {
 };
 
 export default function MenuManager({ initialItems, moments, canWrite }: Props) {
-  const [items, setItems] = useState(initialItems);
-  const [synced, setSynced] = useState(initialItems);
+  // Cambios optimistas (alta, edición, estado, borrado y arrastre): se ven al
+  // momento y se deshacen si el servidor falla.
+  const [items, mutate] = useOptimisticState(initialItems);
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState<MenuType | "ALL">("ALL");
   const [showDiscarded, setShowDiscarded] = useState(false);
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  // Re-sync tras revalidar en el servidor, sin pisar el estado optimista en vuelo.
-  if (initialItems !== synced && !isPending) {
-    setSynced(initialItems);
-    setItems(initialItems);
-  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -96,6 +96,7 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
   );
   const itemsOf = (activityId: number | null) => visible.filter((i) => i.activityId === activityId);
   const discardedCount = items.filter((i) => i.status === "DISCARDED").length;
+  const publicCount = items.filter((i) => i.isPublic && i.status !== "DISCARDED").length;
 
   // El drag reordena el listado completo: con un filtro activo el orden mostrado
   // no es el real, así que solo se arrastra en la vista sin filtrar.
@@ -144,8 +145,8 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
       else ordered.push(...groupItems.slice(0, idx), moved, ...groupItems.slice(idx));
     }
 
-    setItems(ordered.map((i, idx) => ({ ...i, sortOrder: idx })));
-    startTransition(() => moveMenuItem(draggedId, targetActivityId, ordered.map((i) => i.id)));
+    const next = ordered.map((i, idx) => ({ ...i, sortOrder: idx }));
+    mutate(() => next, () => moveMenuItem(draggedId, targetActivityId, ordered.map((i) => i.id)), { error: "No se pudo mover el ítem" });
   }
 
   const dragging = activeId != null ? items.find((i) => i.id === activeId) ?? null : null;
@@ -159,54 +160,54 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
             value={filter}
             onChange={(e) => setFilter(e.target.value as MenuType | "ALL")}
             aria-label="Filtrar por tipo"
-            className="px-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-on-surface text-sm shadow-sm cursor-pointer"
+            className={`${selectCls} w-auto bg-surface-container-lowest`}
           >
             <option value="ALL">Todos los tipos</option>
             {TYPES.map((t) => (
               <option key={t.value} value={t.value}>{t.label}</option>
             ))}
           </select>
-          <label className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={showDiscarded}
-              onChange={(e) => setShowDiscarded(e.target.checked)}
-              className="w-4 h-4 rounded cursor-pointer"
-            />
-            Mostrar descartados{discardedCount > 0 ? ` (${discardedCount})` : ""}
-          </label>
+          <Checkbox checked={showDiscarded} onChange={setShowDiscarded} label={`Mostrar descartados${discardedCount > 0 ? ` (${discardedCount})` : ""}`} />
         </div>
         {canWrite && (
-          <button onClick={() => setShowForm((v) => !v)} className={showForm ? btnSecondary : btnPrimary}>
-            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showForm ? "Cerrar" : "Nuevo ítem"}
+          <button type="button" onClick={() => setShowForm(true)} className={btnPrimary}>
+            <Plus className="w-4 h-4" aria-hidden />
+            Nuevo ítem
           </button>
         )}
       </div>
 
+      {items.length > 0 && (
+        <p className="flex items-center gap-2 text-sm text-on-surface-variant">
+          <Eye className="w-4 h-4 shrink-0" aria-hidden />
+          {publicCount === 0
+            ? "Los invitados aún no ven ningún ítem. Usa el ojo de cada ítem para mostrarlo en su invitación."
+            : `Los invitados ven ${publicCount} ${publicCount === 1 ? "ítem" : "ítems"} en su invitación.`}
+        </p>
+      )}
+
       {canWrite && !dragEnabled && visible.length > 0 && (
-        <p className="text-xs text-on-surface-variant">
+        <p className="text-sm text-on-surface-variant">
           Para reordenar o mover ítems entre momentos arrastrándolos, quita el filtro y oculta los descartados.
         </p>
       )}
 
-      {showForm && canWrite && <ItemForm moments={moments} onDone={() => setShowForm(false)} />}
+      <Dialog open={showForm && canWrite} onClose={() => setShowForm(false)} title="Nuevo ítem del menú" size="lg">
+        <ItemForm moments={moments} mutate={mutate} onDone={() => setShowForm(false)} />
+      </Dialog>
 
       {moments.length === 0 && (
-        <p className="text-xs text-on-surface-variant bg-surface-container-low rounded-xl px-4 py-3 font-medium">
+        <p className="text-sm text-on-surface bg-surface-container-low rounded-xl px-4 py-3">
           Aún no hay actividades en el Cronograma. Los ítems quedarán en «Por asignar» hasta que crees
           los momentos de la boda (recepción, cena, brindis…) en la sección Cronograma.
         </p>
       )}
 
       {(items.length === 0 || (visible.length === 0 && !dragEnabled)) && (
-        <div className="bg-surface-container-lowest rounded-2xl p-10 text-center shadow-sm">
-          <p className="text-on-surface-variant font-sans text-sm">
-            {items.length === 0
-              ? "Aún no hay nada en el menú."
-              : "Ningún ítem coincide con el filtro."}
-          </p>
-        </div>
+        <EmptyState
+          icon={UtensilsCrossed}
+          message={items.length === 0 ? (canWrite ? "Aún no hay nada en el menú. Empieza con «Nuevo ítem»." : "Aún no hay nada en el menú.") : "Ningún ítem coincide con el filtro."}
+        />
       )}
 
       <DndContext
@@ -224,6 +225,7 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
               time={g.time}
               items={itemsOf(g.activityId)}
               moments={moments}
+              mutate={mutate}
               canWrite={canWrite}
               dragEnabled={dragEnabled}
               isUnassigned={g.activityId === null}
@@ -235,7 +237,7 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
 
         <DragOverlay>
           {dragging && (
-            <div className="bg-surface-container-lowest p-4 rounded-xl shadow-lg opacity-95">
+            <div className="bg-surface-container-lowest p-4 rounded-xl shadow-md ring-2 ring-primary/40">
               <p className="font-sans text-sm font-medium text-on-surface">{dragging.name}</p>
             </div>
           )}
@@ -248,13 +250,14 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
 // ─── Grupo (momento de la boda) ──────────────────────────────────────────────
 
 function MomentGroup({
-  groupId, title, time, items, moments, canWrite, dragEnabled, isUnassigned, showWhenEmpty,
+  groupId, title, time, items, moments, mutate, canWrite, dragEnabled, isUnassigned, showWhenEmpty,
 }: {
   groupId: string;
   title: string;
   time: string | null;
   items: MenuItem[];
   moments: MenuMoment[];
+  mutate: Mutate;
   canWrite: boolean;
   dragEnabled: boolean;
   isUnassigned: boolean;
@@ -268,29 +271,29 @@ function MomentGroup({
     <section
       ref={setNodeRef}
       className={`rounded-2xl transition-colors ${
-        isOver ? "bg-primary/5 ring-2 ring-primary/30" : ""
-      } ${isUnassigned ? "bg-error/[0.03]" : ""}`}
+        isOver ? "bg-secondary-container/50 ring-2 ring-primary/30" : isUnassigned ? "bg-surface-container-low" : ""
+      }`}
     >
-      <header className="flex items-center gap-3 px-4 pt-4 pb-2">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-4 pb-2">
         {isUnassigned ? (
-          <HelpCircle className="w-4 h-4 text-error opacity-70 shrink-0" />
+          <HelpCircle className="w-5 h-5 text-error shrink-0" aria-hidden />
         ) : (
-          <Clock className="w-4 h-4 text-on-surface-variant opacity-60 shrink-0" />
+          <Clock className="w-5 h-5 text-on-surface-variant shrink-0" aria-hidden />
         )}
-        <h2 className={`font-serif text-lg ${isUnassigned ? "text-error" : "text-primary"}`}>{title}</h2>
+        <h2 className="font-serif text-3xl leading-none text-primary">{title}</h2>
         {time && (
-          <span className="text-xs font-medium text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full tabular-nums">
+          <span className="text-sm font-medium text-on-secondary-container bg-secondary-container px-2.5 py-0.5 rounded-full tabular-nums">
             {time}
           </span>
         )}
-        <span className="text-xs text-on-surface-variant ml-auto">
-          {items.length === 0 ? "Vacío" : `${items.length} ${items.length === 1 ? "ítem" : "ítems"}`}
+        <span className={`text-sm ml-auto ${isUnassigned && items.length > 0 ? "text-error font-medium" : "text-on-surface-variant"}`}>
+          {items.length === 0 ? "Vacío" : isUnassigned ? `${items.length} sin momento` : `${items.length} ${items.length === 1 ? "ítem" : "ítems"}`}
         </span>
       </header>
 
       <div className="px-4 pb-4 space-y-2">
         {items.length === 0 && (
-          <p className="text-xs text-on-surface-variant rounded-xl bg-surface-container-low/60 px-4 py-3">
+          <p className="text-sm text-on-surface-variant rounded-xl outline-2 outline-dashed outline-outline-variant px-4 py-3">
             Arrastra aquí un ítem, o elige este momento al crearlo.
           </p>
         )}
@@ -300,6 +303,7 @@ function MomentGroup({
               key={item.id}
               item={item}
               moments={moments}
+              mutate={mutate}
               canWrite={canWrite}
               dragEnabled={dragEnabled}
             />
@@ -313,70 +317,72 @@ function MomentGroup({
 // ─── Ítem ────────────────────────────────────────────────────────────────────
 
 function ItemRow({
-  item, moments, canWrite, dragEnabled,
+  item, moments, mutate, canWrite, dragEnabled,
 }: {
   item: MenuItem;
   moments: MenuMoment[];
+  mutate: Mutate;
   canWrite: boolean;
   dragEnabled: boolean;
 }) {
   const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
-  const [pending, startTransition] = useTransition();
+  const temp = isTemp(item.id);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
-    disabled: !dragEnabled,
+    disabled: !dragEnabled || temp,
   });
 
   const style = { transform: CSS.Transform.toString(transform), transition };
   const TypeIcon = TYPE_META[item.type].icon;
   const status = STATUS_META[item.status];
   const discarded = item.status === "DISCARDED";
-
-  if (editing && canWrite) {
-    return (
-      <ItemForm
-        item={item}
-        moments={moments}
-        onDone={() => setEditing(false)}
-      />
-    );
-  }
+  const shownToGuests = item.isPublic && !discarded;
 
   return (
+    <>
+    <Dialog open={editing && canWrite} onClose={() => setEditing(false)} title={`Editar «${item.name}»`} size="lg">
+      {editing && <ItemForm item={item} moments={moments} mutate={mutate} onDone={() => setEditing(false)} />}
+    </Dialog>
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-start gap-3 p-4 rounded-xl bg-surface-container-lowest shadow-sm hover:shadow-md transition-all ${
+      className={`group flex items-start gap-3 p-4 rounded-xl bg-surface-container-lowest transition-colors hover:bg-[#fffdf8] ${
         isDragging ? "opacity-40" : ""
-      } ${discarded ? "opacity-60" : ""}`}
+      } ${discarded ? "opacity-60" : ""} ${temp ? pendingRowCls : ""}`}
+      aria-busy={temp || undefined}
     >
       {dragEnabled && (
         <button
           {...attributes}
           {...listeners}
-          className="shrink-0 mt-0.5 text-on-surface-variant/80 hover:text-primary cursor-grab active:cursor-grabbing touch-none border-none bg-transparent"
-          aria-label="Reordenar / mover de momento"
+          className="shrink-0 -ml-2 -my-1 w-8 h-11 flex items-center justify-center text-on-surface-variant hover:text-primary cursor-grab active:cursor-grabbing touch-none"
+          aria-label={`Reordenar o mover «${item.name}»`}
         >
           <GripVertical className="w-4 h-4" />
         </button>
       )}
 
-      <div className="shrink-0 w-9 h-9 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
-        <TypeIcon className="w-4 h-4" />
+      <div className="shrink-0 w-9 h-9 rounded-xl bg-surface-container-low text-primary flex items-center justify-center">
+        <TypeIcon className="w-4 h-4" aria-hidden />
       </div>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className={`font-sans text-sm font-medium text-on-surface ${discarded ? "line-through" : ""}`}>
+          <p className={`text-[15px] font-medium text-on-surface ${discarded ? "line-through" : ""}`}>
             {item.name}
           </p>
           <span className="text-xs text-on-surface-variant">{TYPE_META[item.type].label}</span>
           {!canWrite && <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>}
+          {!canWrite && shownToGuests && (
+            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary-container text-on-primary-container flex items-center gap-1">
+              <Eye className="w-3 h-3" aria-hidden /> Visible para invitados
+            </span>
+          )}
         </div>
 
         {item.description && (
-          <p className="text-xs text-on-surface-variant mt-1">{item.description}</p>
+          <p className="text-sm text-on-surface-variant mt-1">{item.description}</p>
         )}
 
         <div className="flex items-center gap-2 flex-wrap mt-1.5">
@@ -393,53 +399,73 @@ function ItemRow({
           {item.isGlutenFree && <DietTag icon={WheatOff} label="Sin gluten" />}
           {item.isLactoseFree && <DietTag icon={MilkOff} label="Sin lactosa" />}
           {item.allergens && (
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-error/10 text-error flex items-center gap-1">
-              <AlertTriangle className="w-3 h-3" /> {item.allergens}
+            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-error/10 text-error flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" aria-hidden /> {item.allergens}
             </span>
           )}
         </div>
 
-        {item.notes && <p className="text-xs text-on-surface-variant italic mt-1.5">{item.notes}</p>}
+        {item.notes && <p className="text-sm text-on-surface-variant mt-1.5">{item.notes}</p>}
       </div>
 
       {canWrite && (
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex flex-wrap justify-end items-center gap-1 shrink-0">
           <select
             value={item.status}
-            onChange={(e) => startTransition(() => setMenuItemStatus(item.id, e.target.value as MenuStatus))}
-            disabled={pending}
+            onChange={(e) => {
+              const next = e.target.value as MenuStatus;
+              mutate((s) => s.map((i) => i.id === item.id ? { ...i, status: next } : i), () => setMenuItemStatus(item.id, next), { error: "No se pudo cambiar el estado" });
+            }}
             aria-label={`Estado de ${item.name}`}
-            className={`text-xs font-medium pl-2.5 pr-1 py-1.5 rounded-lg border-none outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
+            className={`min-h-11 pointer-fine:min-h-8 text-[13px] font-medium pl-2.5 pr-1 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
           >
             <option value="IDEA">Idea</option>
             <option value="CONFIRMED">Confirmado</option>
             <option value="DISCARDED">Descartado</option>
           </select>
-          <button onClick={() => setEditing(true)} className={iconBtn} aria-label={`Editar ${item.name}`} title="Editar">
+          <button
+            type="button"
+            disabled={discarded}
+            aria-pressed={item.isPublic}
+            onClick={() => {
+              const next = !item.isPublic;
+              mutate(
+                (s) => s.map((i) => i.id === item.id ? { ...i, isPublic: next } : i),
+                () => setMenuItemPublic(item.id, next),
+                { ok: next ? `«${item.name}» ya se ve en el menú de los invitados` : `«${item.name}» quedó oculto para los invitados`, error: "No se pudo cambiar la visibilidad" },
+              );
+            }}
+            title={discarded ? "Los descartados no se muestran a los invitados" : item.isPublic ? "Visible para invitados: pulsa para ocultarlo" : "Oculto para invitados: pulsa para mostrarlo"}
+            aria-label={discarded ? `${item.name}: descartado, no se muestra a los invitados` : item.isPublic ? `Ocultar «${item.name}» a los invitados` : `Mostrar «${item.name}» a los invitados`}
+            className={`${iconBtn} ${shownToGuests ? "text-primary bg-primary-container/60 hover:bg-primary-container" : ""}`}
+          >
+            {shownToGuests ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+          </button>
+          <button type="button" onClick={() => setEditing(true)} className={iconBtn} aria-label={`Editar ${item.name}`}>
             <Pencil className="w-4 h-4" />
           </button>
           <button
             onClick={async () => {
               if (await confirm({ title: `¿Eliminar «${item.name}» del menú?`, description: "Si solo lo estás descartando, usa «Descartar» y podrás recuperarlo.", confirmLabel: "Eliminar" }))
-                startTransition(() => deleteMenuItem(item.id));
+                mutate((s) => s.filter((i) => i.id !== item.id), () => deleteMenuItem(item.id), { ok: "Ítem eliminado", error: "No se pudo eliminar el ítem" });
             }}
-            disabled={pending}
+            type="button"
             className={iconBtnDanger}
             aria-label={`Eliminar ${item.name}`}
-            title="Eliminar"
           >
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
       )}
     </div>
+    </>
   );
 }
 
 function DietTag({ icon: Icon, label }: { icon: typeof Leaf; label: string }) {
   return (
-    <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-on-secondary-container/10 text-on-secondary-container flex items-center gap-1">
-      <Icon className="w-3 h-3" /> {label}
+    <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container flex items-center gap-1">
+      <Icon className="w-3 h-3" aria-hidden /> {label}
     </span>
   );
 }
@@ -447,14 +473,14 @@ function DietTag({ icon: Icon, label }: { icon: typeof Leaf; label: string }) {
 // ─── Formulario (alta y edición) ─────────────────────────────────────────────
 
 function ItemForm({
-  item, moments, onDone,
+  item, moments, mutate, onDone,
 }: {
   item?: MenuItem;
   moments: MenuMoment[];
+  mutate: Mutate;
   onDone: () => void;
 }) {
   const [type, setType] = useState<MenuType>(item?.type ?? "PASAPALO");
-  const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   return (
@@ -485,43 +511,47 @@ function ItemForm({
           isLactoseFree: formData.get("isLactoseFree") === "on",
           allergens: (formData.get("allergens") as string) || "",
           status: (formData.get("status") as MenuStatus) || "IDEA",
+          isPublic: formData.get("isPublic") === "on",
         };
 
         setError(null);
-        startTransition(async () => {
-          try {
-            if (item) await updateMenuItem(item.id, payload);
-            else await createMenuItem(payload);
-            onDone();
-          } catch (e) {
-            setError(e instanceof Error ? e.message : "No se pudo guardar");
-          }
-        });
+        if (item) {
+          mutate((s) => s.map((i) => i.id === item.id ? { ...i, ...payload } : i), () => updateMenuItem(item.id, payload), { ok: "Ítem guardado", error: "No se pudo guardar el ítem" });
+        } else {
+          mutate(
+            (s) => [...s, { ...payload, id: tempId(), sortOrder: s.length, createdBy: null, createdAt: nowSql(), updatedAt: nowSql() }],
+            () => createMenuItem(payload),
+            { ok: "Ítem agregado al menú", error: "No se pudo agregar el ítem" },
+          );
+        }
+        onDone();
       }}
-      className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm space-y-4"
+      className="space-y-4"
     >
       {/* Tipo */}
-      <div className="flex flex-wrap items-center gap-1.5 p-1 bg-surface-container-low rounded-xl w-fit">
+      <div role="radiogroup" aria-label="Tipo" className="flex flex-wrap items-center gap-1 p-1 bg-surface-container-low rounded-xl w-fit">
         {TYPES.map((t) => (
           <button
             key={t.value}
             type="button"
+            role="radio"
+            aria-checked={type === t.value}
             onClick={() => setType(t.value)}
-            className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all border-none cursor-pointer ${
-              type === t.value ? "bg-primary text-on-primary shadow-sm" : "text-on-surface-variant hover:text-primary"
+            className={`flex items-center gap-1.5 min-h-10 px-3 rounded-lg text-sm font-medium transition-colors cursor-pointer ${
+              type === t.value ? "bg-surface-container-lowest text-primary shadow-sm" : "text-on-surface-variant hover:text-on-surface"
             }`}
           >
-            <t.icon className="w-4 h-4" /> {t.label}
+            <t.icon className="w-4 h-4" aria-hidden /> {t.label}
           </button>
         ))}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         <Field label="Nombre" className="md:col-span-5">
-          <input required name="name" defaultValue={item?.name} placeholder="Ej. Empanadas de carne" className={inputCls} />
+          <GrowText required name="name" defaultValue={item?.name} placeholder="Ej. Empanadas de carne" className={inputCls} />
         </Field>
         <Field label="Momento" optional className="md:col-span-4">
-          <select name="activityId" defaultValue={item?.activityId ?? ""} className={inputCls}>
+          <select name="activityId" defaultValue={item?.activityId ?? ""} className={selectCls}>
             <option value="">Por asignar</option>
             {moments.map((m) => (
               <option key={m.id} value={m.id}>
@@ -531,7 +561,7 @@ function ItemForm({
           </select>
         </Field>
         <Field label="Estado" className="md:col-span-3">
-          <select name="status" defaultValue={item?.status ?? "IDEA"} className={inputCls}>
+          <select name="status" defaultValue={item?.status ?? "IDEA"} className={selectCls}>
             <option value="IDEA">Idea</option>
             <option value="CONFIRMED">Confirmado con proveedor</option>
             <option value="DISCARDED">Descartado</option>
@@ -539,10 +569,10 @@ function ItemForm({
         </Field>
 
         <Field label="Descripción" optional className="md:col-span-6">
-          <input name="description" defaultValue={item?.description} placeholder="Detalle del plato o bebida…" className={inputCls} />
+          <GrowText multiline name="description" defaultValue={item?.description} placeholder="Detalle del plato o bebida…" className={inputCls} />
         </Field>
         <Field label="Cantidad" optional className="md:col-span-2">
-          <input type="number" min="0" name="quantity" defaultValue={item?.quantity ?? ""} placeholder="0" className={inputCls} />
+          <input type="number" inputMode="numeric" min="0" name="quantity" defaultValue={item?.quantity ?? ""} placeholder="0" className={inputCls} />
         </Field>
         <Field label="Unidad" optional className="md:col-span-2">
           <input name="unit" defaultValue={item?.unit} placeholder="porciones" className={inputCls} />
@@ -553,63 +583,39 @@ function ItemForm({
       </div>
 
       {/* Etiquetas dietéticas */}
-      <div className="flex flex-wrap items-center gap-4">
+      <div className="flex flex-wrap items-center gap-x-5">
         <Checkbox name="isVegetarian" label="Vegetariano" defaultChecked={item?.isVegetarian} />
         <Checkbox name="isVegan" label="Vegano" defaultChecked={item?.isVegan} />
         <Checkbox name="isGlutenFree" label="Sin gluten" defaultChecked={item?.isGlutenFree} />
         <Checkbox name="isLactoseFree" label="Sin lactosa" defaultChecked={item?.isLactoseFree} />
       </div>
 
+      <div className="rounded-xl bg-surface-container-low px-4 py-1">
+        <Checkbox
+          name="isPublic"
+          defaultChecked={item?.isPublic ?? false}
+          label={<span>Visible para invitados <span className="text-on-surface-variant">· aparece en el menú de su invitación con nombre, descripción y etiquetas</span></span>}
+        />
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Field label="Alérgenos" optional>
-          <input name="allergens" defaultValue={item?.allergens} placeholder="Frutos secos, mariscos…" className={inputCls} />
+          <GrowText name="allergens" defaultValue={item?.allergens} placeholder="Frutos secos, mariscos…" className={inputCls} />
         </Field>
         <Field label="Notas" optional>
-          <input name="notes" defaultValue={item?.notes} placeholder="Detalles para el catering…" className={inputCls} />
+          <GrowText multiline name="notes" defaultValue={item?.notes} placeholder="Detalles para el catering…" className={inputCls} />
         </Field>
       </div>
 
-      {error && <p className="text-xs text-error font-medium">{error}</p>}
+      {error && <p role="alert" className="text-sm text-error">{error}</p>}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
         <button type="button" onClick={onDone} className={btnGhost}>Cancelar</button>
-        <button type="submit" disabled={pending} className={btnPrimary}>
-          {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : item ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-          {item ? "Guardar" : "Agregar"}
+        <button type="submit" className={btnPrimary}>
+          {item ? <Save className="w-4 h-4" aria-hidden /> : <Plus className="w-4 h-4" aria-hidden />}
+          {item ? "Guardar cambios" : "Agregar al menú"}
         </button>
       </div>
     </form>
   );
 }
-
-// ─── Compartidos ─────────────────────────────────────────────────────────────
-
-
-function Checkbox({ name, label, defaultChecked }: { name: string; label: string; defaultChecked?: boolean }) {
-  return (
-    <label className="flex items-center gap-2 text-sm text-on-surface-variant cursor-pointer">
-      <input
-        type="checkbox"
-        name={name}
-        defaultChecked={defaultChecked}
-        className="w-4 h-4 rounded accent-primary cursor-pointer"
-      />
-      {label}
-    </label>
-  );
-}
-
-function Field({ label, optional, className, children }: { label: string; optional?: boolean; className?: string; children: React.ReactNode }) {
-  return (
-    <div className={className}>
-      <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
-        {label} {optional && <span className="font-normal text-on-surface-variant/80">(opcional)</span>}
-      </label>
-      {children}
-    </div>
-  );
-}
-
-const inputCls = "w-full px-4 py-3 border-none rounded-xl bg-surface-container-low focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface placeholder-on-surface-variant/50 shadow-sm";
-const iconBtn = "w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-all border-none cursor-pointer shrink-0 disabled:opacity-50";
-const iconBtnDanger = "w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all border-none cursor-pointer shrink-0 disabled:opacity-50";

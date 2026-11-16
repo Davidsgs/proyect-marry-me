@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { menuItems, scheduleActivities } from "@/db/schema";
+import { menuItems, scheduleActivities, scheduleSections } from "@/db/schema";
 import { eq, asc, sql } from "drizzle-orm";
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
@@ -39,7 +39,9 @@ const fetchMenu = unstable_cache(
         sortOrder: scheduleActivities.sortOrder,
       })
       .from(scheduleActivities)
-      .orderBy(asc(scheduleActivities.sortOrder), asc(scheduleActivities.id))
+      // Mismo orden que el cronograma: por sección y, dentro, por posición.
+      .leftJoin(scheduleSections, eq(scheduleActivities.sectionId, scheduleSections.id))
+      .orderBy(sql`COALESCE(${scheduleSections.sortOrder}, 1000000)`, asc(scheduleActivities.sortOrder), asc(scheduleActivities.id))
       .all();
     return { items, moments };
   },
@@ -51,6 +53,7 @@ function invalidate() {
   updateTag("menu");
   revalidatePath("/admin/menu");
   revalidatePath("/admin");
+  revalidatePath("/dashboard"); // menú público de los invitados
 }
 
 async function requireRead() {
@@ -84,6 +87,33 @@ export async function getMenuSummary() {
   };
 }
 
+// Menú para los invitados (solo lectura): ítems marcados como visibles y no
+// descartados, agrupados por momento. Nunca expone proveedor, cantidades,
+// notas internas ni estado.
+export type PublicMenuItem = Pick<MenuItem, "id" | "name" | "type" | "description" | "isVegetarian" | "isVegan" | "isGlutenFree" | "isLactoseFree" | "allergens">;
+export type PublicMenuGroup = { id: number | null; title: string; time: string | null; items: PublicMenuItem[] };
+
+export async function getPublicMenu(): Promise<PublicMenuGroup[]> {
+  const session = await auth();
+  if (!session?.user) throw new Error("Sin sesión");
+  const { items, moments } = await fetchMenu();
+  const shown = items
+    .filter((i) => i.isPublic && i.status !== "DISCARDED")
+    .map(({ id, name, type, description, isVegetarian, isVegan, isGlutenFree, isLactoseFree, allergens, activityId }) => ({
+      activityId,
+      item: { id, name, type, description, isVegetarian, isVegan, isGlutenFree, isLactoseFree, allergens },
+    }));
+  const groups: PublicMenuGroup[] = moments.map((m) => ({
+    id: m.id,
+    title: m.title,
+    time: m.time,
+    items: shown.filter((s) => s.activityId === m.id).map((s) => s.item),
+  }));
+  const loose = shown.filter((s) => s.activityId === null || !moments.some((m) => m.id === s.activityId));
+  if (loose.length) groups.push({ id: null, title: "Y además", time: null, items: loose.map((s) => s.item) });
+  return groups.filter((g) => g.items.length > 0);
+}
+
 // ─── Escrituras ──────────────────────────────────────────────────────────────
 
 type ItemInput = {
@@ -101,6 +131,7 @@ type ItemInput = {
   isLactoseFree?: boolean;
   allergens?: string;
   status?: MenuStatus;
+  isPublic?: boolean;
 };
 
 export async function createMenuItem(data: ItemInput) {
@@ -131,6 +162,7 @@ export async function createMenuItem(data: ItemInput) {
     isLactoseFree: data.isLactoseFree ?? false,
     allergens: data.allergens?.trim() || "",
     status: data.status ?? "IDEA",
+    isPublic: data.isPublic ?? false,
     sortOrder: (last?.max ?? -1) + 1,
     createdBy: session?.user?.id ? Number(session.user.id) : null,
   });
@@ -162,6 +194,7 @@ export async function updateMenuItem(id: number, data: Partial<ItemInput>) {
   if (data.isLactoseFree !== undefined) set.isLactoseFree = data.isLactoseFree;
   if (data.allergens !== undefined) set.allergens = data.allergens.trim();
   if (data.status !== undefined) set.status = data.status;
+  if (data.isPublic !== undefined) set.isPublic = data.isPublic;
 
   if (Object.keys(set).length > 0) {
     await db.update(menuItems).set(set).where(eq(menuItems.id, id));
@@ -178,6 +211,13 @@ export async function deleteMenuItem(id: number) {
 export async function setMenuItemStatus(id: number, status: MenuStatus) {
   await requireWrite();
   await db.update(menuItems).set({ status }).where(eq(menuItems.id, id));
+  invalidate();
+}
+
+// Muestra u oculta el ítem en el menú de los invitados.
+export async function setMenuItemPublic(id: number, isPublic: boolean) {
+  await requireWrite();
+  await db.update(menuItems).set({ isPublic }).where(eq(menuItems.id, id));
   invalidate();
 }
 
