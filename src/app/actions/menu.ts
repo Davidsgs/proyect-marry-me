@@ -2,7 +2,7 @@
 
 import { db } from "@/db";
 import { menuItems, scheduleActivities, scheduleSections } from "@/db/schema";
-import { eq, asc, sql } from "drizzle-orm";
+import { eq, asc, sql, inArray } from "drizzle-orm";
 import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
@@ -218,6 +218,15 @@ export async function setMenuItemStatus(id: number, status: MenuStatus) {
 export async function setMenuItemPublic(id: number, isPublic: boolean) {
   await requireWrite();
   await db.update(menuItems).set({ isPublic }).where(eq(menuItems.id, id));
+  invalidate();
+}
+
+// Muestra a los invitados varios ítems de una vez (p. ej. todos los confirmados).
+export async function showMenuItems(ids: number[]) {
+  await requireWrite();
+  if (ids.length > 0) {
+    await db.update(menuItems).set({ isPublic: true }).where(inArray(menuItems.id, ids));
+  }
   invalidate();
 }
 

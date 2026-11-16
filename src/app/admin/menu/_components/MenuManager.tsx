@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isTemp, pendingRowCls, tempId, useOptimisticState, type Patch } from "@/app/admin/_components/optimistic";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import { Checkbox, EmptyState, Field, btnPrimary, btnGhost, iconBtn, iconBtnDanger, inputCls, selectCls } from "@/app/admin/_components/ui";
+import { Checkbox, EmptyState, Field, btnPrimary, btnGhost, btnGhostSm, iconBtn, iconBtnDanger, inputCls, selectCls } from "@/app/admin/_components/ui";
 import { Dialog } from "@/components/Dialog";
 import { GrowText } from "@/components/GrowText";
 import {
@@ -30,7 +30,7 @@ import {
   Leaf, WheatOff, MilkOff, AlertTriangle, Eye, EyeOff,
 } from "lucide-react";
 import {
-  createMenuItem, updateMenuItem, deleteMenuItem, setMenuItemStatus, setMenuItemPublic, moveMenuItem,
+  createMenuItem, updateMenuItem, deleteMenuItem, setMenuItemStatus, setMenuItemPublic, showMenuItems, moveMenuItem,
   type MenuItem, type MenuMoment, type MenuType, type MenuStatus,
 } from "@/app/actions/menu";
 
@@ -97,6 +97,17 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
   const itemsOf = (activityId: number | null) => visible.filter((i) => i.activityId === activityId);
   const discardedCount = items.filter((i) => i.status === "DISCARDED").length;
   const publicCount = items.filter((i) => i.isPublic && i.status !== "DISCARDED").length;
+  // Confirmados con el proveedor que los invitados todavía no ven: se publican de una vez.
+  const hiddenConfirmed = items.filter((i) => i.status === "CONFIRMED" && !i.isPublic && !isTemp(i.id)).map((i) => i.id);
+
+  function showConfirmed() {
+    const ids = new Set(hiddenConfirmed);
+    mutate(
+      (s) => s.map((i) => (ids.has(i.id) ? { ...i, isPublic: true } : i)),
+      () => showMenuItems([...ids]),
+      { ok: `Los invitados ya ven ${ids.size} ${ids.size === 1 ? "ítem confirmado" : "ítems confirmados"}`, error: "No se pudieron mostrar los ítems" },
+    );
+  }
 
   // El drag reordena el listado completo: con un filtro activo el orden mostrado
   // no es el real, así que solo se arrastra en la vista sin filtrar.
@@ -178,12 +189,20 @@ export default function MenuManager({ initialItems, moments, canWrite }: Props) 
       </div>
 
       {items.length > 0 && (
-        <p className="flex items-center gap-2 text-sm text-on-surface-variant">
-          <Eye className="w-4 h-4 shrink-0" aria-hidden />
-          {publicCount === 0
-            ? "Los invitados aún no ven ningún ítem. Usa el ojo de cada ítem para mostrarlo en su invitación."
-            : `Los invitados ven ${publicCount} ${publicCount === 1 ? "ítem" : "ítems"} en su invitación.`}
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <p className="flex items-center gap-2 text-sm text-on-surface-variant">
+            <Eye className="w-4 h-4 shrink-0" aria-hidden />
+            {publicCount === 0
+              ? "Los invitados aún no ven ningún ítem. Usa el ojo de cada ítem para mostrarlo en su invitación."
+              : `Los invitados ven ${publicCount} ${publicCount === 1 ? "ítem" : "ítems"} en su invitación.`}
+          </p>
+          {canWrite && hiddenConfirmed.length > 0 && (
+            <button type="button" onClick={showConfirmed} className={`${btnGhostSm} self-start sm:self-auto`}>
+              <Eye className="w-3.5 h-3.5" aria-hidden />
+              Mostrar los {hiddenConfirmed.length} confirmados
+            </button>
+          )}
+        </div>
       )}
 
       {canWrite && !dragEnabled && visible.length > 0 && (
