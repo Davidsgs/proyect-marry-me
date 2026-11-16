@@ -9,6 +9,7 @@ import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
+import { declined } from "@/lib/attendance";
 import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
 import {
     CheckCircle2,
@@ -164,6 +165,18 @@ export default async function AdminPage() {
             icon: Armchair,
             title: `${confirmedUnseated} ${confirmedUnseated === 1 ? "confirmado sin mesa" : "confirmados sin mesa"}`,
             detail: "Asígnales mesa antes de imprimir el plano.",
+            href: "/admin/tables",
+        });
+    }
+    const seatedNotComing = canReadTables
+        ? guestUsers.filter((u) => u.tableId != null && declined(u, families.find((f) => f.id === u.familyId)))
+        : [];
+    if (seatedNotComing.length > 0) {
+        pending.push({
+            key: "seated-not-coming",
+            icon: UserX,
+            title: `${seatedNotComing.length} ${seatedNotComing.length === 1 ? "persona que no viene ocupa" : "personas que no vienen ocupan"} una silla`,
+            detail: "Libera sus sillas para que no cuenten en el plano. " + namesPreview(seatedNotComing.map((u) => `${u.name} ${u.lastName}`)),
             href: "/admin/tables",
         });
     }

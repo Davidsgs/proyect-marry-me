@@ -27,7 +27,8 @@ import {
     assignUserToTable,
     assignFamilyToTable,
 } from "@/app/actions/tables";
-import { Plus, X, Armchair, Pencil, Trash2, GripVertical, Baby, Smile, List, LayoutGrid, Printer, Eraser, ChevronDown } from "lucide-react";
+import { declined } from "@/lib/attendance";
+import { Plus, X, UserX, Armchair, Pencil, Trash2, GripVertical, Baby, Smile, List, LayoutGrid, Printer, Eraser, ChevronDown } from "lucide-react";
 import { EmptyState, StatCard, Tabs, btnGhost, btnPrimary, btnSecondary, iconBtn, iconBtnDanger, inputCls, selectCls } from "@/app/admin/_components/ui";
 import { Dialog } from "@/components/Dialog";
 import TablePlan from "./TablePlan";
@@ -482,6 +483,7 @@ function TableCard({
     const over = occupancy > table.capacity;
     const full = occupancy === table.capacity;
     const pct = Math.min(100, Math.round((occupancy / Math.max(1, table.capacity)) * 100));
+    const notComing = members.filter((u) => declined(u, families.find((f) => f.id === u.familyId))).length;
 
     return (
         <div
@@ -507,6 +509,12 @@ function TableCard({
 
             {over && (
                 <p className="text-sm text-error">Sobra{occupancy - table.capacity === 1 ? "" : "n"} {occupancy - table.capacity}: mueve a alguien o amplía la mesa.</p>
+            )}
+            {notComing > 0 && (
+                <p className="flex items-center gap-1.5 text-sm text-on-surface-variant">
+                    <UserX className="w-4 h-4 shrink-0" aria-hidden />
+                    {notComing === 1 ? "1 persona no viene: puedes liberar su silla." : `${notComing} personas no vienen: puedes liberar sus sillas.`}
+                </p>
             )}
             <div className="min-h-14 flex flex-wrap gap-1.5 content-start">
                 {members.length === 0 ? (
@@ -550,10 +558,25 @@ function SeatedChip({
 }) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: `user-${user.id}`, disabled: !canWrite });
     const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+    const out = declined(user, family);
+    const name = (
+        <span className={`truncate max-w-32 ${out ? "line-through text-on-surface-variant" : ""}`}>
+            {user.name} {user.lastName}
+            {out && <span className="sr-only"> (no viene)</span>}
+        </span>
+    );
 
-    if (!canWrite) return <span title={family?.name ?? ""}><ChipBody user={user} /></span>;
+    if (!canWrite) {
+        return (
+            <span title={out ? `${family?.name ?? ""} · No viene` : family?.name ?? ""} className="flex items-center gap-1.5 min-h-10 pointer-fine:min-h-8 px-3 rounded-lg bg-surface-container-lowest text-on-surface text-sm shadow-sm">
+                {out && <UserX className="w-3.5 h-3.5 text-on-surface-variant shrink-0" aria-hidden />}
+                {name}
+                <AgeMark category={user.ageCategory as AgeCategory} />
+            </span>
+        );
+    }
     return (
-        <span ref={setNodeRef} style={style} className={`flex items-center rounded-lg bg-surface-container-lowest shadow-sm ${isDragging ? "opacity-40" : ""}`} title={family?.name ?? ""}>
+        <span ref={setNodeRef} style={style} className={`flex items-center rounded-lg bg-surface-container-lowest shadow-sm ${isDragging ? "opacity-40" : ""}`} title={out ? `${family?.name ?? ""} · No viene` : family?.name ?? ""}>
             <button
                 type="button"
                 {...listeners}
@@ -563,7 +586,8 @@ function SeatedChip({
                 className="flex items-center gap-1.5 min-h-10 pointer-fine:min-h-8 pl-3 pr-1 text-sm text-on-surface cursor-pointer pointer-fine:cursor-grab active:cursor-grabbing touch-manipulation"
             >
                 <GripVertical className="w-3.5 h-3.5 text-on-surface-variant shrink-0 hidden pointer-fine:block" aria-hidden />
-                <span className="truncate max-w-32">{user.name} {user.lastName}</span>
+                {out && <UserX className="w-3.5 h-3.5 text-on-surface-variant shrink-0" aria-hidden />}
+                {name}
                 <AgeMark category={user.ageCategory as AgeCategory} />
             </button>
             <button
