@@ -12,7 +12,7 @@ export default function Countdown() {
     });
 
     useEffect(() => {
-        // 3 de Abril de 2027 00:00:00 en UTC-3 (Argentina)
+        // 2 de abril de 2027 00:00:00 en UTC-3 (Argentina)
         const targetDate = new Date(WEDDING_DATE_ISO).getTime();
 
         const updateTimer = () => {
@@ -43,30 +43,34 @@ export default function Countdown() {
     }, []);
 
     if (timeLeft.days === -1) {
-        return <div className="h-24"></div>; // Placeholder para evitar desajustes de hidratación 
+        return <div className="h-28 sm:h-36" />; // Reserva el alto antes de hidratar
     }
 
+    const units = [
+        { value: String(timeLeft.days), label: timeLeft.days === 1 ? "día" : "días" },
+        { value: String(timeLeft.hours).padStart(2, "0"), label: "horas" },
+        { value: String(timeLeft.minutes).padStart(2, "0"), label: "minutos" },
+        { value: String(timeLeft.seconds).padStart(2, "0"), label: "segundos" },
+    ];
+
     return (
-        <div className="flex flex-wrap gap-4 sm:gap-8 justify-center items-end text-center z-10">
-            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.days}</span>
-                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Días</span>
-            </div>
-            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 sm:mb-12 text-wedding-blush-light/60">:</span>
-            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.hours.toString().padStart(2, '0')}</span>
-                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Horas</span>
-            </div>
-            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 sm:mb-12 text-wedding-blush-light/60">:</span>
-            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.minutes.toString().padStart(2, '0')}</span>
-                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Minutos</span>
-            </div>
-            <span className="text-2xl sm:text-4xl md:text-6xl font-light mb-8 sm:mb-12 text-wedding-blush-light/60">:</span>
-            <div className="flex flex-col items-center min-w-[70px] sm:min-w-[100px]">
-                <span className="text-4xl sm:text-6xl md:text-8xl font-serif font-light text-wedding-cream drop-shadow-md leading-none">{timeLeft.seconds.toString().padStart(2, '0')}</span>
-                <span className="text-xs sm:text-sm border-t border-wedding-blush-light/30 pt-2 mt-4 tracking-widest uppercase text-wedding-cream/80 w-full">Segundos</span>
-            </div>
+        <div
+            role="timer"
+            aria-label={`Faltan ${timeLeft.days} días, ${timeLeft.hours} horas y ${timeLeft.minutes} minutos`}
+            className="flex justify-center items-start gap-2 sm:gap-6 text-center"
+        >
+            {units.map((u, i) => (
+                <div key={u.label} className="flex items-start gap-2 sm:gap-6">
+                    {i > 0 && (
+                        <span aria-hidden className="font-sans font-light text-3xl sm:text-5xl md:text-7xl leading-none text-rubor/60">:</span>
+                    )}
+                    <div className="flex flex-col items-center min-w-[3.75rem] sm:min-w-24">
+                        {/* Cifras en Mulish ligera con numerales tabulares (no saltan al cambiar). */}
+                        <span aria-hidden className="font-sans font-light tabular-nums text-4xl sm:text-6xl md:text-7xl leading-none text-crema">{u.value}</span>
+                        <span aria-hidden className="mt-3 font-text text-sm sm:text-base text-crema/85">{u.label}</span>
+                    </div>
+                </div>
+            ))}
         </div>
     );
 }

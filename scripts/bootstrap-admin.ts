@@ -15,13 +15,16 @@ if (!TARGET_EMAIL) {
 async function main() {
   const { db } = await import("../src/db");
   const { users, roles, userRoles } = await import("../src/db/schema");
+  const { slugifyAlias, uniqueAlias } = await import("../src/lib/alias");
 
   // 1. Verificar / crear el usuario
   let dbUser = await db.select().from(users).where(eq(users.email, TARGET_EMAIL)).get();
 
   if (!dbUser) {
     const fullname = `${TARGET_NAME} ${TARGET_LAST_NAME}`.trim();
+    const taken = new Set((await db.select({ alias: users.alias }).from(users).all()).map((r) => r.alias).filter((a): a is string => !!a));
     await db.insert(users).values({
+      alias: uniqueAlias(slugifyAlias(fullname), taken),
       email: TARGET_EMAIL,
       name: TARGET_NAME,
       lastName: TARGET_LAST_NAME,

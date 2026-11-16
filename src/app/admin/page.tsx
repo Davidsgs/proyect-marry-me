@@ -9,14 +9,11 @@ import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
-import { PageHeader, StatCard, btnPrimary } from "@/app/admin/_components/ui";
+import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
 import {
     CheckCircle2,
     ChevronRight,
     ListTodo,
-    Users as UsersIcon,
-    Home,
-    CalendarClock,
     Armchair,
     Wallet,
     UserX,
@@ -170,188 +167,215 @@ export default async function AdminPage() {
     const deadlineLabel = deadline
         ? deadline.toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
         : null;
-    const greeting = [
-        firstName ? `Hola, ${firstName}.` : null,
-        daysLeft > 0 ? `Faltan ${daysLeft} días para el ${WEDDING_DATE_LABEL}.` : null,
-    ].filter(Boolean).join(" ");
+
+    // Estado general: una fila por sección, cada una enlazada.
+    const status: StatusRow[] = [];
+    if (canReadGuests) {
+        status.push({
+            href: "/admin/guests",
+            label: "Familias que respondieron",
+            value: <>{respondedFamilies}<Of n={totalFamilies} /></>,
+            hint: <ProgressBar percent={responseRate} label={`${responseRate}% respondió`} />,
+        });
+        status.push({
+            href: "/admin/guests?tab=invitados",
+            label: "Invitados que asisten",
+            value: <>{confirmedGuests}<Of n={totalGuests} /></>,
+            hint: `${adultGuests} ${adultGuests === 1 ? "adulto" : "adultos"} · ${minorGuests} ${minorGuests === 1 ? "menor" : "menores"}`,
+            tone: "good",
+        });
+    }
+    if (canReadTables) {
+        status.push({
+            href: "/admin/tables",
+            label: "Invitados con mesa",
+            value: <>{seatedGuests}<Of n={totalGuests} /></>,
+            hint: `${tables.length} ${tables.length === 1 ? "mesa" : "mesas"} · ${tables.reduce((s, t) => s + t.capacity, 0)} asientos`,
+            tone: overCapacityTables.length > 0 ? "warn" : undefined,
+        });
+    }
+    if (canReadTasks) {
+        status.push({
+            href: "/admin/tasks",
+            label: "Tareas pendientes",
+            value: pendingTasks.length,
+            hint: overdueTasks.length > 0
+                ? `${overdueTasks.length} ${overdueTasks.length === 1 ? "vencida" : "vencidas"} · ${allTasks.length - pendingTasks.length} hechas`
+                : `${allTasks.length - pendingTasks.length} hechas`,
+            tone: overdueTasks.length > 0 ? "warn" : undefined,
+        });
+    }
+    if (canReadSchedule) {
+        status.push({
+            href: "/admin/cronograma",
+            label: "Cronograma",
+            value: <>{completedActivities}<Of n={schedule.length} /></>,
+            hint: schedule.length === 0
+                ? "Sin actividades aún"
+                : nextActivity
+                    ? `Sigue: ${nextActivity.title}${nextActivity.time ? ` · ${nextActivity.time}` : ""}`
+                    : "Todo el día completado",
+        });
+    }
+    if (canReadFinance && finance) {
+        status.push({
+            href: "/admin/finance",
+            label: "Balance",
+            value: formatMoney(finance.balanceCents),
+            hint: finance.pendingCount > 0 ? `${formatMoney(finance.toPayCents)} en cuotas por pagar` : "Sin cuotas pendientes",
+            tone: finance.balanceCents < 0 || finance.overdueCount > 0 ? "warn" : undefined,
+        });
+    }
+
+    const addGuests = canWriteUsers && (
+        <Link href="/admin/guests?tab=invitados" className={btnPrimary}>
+            <Plus className="w-4 h-4" aria-hidden /> Agregar invitados
+        </Link>
+    );
 
     return (
-        <div className="max-w-6xl mx-auto space-y-10">
-            <PageHeader
-                title="Resumen"
-                description={greeting || undefined}
-                actions={canWriteUsers && (
-                    <Link href="/admin/guests?tab=invitados" className={btnPrimary}>
-                        <Plus className="w-4 h-4" /> Agregar invitados
-                    </Link>
-                )}
-            />
+        <div className="max-w-6xl mx-auto space-y-10 lg:space-y-14">
+            <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+                <div className="min-w-0">
+                    <h1 className="font-serif text-5xl leading-none text-primary">Resumen</h1>
+                    {firstName && <p className="mt-2 text-sm text-on-surface-variant">Hola, {firstName}.</p>}
+                </div>
+                <div className="flex flex-wrap items-end gap-6">
+                    {daysLeft > 0 && (
+                        <p className="flex items-baseline gap-3">
+                            <span className="font-sans font-light text-6xl sm:text-7xl leading-none tabular-nums text-primary">{daysLeft}</span>
+                            <span className="text-sm text-on-surface-variant leading-snug">
+                                {daysLeft === 1 ? "día" : "días"} para el<br />{WEDDING_DATE_LABEL}
+                            </span>
+                        </p>
+                    )}
+                    {addGuests}
+                </div>
+            </header>
 
-            {/* Estado general: cada tarjeta lleva a su sección */}
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                {canReadGuests && (
-                    <>
-                        <StatCard
-                            href="/admin/guests"
-                            label="Familias que respondieron"
-                            value={<>{respondedFamilies}<span className="text-lg text-on-surface-variant"> / {totalFamilies}</span></>}
-                            icon={Home}
-                            hint={<ProgressBar percent={responseRate} label={`${responseRate}% respondió`} />}
-                        />
-                        <StatCard
-                            href="/admin/guests?tab=invitados"
-                            label="Invitados que asisten"
-                            value={<>{confirmedGuests}<span className="text-lg text-on-surface-variant"> / {totalGuests}</span></>}
-                            icon={UsersIcon}
-                            hint={`${adultGuests} ${adultGuests === 1 ? "adulto" : "adultos"} · ${minorGuests} ${minorGuests === 1 ? "menor" : "menores"}`}
-                        />
-                    </>
-                )}
-                {canReadTables && (
-                    <StatCard
-                        href="/admin/tables"
-                        label="Invitados con mesa"
-                        value={<>{seatedGuests}<span className="text-lg text-on-surface-variant"> / {totalGuests}</span></>}
-                        icon={Armchair}
-                        tone={overCapacityTables.length > 0 ? "warn" : "default"}
-                        hint={`${tables.length} ${tables.length === 1 ? "mesa" : "mesas"} · ${tables.reduce((s, t) => s + t.capacity, 0)} asientos`}
-                    />
-                )}
-                {canReadTasks && (
-                    <StatCard
-                        href="/admin/tasks"
-                        label="Tareas pendientes"
-                        value={pendingTasks.length}
-                        icon={ListTodo}
-                        tone={overdueTasks.length > 0 ? "warn" : "default"}
-                        hint={overdueTasks.length > 0
-                            ? `${overdueTasks.length} ${overdueTasks.length === 1 ? "vencida" : "vencidas"} · ${allTasks.length - pendingTasks.length} hechas`
-                            : `${allTasks.length - pendingTasks.length} hechas`}
-                    />
-                )}
-                {canReadSchedule && (
-                    <StatCard
-                        href="/admin/cronograma"
-                        label="Cronograma"
-                        value={<>{completedActivities}<span className="text-lg text-on-surface-variant"> / {schedule.length}</span></>}
-                        icon={CalendarClock}
-                        hint={schedule.length === 0
-                            ? "Sin actividades aún"
-                            : nextActivity
-                                ? `Sigue: ${nextActivity.title}${nextActivity.time ? ` · ${nextActivity.time}` : ""}`
-                                : "Todo el día completado"}
-                    />
-                )}
-                {canReadFinance && finance && (
-                    <StatCard
-                        href="/admin/finance"
-                        label="Balance"
-                        value={formatMoney(finance.balanceCents)}
-                        icon={Wallet}
-                        tone={finance.balanceCents < 0 || finance.overdueCount > 0 ? "warn" : "default"}
-                        hint={finance.pendingCount > 0
-                            ? `${formatMoney(finance.toPayCents)} en cuotas por pagar`
-                            : "Sin cuotas pendientes"}
-                    />
-                )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-8 items-start">
-                {/* Por resolver */}
+            <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10 lg:gap-12 items-start">
+                {/* Por resolver: lo primero que hay que mirar */}
                 <section className="space-y-4" aria-labelledby="pendientes">
-                    <h2 id="pendientes" className="font-serif italic text-2xl text-primary">Por resolver</h2>
+                    <h2 id="pendientes" className="font-serif text-3xl leading-none text-primary">Por resolver</h2>
                     {pending.length === 0 ? (
-                        <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-[0_4px_20px_rgba(81,68,67,0.04)] flex items-center gap-3 text-sm text-on-surface-variant">
-                            <CheckCircle2 className="w-5 h-5 text-on-secondary-container shrink-0" />
+                        <div className="bg-secondary-container/60 p-6 rounded-2xl flex items-center gap-3 text-sm text-on-secondary-container">
+                            <CheckCircle2 className="w-5 h-5 shrink-0" aria-hidden />
                             Todo al día. No hay nada pendiente que perseguir.
                         </div>
                     ) : (
-                        <ul className="bg-surface-container-lowest rounded-2xl shadow-[0_4px_20px_rgba(81,68,67,0.04)] p-1.5 space-y-1">
+                        <ul className="space-y-2">
                             {pending.map((item) => (
                                 <li key={item.key}>
                                     <Link
                                         href={item.href}
-                                        className="group flex items-center gap-4 p-3 sm:px-4 rounded-xl hover:bg-surface-container-low transition-colors"
+                                        className="group flex items-center gap-4 p-4 rounded-2xl bg-surface-container-lowest hover:bg-[#fffdf8] transition-colors"
                                     >
-                                        <span className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${item.tone === "warn" ? "bg-error/10 text-error" : "bg-surface-container-low text-primary"}`}>
-                                            <item.icon className="w-5 h-5" />
+                                        <span className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 ${item.tone === "warn" ? "bg-error/10 text-error" : "bg-surface-container-low text-primary"}`}>
+                                            <item.icon className="w-5 h-5" aria-hidden />
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span className="block text-sm font-medium text-on-surface">{item.title}</span>
-                                            {item.detail && <span className="block text-xs text-on-surface-variant mt-0.5 truncate">{item.detail}</span>}
+                                            <span className="block text-[15px] font-medium text-on-surface">{item.title}</span>
+                                            {item.detail && <span className="block text-sm text-on-surface-variant mt-0.5 line-clamp-2">{item.detail}</span>}
                                         </span>
-                                        <ChevronRight className="w-4 h-4 text-on-surface-variant/60 shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                                        <ChevronRight className="w-4 h-4 text-on-surface-variant shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
                                     </Link>
                                 </li>
                             ))}
                         </ul>
                     )}
                     {canReadGuests && deadlineLabel && (
-                        <p className="text-xs text-on-surface-variant">
+                        <p className="text-sm text-on-surface-variant">
                             Las familias pueden responder hasta el <span className="font-medium text-on-surface">{deadlineLabel}</span>.
                         </p>
                     )}
                 </section>
 
-                <div className="space-y-10">
-                    {/* Tareas próximas */}
-                    {canReadTasks && (
-                        <section className="space-y-4" aria-labelledby="proximas">
-                            <div className="flex items-baseline justify-between gap-2">
-                                <h2 id="proximas" className="font-serif italic text-2xl text-primary">Próximas tareas</h2>
-                                <Link href="/admin/tasks" className="text-sm font-medium text-primary hover:underline underline-offset-4">Ver todas</Link>
-                            </div>
-                            {upcomingTasks.length === 0 ? (
-                                <p className="text-sm text-on-surface-variant">No hay tareas pendientes.</p>
-                            ) : (
-                                <ul className="space-y-2">
-                                    {upcomingTasks.map((task) => {
-                                        const overdue = task.dueDate != null && task.dueDate < today;
-                                        return (
-                                            <li key={task.id} className="bg-surface-container-lowest px-4 py-3 rounded-xl shadow-[0_2px_12px_rgba(81,68,67,0.04)] flex items-center gap-3">
-                                                <span className="text-sm text-on-surface flex-1 min-w-0 truncate">{task.title}</span>
-                                                <span className={`text-xs font-medium tabular-nums shrink-0 ${overdue ? "text-error" : "text-on-surface-variant"}`}>
-                                                    {overdue ? "Vencida · " : ""}{formatDueDate(task.dueDate)}
-                                                </span>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </section>
-                    )}
+                {/* Estado: una línea por sección */}
+                {status.length > 0 && (
+                    <section className="space-y-4" aria-labelledby="estado">
+                        <h2 id="estado" className="font-serif text-3xl leading-none text-primary">Estado</h2>
+                        <ul className="rounded-2xl bg-surface-container-lowest p-1.5">
+                            {status.map((row) => (
+                                <li key={row.href + row.label}>
+                                    <Link href={row.href} className="group flex items-center gap-4 rounded-xl px-4 py-3.5 hover:bg-surface-container-low transition-colors">
+                                        <span className="min-w-0 flex-1">
+                                            <span className="block text-sm text-on-surface-variant">{row.label}</span>
+                                            {row.hint && <span className="mt-1 block text-xs text-on-surface-variant">{row.hint}</span>}
+                                        </span>
+                                        <span className={`text-xl font-medium tabular-nums whitespace-nowrap ${row.tone === "warn" ? "text-error" : row.tone === "good" ? "text-on-secondary-container" : "text-on-surface"}`}>
+                                            {row.value}
+                                        </span>
+                                        <ChevronRight className="w-4 h-4 text-on-surface-variant shrink-0 transition-transform group-hover:translate-x-0.5" aria-hidden />
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+            </div>
 
-                    {/* Confirmaciones recientes */}
-                    {canReadGuests && (
-                        <section className="space-y-4" aria-labelledby="recientes">
-                            <div className="flex items-baseline justify-between gap-2">
-                                <h2 id="recientes" className="font-serif italic text-2xl text-primary">Últimas confirmaciones</h2>
-                                <Link href="/admin/guests" className="text-sm font-medium text-primary hover:underline underline-offset-4">Ver invitados</Link>
-                            </div>
-                            {recentConfirmedFamilies.length === 0 ? (
-                                <p className="text-sm text-on-surface-variant">Aún no ha confirmado ninguna familia.</p>
-                            ) : (
-                                <ul className="space-y-2">
-                                    {recentConfirmedFamilies.map((f) => {
-                                        const familyUsers = users.filter((u) => u.familyId === f.id);
-                                        const attending = familyUsers.filter((u) => u.isConfirmed).length;
-                                        return (
-                                            <li key={f.id} className="bg-surface-container-lowest px-4 py-3 rounded-xl shadow-[0_2px_12px_rgba(81,68,67,0.04)] flex items-center gap-3">
-                                                <span className="text-sm text-on-surface flex-1 min-w-0 truncate">{f.name}</span>
-                                                <span className="text-xs text-on-secondary-container font-medium tabular-nums shrink-0">
-                                                    {attending} de {familyUsers.length} asisten
-                                                </span>
-                                            </li>
-                                        );
-                                    })}
-                                </ul>
-                            )}
-                        </section>
-                    )}
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                {canReadTasks && (
+                    <section className="space-y-4" aria-labelledby="proximas">
+                        <div className="flex items-baseline justify-between gap-2">
+                            <h2 id="proximas" className="font-serif text-3xl leading-none text-primary">Próximas tareas</h2>
+                            <Link href="/admin/tasks" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Ver todas</Link>
+                        </div>
+                        {upcomingTasks.length === 0 ? (
+                            <EmptyState message="No hay tareas pendientes." />
+                        ) : (
+                            <ul className="space-y-1.5">
+                                {upcomingTasks.map((task) => {
+                                    const overdue = task.dueDate != null && task.dueDate < today;
+                                    return (
+                                        <li key={task.id} className="bg-surface-container-lowest px-4 py-3 rounded-xl flex items-center gap-3">
+                                            <span className="text-sm text-on-surface flex-1 min-w-0 truncate">{task.title}</span>
+                                            <span className={`text-xs font-medium tabular-nums shrink-0 ${overdue ? "text-error" : "text-on-surface-variant"}`}>
+                                                {overdue ? "Vencida · " : ""}{formatDueDate(task.dueDate)}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </section>
+                )}
+
+                {canReadGuests && (
+                    <section className="space-y-4" aria-labelledby="recientes">
+                        <div className="flex items-baseline justify-between gap-2">
+                            <h2 id="recientes" className="font-serif text-3xl leading-none text-primary">Últimas confirmaciones</h2>
+                            <Link href="/admin/guests" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Ver invitados</Link>
+                        </div>
+                        {recentConfirmedFamilies.length === 0 ? (
+                            <EmptyState message="Aún no ha confirmado ninguna familia." />
+                        ) : (
+                            <ul className="space-y-1.5">
+                                {recentConfirmedFamilies.map((f) => {
+                                    const familyUsers = users.filter((u) => u.familyId === f.id);
+                                    const attending = familyUsers.filter((u) => u.isConfirmed).length;
+                                    return (
+                                        <li key={f.id} className="bg-surface-container-lowest px-4 py-3 rounded-xl flex items-center gap-3">
+                                            <span className="text-sm text-on-surface flex-1 min-w-0 truncate">{f.name}</span>
+                                            <span className="text-xs text-on-secondary-container font-medium tabular-nums shrink-0">
+                                                {attending} de {familyUsers.length} asisten
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </section>
+                )}
             </div>
         </div>
     );
+}
+
+type StatusRow = { href: string; label: string; value: React.ReactNode; hint?: React.ReactNode; tone?: "warn" | "good" };
+
+function Of({ n }: { n: number }) {
+    return <span className="text-sm font-normal text-on-surface-variant"> / {n}</span>;
 }
 
 function namesPreview(names: string[], max = 3): string {
@@ -362,7 +386,7 @@ function namesPreview(names: string[], max = 3): string {
 function ProgressBar({ percent, label }: { percent: number; label: string }) {
     return (
         <span className="flex flex-col gap-1.5">
-            <span className="block w-full h-1.5 bg-surface-container rounded-full overflow-hidden" aria-hidden>
+            <span className="block w-full max-w-48 h-1.5 bg-surface-container rounded-full overflow-hidden" aria-hidden>
                 <span className="block h-full bg-primary rounded-full" style={{ width: `${percent}%` }} />
             </span>
             {label}

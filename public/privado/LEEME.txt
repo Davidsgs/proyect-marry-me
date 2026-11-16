@@ -1,0 +1,2 @@
+Fotos de la pareja e ilustración. Solo accesibles con sesión (ver src/proxy.ts).
+Nombres esperados: historia-1.webp, historia-2.webp, ilustracion.webp (cuadradas, ~1200px).

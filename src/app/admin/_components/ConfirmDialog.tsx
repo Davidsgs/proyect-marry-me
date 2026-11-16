@@ -52,12 +52,12 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
         // Escape o clic fuera = cancelar.
         onCancel={() => close(false)}
         onClick={(e) => { if (e.target === dialogRef.current) close(false); }}
-        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-on-surface/30 open:animate-in open:fade-in open:zoom-in-95 open:duration-150"
+        className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-tinta/35 open:animate-in open:fade-in open:zoom-in-95 open:duration-150"
       >
         {opts && (
           <div className="p-6 space-y-5">
             <div className="space-y-2">
-              <h2 className="font-serif text-xl text-on-surface text-balance">{opts.title}</h2>
+              <h2 className="font-serif text-2xl leading-tight text-on-surface text-balance">{opts.title}</h2>
               {opts.description && (
                 <p className="text-sm font-sans text-on-surface-variant text-pretty">{opts.description}</p>
               )}

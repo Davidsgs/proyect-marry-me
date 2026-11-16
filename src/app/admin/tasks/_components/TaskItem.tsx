@@ -1,114 +1,37 @@
 "use client";
 
-import { toggleTask, deleteTask, updateTask } from "@/app/actions/tasks";
 import type { tasks } from "@/db/schema";
 import { parseLocalDate, todayLocalISO } from "@/lib/dates";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import { Trash2, Check, Calendar, Pencil, X, Save, MoreVertical, User, Clock } from "lucide-react";
-import { useState, useRef, useEffect, useTransition } from "react";
+import { btnGhost, btnPrimary, btnSecondary, iconBtn, iconBtnDanger, inputCls } from "@/app/admin/_components/ui";
+import { Dialog } from "@/components/Dialog";
+import { DatePicker } from "@/components/DatePicker";
+import { Trash2, Check, Calendar, Pencil, User, Clock } from "lucide-react";
+import { useState } from "react";
+import { useTasks } from "./TasksSync";
+import { isTemp, pendingRowCls } from "@/app/admin/_components/optimistic";
+import { GrowText } from "@/components/GrowText";
+import { PRIORITY_LABEL, type Priority } from "@/lib/priority";
+import { PriorityIcon, PriorityPicker } from "./PriorityIcon";
 
-type Task = typeof tasks.$inferSelect & { completedByName?: string | null };
+export type Task = typeof tasks.$inferSelect & { completedByName?: string | null };
 
 interface Props {
     task: Task;
     canWrite: boolean;
 }
 
-function truncateName(name: string | null | undefined, maxLen = 22): string {
-    if (!name) return "Admin";
-    if (name.length <= maxLen) return name;
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-        const firstLast = `${parts[0]} ${parts[parts.length - 1][0]}.`;
-        if (firstLast.length <= maxLen) return firstLast;
-        return parts[0].slice(0, maxLen - 1) + ".";
-    }
-    return name.slice(0, maxLen - 1) + ".";
-}
-
-function CompletionMenu({ task }: { task: Task }) {
-    const [open, setOpen] = useState(false);
-    const ref = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-        if (!open) return;
-        function handleClick(e: MouseEvent) {
-            if (ref.current && !ref.current.contains(e.target as Node)) {
-                setOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClick);
-        return () => document.removeEventListener("mousedown", handleClick);
-    }, [open]);
-
-    const completedDate = task.completedAt
-        ? new Intl.DateTimeFormat("es-AR", {
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          }).format(new Date(task.completedAt))
-        : null;
-
-    const completedTime = task.completedAt
-        ? new Intl.DateTimeFormat("es-AR", {
-            hour: "2-digit",
-            minute: "2-digit",
-          }).format(new Date(task.completedAt))
-        : null;
-
-    return (
-        <div ref={ref} className="relative shrink-0">
-            <button
-                onClick={() => setOpen(v => !v)}
-                className="w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant/50 hover:text-on-surface-variant hover:bg-surface-container transition-all border-none cursor-pointer"
-                title="Ver información"
-            >
-                <MoreVertical className="w-4 h-4" />
-            </button>
-
-            {open && (
-                <div className="absolute right-0 top-10 z-50 w-56 bg-white rounded-2xl shadow-xl border border-surface-container p-3 space-y-2.5">
-                    <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant/80">
-                        Finalizada por
-                    </p>
-                    <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-primary/70 shrink-0" />
-                        <span
-                            className="text-sm font-medium text-on-surface truncate"
-                            title={task.completedByName ?? undefined}
-                        >
-                            {truncateName(task.completedByName)}
-                        </span>
-                    </div>
-                    {completedDate && (
-                        <div className="space-y-1 pt-1 border-t border-surface-container">
-                            <div className="flex items-center gap-2">
-                                <Calendar className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-                                <span className="text-xs text-on-surface-variant">{completedDate}</span>
-                            </div>
-                            {completedTime && (
-                                <div className="flex items-center gap-2">
-                                    <Clock className="w-3.5 h-3.5 text-primary/70 shrink-0" />
-                                    <span className="text-xs text-on-surface-variant">{completedTime}</span>
-                                </div>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
-        </div>
-    );
-}
+const fmtShort = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" });
+const fmtLong = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric" });
+const fmtStamp = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 export default function TaskItem({ task, canWrite }: Props) {
-    const [isEditing, setIsEditing] = useState(false);
-    const [editTitle, setEditTitle] = useState(task.title);
-    const [editDesc, setEditDesc] = useState(task.description ?? "");
-    const [editDate, setEditDate] = useState(task.dueDate ?? "");
-    const [saving, setSaving] = useState(false);
-    const [showDetail, setShowDetail] = useState(false);
     const confirm = useConfirm();
-    const [, startDelete] = useTransition();
+    const { toggle, update, remove } = useTasks();
+    const [mode, setMode] = useState<"closed" | "view" | "edit">("closed");
+
+    const isPastDue = Boolean(task.dueDate && !task.isCompleted && task.dueDate < todayLocalISO());
+    const shortDate = task.dueDate ? fmtShort.format(parseLocalDate(task.dueDate)) : null;
 
     async function handleDelete() {
         const ok = await confirm({
@@ -117,300 +40,232 @@ export default function TaskItem({ task, canWrite }: Props) {
             confirmLabel: "Eliminar",
         });
         if (!ok) return;
-        startDelete(async () => {
-            await deleteTask(task.id);
-            setShowDetail(false);
-        });
+        setMode("closed");
+        remove(task);
     }
 
-    const formattedDate = task.dueDate
-        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "short", year: "numeric" }).format(parseLocalDate(task.dueDate))
-        : null;
-
-    const isPastDue = task.dueDate && !task.isCompleted && task.dueDate < todayLocalISO();
-
-    async function handleSave() {
-        if (!editTitle.trim()) return;
-        setSaving(true);
-        try {
-            await updateTask(task.id, {
-                title: editTitle.trim(),
-                description: editDesc.trim(),
-                dueDate: editDate || undefined,
-            });
-            setIsEditing(false);
-        } finally {
-            setSaving(false);
-        }
+    function handleSave(data: { title: string; description: string; dueDate: string | null; priority: Priority }) {
+        setMode("closed");
+        update(task, data);
     }
 
-    function handleCancel() {
-        setEditTitle(task.title);
-        setEditDesc(task.description ?? "");
-        setEditDate(task.dueDate ?? "");
-        setIsEditing(false);
-    }
-
-    if (isEditing && !task.isCompleted) {
-        return (
-            <div className="flex flex-col gap-3 p-4 rounded-xl bg-surface-container-lowest shadow-md border border-primary/20">
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-2">
-                    <input
-                        autoFocus
-                        value={editTitle}
-                        onChange={e => setEditTitle(e.target.value)}
-                        placeholder="Título"
-                        className="md:col-span-5 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/50 border-none"
-                    />
-                    <input
-                        value={editDesc}
-                        onChange={e => setEditDesc(e.target.value)}
-                        placeholder="Descripción (opcional)"
-                        className="md:col-span-4 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/50 border-none"
-                    />
-                    <input
-                        type="date"
-                        value={editDate}
-                        onChange={e => setEditDate(e.target.value)}
-                        className="md:col-span-3 px-3 py-2 rounded-lg bg-surface-container-low text-on-surface text-sm outline-none focus:ring-2 focus:ring-primary/50 border-none"
-                    />
-                </div>
-                <div className="flex justify-end gap-2">
-                    <button
-                        onClick={handleCancel}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-container transition-all border-none cursor-pointer"
-                    >
-                        <X className="w-3.5 h-3.5" />
-                        Cancelar
-                    </button>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving || !editTitle.trim()}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-primary text-on-primary hover:bg-primary/90 transition-all border-none cursor-pointer disabled:opacity-50"
-                    >
-                        <Save className="w-3.5 h-3.5" />
-                        {saving ? "Guardando…" : "Guardar"}
-                    </button>
-                </div>
-            </div>
-        );
+    function handleToggle() {
+        setMode("closed");
+        toggle(task);
     }
 
     return (
         <>
-        <div className={`flex items-center gap-2 p-4 rounded-xl transition-all group ${
-            task.isCompleted
-                ? "bg-surface-container-low/50"
-                : "bg-surface-container-lowest shadow-sm hover:shadow-md"
-        }`}>
-            {/* Dimmed wrapper — opacity only here, not on action buttons/popover */}
-            <div className={`flex items-center gap-4 flex-1 min-w-0 ${task.isCompleted ? "opacity-60" : ""}`}>
-                {/* Toggle checkbox */}
+            <div aria-busy={isTemp(task.id) || undefined} className={`group flex items-center gap-1 pr-2 rounded-xl transition-colors ${isTemp(task.id) ? pendingRowCls : ""} ${
+                task.isCompleted ? "bg-surface-container-low" : "bg-surface-container-lowest hover:bg-[#fffdf8]"
+            }`}>
                 {canWrite ? (
                     <button
-                        onClick={() => toggleTask(task.id)}
-                        className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-all border-none cursor-pointer ${
-                            task.isCompleted
-                                ? "bg-primary text-on-primary"
-                                : "bg-surface-container-low text-transparent hover:bg-primary/20 hover:text-primary"
-                        }`}
+                        type="button"
+                        onClick={handleToggle}
+                        aria-pressed={task.isCompleted}
+                        aria-label={task.isCompleted ? `Reabrir «${task.title}»` : `Completar «${task.title}»`}
+                        className="shrink-0 w-12 h-14 flex items-center justify-center cursor-pointer group/check"
                     >
-                        <Check className="w-4 h-4 stroke-[3]" />
+                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+                            task.isCompleted ? "bg-primary text-on-primary" : "bg-surface-container text-transparent group-hover/check:text-primary"
+                        }`}>
+                            <Check className="w-4 h-4 stroke-[3]" />
+                        </span>
                     </button>
                 ) : (
-                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                        task.isCompleted ? "bg-primary text-on-primary" : "bg-surface-container-low text-transparent"
-                    }`}>
-                        <Check className="w-4 h-4 stroke-[3]" />
-                    </div>
+                    <span className="shrink-0 w-12 h-14 flex items-center justify-center">
+                        <span className={`w-6 h-6 rounded-lg flex items-center justify-center ${
+                            task.isCompleted ? "bg-primary text-on-primary" : "bg-surface-container text-transparent"
+                        }`}>
+                            <Check className="w-4 h-4 stroke-[3]" />
+                        </span>
+                    </span>
                 )}
 
-                {/* Content — tap abre el detalle (texto completo, útil en móvil) */}
-                <button
-                    type="button"
-                    onClick={() => setShowDetail(true)}
-                    className="flex-1 min-w-0 text-left border-none bg-transparent cursor-pointer"
-                >
-                    <p className={`font-sans text-sm font-medium truncate ${
-                        task.isCompleted ? "line-through text-on-surface-variant" : "text-on-surface"
-                    }`}>
-                        {task.title}
+                {/* Tocar abre el detalle con el texto completo (útil en móvil) */}
+                <button type="button" onClick={() => setMode("view")} className="flex-1 min-w-0 py-3 text-left cursor-pointer">
+                    <p className={`flex items-center gap-1.5 text-[15px] font-medium ${task.isCompleted ? "line-through text-on-surface-variant" : "text-on-surface"}`}>
+                        {!task.isCompleted && <PriorityIcon priority={task.priority} />}
+                        <span className="truncate">{task.title}</span>
                     </p>
-                    {task.description && (
-                        <p className="text-xs text-on-surface-variant/80 font-light truncate mt-0.5">
-                            {task.description}
+                    {task.isCompleted ? (
+                        <p className="text-xs text-on-surface-variant truncate mt-0.5">
+                            Hecha por {task.completedByName ?? "un administrador"}
+                            {task.completedAt && ` · ${fmtShort.format(new Date(task.completedAt))}`}
                         </p>
-                    )}
+                    ) : task.description ? (
+                        <p className="text-sm text-on-surface-variant truncate mt-0.5">{task.description}</p>
+                    ) : null}
                 </button>
 
-                {/* Due date badge (pending only) */}
-                {!task.isCompleted && formattedDate && (
-                    <span className={`text-[10px] font-sans tracking-wider uppercase font-medium px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 ${
-                        isPastDue
-                            ? "bg-error/10 text-error"
-                            : "bg-surface-container text-on-surface-variant"
+                {!task.isCompleted && shortDate && (
+                    <span className={`text-xs font-medium tabular-nums px-2.5 py-1 rounded-full shrink-0 flex items-center gap-1 ${
+                        isPastDue ? "bg-error/10 text-error" : "bg-surface-container text-on-surface-variant"
                     }`}>
-                        <Calendar className="w-3 h-3" />
-                        {formattedDate}
+                        <Calendar className="w-3 h-3" aria-hidden />
+                        {isPastDue && <span className="sr-only">Vencida: </span>}
+                        {shortDate}
                     </span>
+                )}
+
+                {canWrite && (
+                    <div className="flex items-center pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        {!task.isCompleted && (
+                            <button type="button" onClick={() => setMode("edit")} className={iconBtn} aria-label={`Editar «${task.title}»`}>
+                                <Pencil className="w-4 h-4" />
+                            </button>
+                        )}
+                        <button type="button" onClick={handleDelete} className={iconBtnDanger} aria-label={`Eliminar «${task.title}»`}>
+                            <Trash2 className="w-4 h-4" />
+                        </button>
+                    </div>
                 )}
             </div>
 
-            {/* Edit button (pending only) — outside opacity wrapper */}
-            {canWrite && !task.isCompleted && (
-                <button
-                    onClick={() => setIsEditing(true)}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-all pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
-                >
-                    <Pencil className="w-4 h-4" />
-                </button>
-            )}
-
-            {/* 3-dot menu (completed only) — outside opacity wrapper so popover is fully opaque */}
-            {task.isCompleted && task.completedAt && (
-                <CompletionMenu task={task} />
-            )}
-
-            {/* Delete button — outside opacity wrapper */}
-            {canWrite && (
-                <button
-                    onClick={handleDelete}
-                    className="w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-all pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100 shrink-0 border-none cursor-pointer"
-                >
-                    <Trash2 className="w-4 h-4" />
-                </button>
-            )}
-        </div>
-
-        {showDetail && (
-            <TaskDetailModal
-                task={task}
-                canWrite={canWrite}
-                onClose={() => setShowDetail(false)}
-                onEdit={() => { setShowDetail(false); setIsEditing(true); }}
-                onToggle={() => toggleTask(task.id)}
-                onDelete={handleDelete}
-            />
-        )}
-
+            <Dialog
+                open={mode !== "closed"}
+                onClose={() => setMode("closed")}
+                title={mode === "edit" ? "Editar tarea" : task.title}
+                description={mode === "view" && task.isCompleted ? "Tarea completada" : undefined}
+                size="md"
+            >
+                {mode === "edit" ? (
+                    <EditTaskForm task={task} onCancel={() => setMode("view")} onSave={handleSave} />
+                ) : mode === "view" ? (
+                    <TaskDetail task={task} canWrite={canWrite} isPastDue={isPastDue} onEdit={() => setMode("edit")} onToggle={handleToggle} onDelete={handleDelete} />
+                ) : null}
+            </Dialog>
         </>
     );
 }
 
-function TaskDetailModal({
+function TaskDetail({
     task,
     canWrite,
-    onClose,
+    isPastDue,
     onEdit,
     onToggle,
     onDelete,
 }: {
     task: Task;
     canWrite: boolean;
-    onClose: () => void;
+    isPastDue: boolean;
     onEdit: () => void;
     onToggle: () => void;
     onDelete: () => void;
 }) {
-    const formattedDate = task.dueDate
-        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric" }).format(parseLocalDate(task.dueDate))
-        : null;
-    const isPastDue = task.dueDate && !task.isCompleted && task.dueDate < todayLocalISO();
-    const completedDate = task.completedAt
-        ? new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(task.completedAt))
-        : null;
+    const longDate = task.dueDate ? fmtLong.format(parseLocalDate(task.dueDate)) : null;
+    const h = "text-sm font-semibold text-on-surface mb-2";
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center sm:p-4" role="dialog" aria-modal="true">
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} aria-hidden />
-            <div className="relative w-full sm:max-w-md bg-surface-container-lowest rounded-t-3xl sm:rounded-3xl shadow-xl max-h-[85vh] flex flex-col animate-in slide-in-from-bottom sm:zoom-in-95 sm:fade-in duration-200">
-                {/* Header */}
-                <div className="shrink-0 flex items-start justify-between gap-3 p-5 border-b border-surface-container">
-                    <div className="min-w-0">
-                        <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-1">
-                            {task.isCompleted ? "Tarea completada" : "Detalle de la tarea"}
+        <div className="space-y-5">
+            <section>
+                <h3 className={h}>Descripción</h3>
+                {task.description ? (
+                    <p className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed">{task.description}</p>
+                ) : (
+                    <p className="text-sm text-on-surface-variant">Sin descripción.</p>
+                )}
+            </section>
+
+            {!task.isCompleted && (
+                <section>
+                    <h3 className={h}>Importancia</h3>
+                    <span className="inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full bg-surface-container text-on-surface">
+                        <PriorityIcon priority={task.priority} />
+                        {PRIORITY_LABEL[task.priority]}
+                    </span>
+                </section>
+            )}
+
+            {longDate && !task.isCompleted && (
+                <section>
+                    <h3 className={h}>Fecha límite</h3>
+                    <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full ${isPastDue ? "bg-error/10 text-error" : "bg-surface-container text-on-surface"}`}>
+                        <Calendar className="w-3.5 h-3.5" aria-hidden />
+                        {longDate}{isPastDue && " · vencida"}
+                    </span>
+                </section>
+            )}
+
+            {task.isCompleted && (
+                <section className="space-y-2">
+                    <h3 className={h}>Finalizada</h3>
+                    <p className="flex items-center gap-2 text-sm text-on-surface">
+                        <User className="w-4 h-4 text-primary shrink-0" aria-hidden />
+                        {task.completedByName ?? "Un administrador"}
+                    </p>
+                    {task.completedAt && (
+                        <p className="flex items-center gap-2 text-sm text-on-surface">
+                            <Clock className="w-4 h-4 text-primary shrink-0" aria-hidden />
+                            {fmtStamp.format(new Date(task.completedAt))}
                         </p>
-                        <h3 className={`font-serif text-xl leading-snug ${task.isCompleted ? "line-through text-on-surface-variant" : "text-primary"}`}>
-                            {task.title}
-                        </h3>
-                    </div>
-                    <button
-                        onClick={onClose}
-                        aria-label="Cerrar"
-                        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-surface-container transition-colors border-none cursor-pointer"
-                    >
-                        <X className="w-5 h-5" />
+                    )}
+                </section>
+            )}
+
+            {canWrite && (
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                    <button type="button" onClick={onToggle} className={`${btnPrimary} flex-1`}>
+                        <Check className="w-4 h-4" aria-hidden />
+                        {task.isCompleted ? "Reabrir" : "Completar"}
+                    </button>
+                    {!task.isCompleted && (
+                        <button type="button" onClick={onEdit} className={btnSecondary}>
+                            <Pencil className="w-4 h-4" aria-hidden />
+                            Editar
+                        </button>
+                    )}
+                    <button type="button" onClick={onDelete} aria-label="Eliminar tarea" className={`${btnGhost} text-error hover:text-error hover:bg-error/10`}>
+                        <Trash2 className="w-4 h-4" aria-hidden />
                     </button>
                 </div>
-
-                {/* Cuerpo scrollable */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-5 min-h-0">
-                    <section>
-                        <h4 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Descripción</h4>
-                        {task.description ? (
-                            <p className="text-sm text-on-surface whitespace-pre-wrap leading-relaxed">{task.description}</p>
-                        ) : (
-                            <p className="text-sm text-on-surface-variant/80 italic">Sin descripción.</p>
-                        )}
-                    </section>
-
-                    {formattedDate && !task.isCompleted && (
-                        <section>
-                            <h4 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant mb-2">Fecha límite</h4>
-                            <span className={`inline-flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full ${isPastDue ? "bg-error/10 text-error" : "bg-surface-container text-on-surface-variant"}`}>
-                                <Calendar className="w-3.5 h-3.5" />
-                                {formattedDate}{isPastDue && " · vencida"}
-                            </span>
-                        </section>
-                    )}
-
-                    {task.isCompleted && (
-                        <section className="space-y-2">
-                            <h4 className="text-[10px] font-sans tracking-widest uppercase font-medium text-on-surface-variant">Finalizada</h4>
-                            <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-                                <User className="w-4 h-4 text-primary/70 shrink-0" />
-                                <span>{task.completedByName ?? "Admin"}</span>
-                            </div>
-                            {completedDate && (
-                                <div className="flex items-center gap-2 text-sm text-on-surface-variant">
-                                    <Clock className="w-4 h-4 text-primary/70 shrink-0" />
-                                    <span>{completedDate}</span>
-                                </div>
-                            )}
-                        </section>
-                    )}
-                </div>
-
-                {/* Acciones */}
-                {canWrite && (
-                    <div className="shrink-0 flex items-center gap-2 p-4 border-t border-surface-container">
-                        <button
-                            onClick={onToggle}
-                            className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium hover:bg-surface-container transition-all border-none cursor-pointer"
-                        >
-                            <Check className="w-4 h-4" />
-                            {task.isCompleted ? "Reabrir" : "Completar"}
-                        </button>
-                        {!task.isCompleted && (
-                            <button
-                                onClick={onEdit}
-                                className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-surface-container-low text-on-surface text-sm font-medium hover:bg-surface-container transition-all border-none cursor-pointer"
-                            >
-                                <Pencil className="w-4 h-4" />
-                                Editar
-                            </button>
-                        )}
-                        <button
-                            onClick={onDelete}
-                            aria-label="Eliminar tarea"
-                            className="flex items-center justify-center px-4 py-3 rounded-xl text-error hover:bg-error/10 transition-all border-none cursor-pointer"
-                        >
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    </div>
-                )}
-            </div>
+            )}
         </div>
     );
 }
 
+function EditTaskForm({ task, onCancel, onSave }: {
+    task: Task;
+    onCancel: () => void;
+    onSave: (data: { title: string; description: string; dueDate: string | null; priority: Priority }) => void;
+}) {
+    const [title, setTitle] = useState(task.title);
+    const [desc, setDesc] = useState(task.description ?? "");
+    const [date, setDate] = useState(task.dueDate ?? "");
+    const [priority, setPriority] = useState<Priority>(task.priority);
+    const [error, setError] = useState<string | null>(null);
+    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+
+    function save() {
+        if (!title.trim()) return setError("La tarea necesita un título.");
+        setError(null);
+        onSave({ title: title.trim(), description: desc.trim(), dueDate: date || null, priority });
+    }
+
+    return (
+        <form onSubmit={(e) => { e.preventDefault(); save(); }} className="space-y-4">
+            <label className="block">
+                <span className={label}>Título</span>
+                <GrowText autoFocus required value={title} onChange={(e) => setTitle(e.target.value)} className={inputCls} />
+            </label>
+            <label className="block">
+                <span className={label}>Descripción <span className="font-normal">(opcional)</span></span>
+                <GrowText multiline value={desc} onChange={(e) => setDesc(e.target.value)} className={`${inputCls} min-h-18`} />
+            </label>
+            <div>
+                <label htmlFor={`task-due-${task.id}`} className={label}>Fecha límite <span className="font-normal">(opcional)</span></label>
+                <DatePicker id={`task-due-${task.id}`} value={date} onChange={setDate} />
+            </div>
+            <PriorityPicker value={priority} onChange={setPriority} idPrefix={`task-${task.id}`} />
+            {error && <p role="alert" className="text-sm text-error">{error}</p>}
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button type="button" onClick={onCancel} className={btnGhost}>Cancelar</button>
+                <button type="submit" disabled={!title.trim()} className={btnPrimary}>
+                    Guardar cambios
+                </button>
+            </div>
+        </form>
+    );
+}

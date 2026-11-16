@@ -67,3 +67,9 @@ Desktop.ini
 *~
 
 PLAN.md
+# capturas y reportes de herramientas de diseño (taste-skill)
+.taste-skill/
+
+# fotos privadas de la pareja: solo en el servidor, nunca en el repo (es público)
+/public/privado/*
+!/public/privado/LEEME.txt

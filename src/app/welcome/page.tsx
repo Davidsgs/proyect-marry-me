@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { LayoutDashboard, Mail, LogOut, ChevronRight } from "lucide-react";
 import { Monogram } from "@/components/Monogram";
+import { BotanicalShadow } from "@/components/BotanicalShadow";
 
 export const dynamic = "force-dynamic";
 
@@ -22,14 +23,15 @@ export default async function WelcomePage() {
     const firstName = session.user.name?.split(" ")[0] ?? "";
 
     return (
-        <main className="min-h-screen bg-surface flex items-center justify-center px-4 py-12">
-            <div className="w-full max-w-xl space-y-8">
+        <main className="relative min-h-dvh overflow-hidden bg-rubor text-tinta flex items-center justify-center px-4 py-12">
+            <BotanicalShadow variant="rama" className="absolute -top-20 -right-24 w-[30rem] max-w-[90vw] -scale-x-100 text-rosa-profundo/20" />
+            <div className="relative w-full max-w-xl space-y-8 animate-rise">
                 <div className="text-center space-y-3">
                     <Monogram size="md" className="mx-auto" />
-                    <h1 className="font-serif italic text-4xl text-primary">
+                    <h1 className="font-serif text-5xl leading-none text-oliva-profundo">
                         {firstName ? `Hola, ${firstName}` : "Hola"}
                     </h1>
-                    <p className="text-on-surface-variant">¿A dónde quieres ir?</p>
+                    <p className="font-text text-base">¿A dónde quieres ir?</p>
                 </div>
 
                 <div className="grid gap-3">
@@ -54,7 +56,7 @@ export default async function WelcomePage() {
                     }}
                     className="text-center"
                 >
-                    <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm text-on-surface-variant hover:text-primary hover:bg-surface-container-low transition-colors">
+                    <button className="inline-flex items-center gap-2 min-h-11 px-4 rounded-xl text-sm font-medium text-tinta hover:bg-crema/60 transition-colors">
                         <LogOut className="w-4 h-4" />
                         Cerrar sesión
                     </button>
@@ -68,16 +70,16 @@ function Choice({ href, icon: Icon, title, text }: { href: string; icon: typeof 
     return (
         <Link
             href={href}
-            className="group flex items-center gap-4 p-5 rounded-2xl bg-surface-container-lowest shadow-[0_4px_24px_rgba(81,68,67,0.06)] hover:shadow-[0_8px_28px_rgba(81,68,67,0.09)] transition-shadow"
+            className="group flex items-center gap-4 p-5 rounded-2xl bg-crema shadow-sm hover:shadow-md active:scale-[0.99] transition-[box-shadow,transform] duration-150"
         >
-            <span className="w-12 h-12 rounded-xl bg-surface-container-low text-primary flex items-center justify-center shrink-0">
+            <span className="w-12 h-12 rounded-xl bg-surface-container-low text-oliva-profundo flex items-center justify-center shrink-0">
                 <Icon className="w-6 h-6" strokeWidth={1.5} />
             </span>
             <span className="flex-1 min-w-0">
-                <span className="block font-serif text-2xl text-on-surface">{title}</span>
+                <span className="block font-serif text-3xl leading-tight text-tinta">{title}</span>
                 <span className="block text-sm text-on-surface-variant">{text}</span>
             </span>
-            <ChevronRight className="w-5 h-5 text-on-surface-variant/80 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+            <ChevronRight className="w-5 h-5 text-on-surface-variant transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
         </Link>
     );
 }

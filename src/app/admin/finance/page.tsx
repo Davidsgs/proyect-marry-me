@@ -5,7 +5,6 @@ import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { getTransactions, getPlans } from "@/app/actions/finance";
 import { formatMoney } from "@/lib/money";
-import { TrendingUp, TrendingDown, Wallet, CalendarClock } from "lucide-react";
 import FinanceManager from "./_components/FinanceManager";
 
 export const dynamic = "force-dynamic";
@@ -52,14 +51,13 @@ export default async function FinancePage() {
       <PageHeader title="Economía" description="Registra ingresos y egresos, y lleva la trazabilidad de los pagos en cuotas." />
 
       {/* Tarjetas resumen */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Balance" value={formatMoney(balanceCents)} icon={Wallet} tone={balanceCents < 0 ? "warn" : "default"} />
-        <StatCard label="Ingresos" value={formatMoney(incomeCents)} icon={TrendingUp} tone="good" />
-        <StatCard label="Egresos" value={formatMoney(expenseCents)} icon={TrendingDown} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard label="Balance" value={formatMoney(balanceCents)} tone={balanceCents < 0 ? "warn" : "default"} />
+        <StatCard label="Ingresos" value={formatMoney(incomeCents)} tone="good" />
+        <StatCard label="Egresos" value={formatMoney(expenseCents)} />
         <StatCard
           label="Cuotas por pagar"
           value={formatMoney(toPayCents)}
-          icon={CalendarClock}
           tone={overdueCount > 0 ? "warn" : "default"}
           hint={
             <>

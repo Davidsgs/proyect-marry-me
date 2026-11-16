@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { getTables } from "@/app/actions/tables";
+import { getFloorPlan } from "@/app/actions/floor";
 import { PageHeader } from "@/app/admin/_components/ui";
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import TablesManager from "./_components/TablesManager";
@@ -16,13 +17,13 @@ export default async function TablesPage() {
         redirect("/admin");
     }
 
-    const [tables, families, users] = await Promise.all([getTables(), getFamilies(), getUsers()]);
+    const [tables, families, users, floor] = await Promise.all([getTables(), getFamilies(), getUsers(), getFloorPlan()]);
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">
-            <PageHeader title="Mesas" description="Arrastra a cada invitado a su mesa o elige la mesa junto a su nombre. Los cambios se guardan solos y el invitado los ve en su panel." />
+            <PageHeader title="Mesas" description="Toca a cada invitado para elegir su mesa (o arrástralo con el ratón). En «Plano» dibujas cada área con sus mesas, la pista, el DJ o la mesa dulce, y pruebas distintas distribuciones." />
 
-            <TablesManager initialTables={tables} families={families} users={users} canWrite={hasPermission(perms, "tables.write")} />
+            <TablesManager initialTables={tables} families={families} users={users} floor={floor} canWrite={hasPermission(perms, "tables.write")} />
         </div>
     );
 }

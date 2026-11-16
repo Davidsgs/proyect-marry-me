@@ -1,7 +1,7 @@
 "use server";
 
 import { db } from "@/db";
-import { tables, users } from "@/db/schema";
+import { layoutPositions, tables, users } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { cachedTables, cachedUsers } from "@/lib/data";
@@ -13,6 +13,7 @@ const fetchAllTables = cachedTables;
 function invalidateTables() {
     updateTag("tables");
     updateTag("users");
+    updateTag("floor");
     revalidatePath("/admin/tables");
     revalidatePath("/dashboard");
 }
@@ -25,7 +26,7 @@ export async function getTables() {
     return await fetchAllTables();
 }
 
-export async function createTable(data: { number: number; name?: string; capacity?: number; notes?: string }) {
+export async function createTable(data: { number: number; name?: string; capacity?: number; notes?: string; areaId?: number | null }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "tables.write")) {
         throw new Error("Sin permisos");
@@ -35,11 +36,12 @@ export async function createTable(data: { number: number; name?: string; capacit
         name: data.name ?? "",
         capacity: data.capacity ?? 10,
         notes: data.notes ?? "",
+        areaId: data.areaId ?? null,
     });
     invalidateTables();
 }
 
-export async function updateTable(id: number, data: { number?: number; name?: string; capacity?: number; notes?: string }) {
+export async function updateTable(id: number, data: { number?: number; name?: string; capacity?: number; notes?: string; areaId?: number | null }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "tables.write")) {
         throw new Error("Sin permisos");
@@ -49,6 +51,7 @@ export async function updateTable(id: number, data: { number?: number; name?: st
     if (data.name !== undefined) updateSet.name = data.name;
     if (data.capacity !== undefined) updateSet.capacity = data.capacity;
     if (data.notes !== undefined) updateSet.notes = data.notes;
+    if (data.areaId !== undefined) updateSet.areaId = data.areaId;
 
     if (Object.keys(updateSet).length > 0) {
         await db.update(tables).set(updateSet).where(eq(tables.id, id));
@@ -64,17 +67,11 @@ export async function deleteTable(id: number) {
     // Null assignments explicitly: the table_id column was added via ALTER TABLE
     // ADD COLUMN, which in SQLite carries no ON DELETE action, so orphaned rows
     // would otherwise keep pointing at the deleted table and vanish from the UI.
-    await db.update(users).set({ tableId: null }).where(eq(users.tableId, id));
-    await db.delete(tables).where(eq(tables.id, id));
-    invalidateTables();
-}
-
-export async function updateTablePosition(id: number, posX: number, posY: number) {
-    const session = await auth();
-    if (!hasPermission(session?.user?.permissions, "tables.write")) {
-        throw new Error("Sin permisos");
-    }
-    await db.update(tables).set({ posX: Math.round(posX), posY: Math.round(posY) }).where(eq(tables.id, id));
+    await db.batch([
+        db.update(users).set({ tableId: null }).where(eq(users.tableId, id)),
+        db.delete(layoutPositions).where(eq(layoutPositions.tableId, id)),
+        db.delete(tables).where(eq(tables.id, id)),
+    ]);
     invalidateTables();
 }
 

@@ -1,4 +1,4 @@
-import { AnySQLiteColumn, integer, sqliteTable, text, primaryKey } from "drizzle-orm/sqlite-core";
+import { AnySQLiteColumn, integer, sqliteTable, text, primaryKey, uniqueIndex } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 export const families = sqliteTable("families", {
@@ -7,6 +7,8 @@ export const families = sqliteTable("families", {
   alias: text("alias").default("").notNull(),
   globalRsvpStatus: text("global_rsvp_status", { enum: ["PENDING", "CONFIRMED", "DECLINED"] }).default("PENDING").notNull(),
   delegateUserId: integer("delegate_user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  // Familia directa: puede traer niños. Las demás ven la nota de celebración para adultos.
+  isDirectFamily: integer("is_direct_family", { mode: 'boolean' }).default(false).notNull(),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
@@ -17,11 +19,16 @@ export const users = sqliteTable("users", {
   name: text("name").notNull(),
   lastName: text("last_name").default("").notNull(),
   fullname: text("fullname").default("").notNull(),
+  // Alias único por persona (src/lib/alias.ts). Nulo solo en filas anteriores a la migración.
+  alias: text("alias").unique(),
   familyId: integer("family_id").references((): AnySQLiteColumn => families.id, { onDelete: 'cascade' }),
   tableId: integer("table_id").references((): AnySQLiteColumn => tables.id, { onDelete: 'set null' }),
   role: text("role", { enum: ["ADMIN", "MAIN_GUEST", "GUEST"] }).default("GUEST").notNull(),
   ageCategory: text("age_category", { enum: ["BABY", "CHILD", "ADULT"] }).default("ADULT").notNull(),
   isConfirmed: integer("is_confirmed", { mode: 'boolean' }).default(false),
+  // Restricción alimentaria (src/lib/diet.ts). dietaryNote solo con OTHER, ≤20 caracteres.
+  dietary: text("dietary", { enum: ["NONE", "VEGETARIAN", "VEGAN", "GLUTEN_FREE", "LACTOSE_FREE", "OTHER"] }).default("NONE").notNull(),
+  dietaryNote: text("dietary_note").default("").notNull(),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
@@ -32,6 +39,9 @@ export const tables = sqliteTable("tables", {
   name: text("name").default("").notNull(),
   capacity: integer("capacity").default(10).notNull(),
   notes: text("notes").default("").notNull(),
+  // Área del plano (floor_areas). Nula = primera área. Las posiciones viven en
+  // layout_positions (una por alternativa); pos_x/pos_y quedan del plano antiguo.
+  areaId: integer("area_id").references((): AnySQLiteColumn => floorAreas.id, { onDelete: 'set null' }),
   posX: integer("pos_x"),
   posY: integer("pos_y"),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
@@ -87,6 +97,8 @@ export const tasks = sqliteTable("tasks", {
   title: text("title").notNull(),
   description: text("description").default("").notNull(),
   dueDate: text("due_date"),
+  // Importancia (src/lib/priority.ts): valores en inglés, etiquetas en español.
+  priority: text("priority", { enum: ["HIGHEST", "HIGH", "MEDIUM", "LOW"] }).default("MEDIUM").notNull(),
   isCompleted: integer("is_completed", { mode: 'boolean' }).default(false).notNull(),
   completedAt: text("completed_at"),
   completedBy: integer("completed_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
@@ -95,10 +107,22 @@ export const tasks = sqliteTable("tasks", {
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
-// Cronograma del día de la boda: cada actividad es un hito de la cronología
-// (Titulo + hora), con una sublista de tareas (solo checkboxes) y notas al pie.
+// Secciones del cronograma (Pre-boda, Boda, Fiesta…): agrupan actividades y
+// pueden llevar su propia fecha ("YYYY-MM-DD"), p. ej. la pre-boda otro día.
+export const scheduleSections = sqliteTable("schedule_sections", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  date: text("date"),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Cronograma de la boda: cada actividad es un hito de la cronología
+// (Titulo + hora), con una sublista de pasos y notas al pie.
 export const scheduleActivities = sqliteTable("schedule_activities", {
   id: integer("id").primaryKey({ autoIncrement: true }),
+  // Sección a la que pertenece. Si se borra la sección, queda «Sin sección».
+  sectionId: integer("section_id").references((): AnySQLiteColumn => scheduleSections.id, { onDelete: 'set null' }),
   title: text("title").notNull(),
   time: text("time"),                                  // "HH:MM" o null
   notes: text("notes").default("").notNull(),
@@ -111,12 +135,15 @@ export const scheduleActivities = sqliteTable("schedule_activities", {
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
-// Responsables de una actividad: solo nombres. Las tareas de la actividad
-// pueden apuntar a uno de ellos (scheduleTasks.responsibleId).
+// Responsables de una actividad: un invitado de la lista (userId) o un nombre
+// libre (proveedores sin cuenta). El nombre se guarda siempre, así sigue
+// mostrándose aunque se borre al invitado. Los pasos de la actividad pueden
+// apuntar a uno de ellos (scheduleTasks.responsibleId).
 export const scheduleResponsibles = sqliteTable("schedule_responsibles", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   activityId: integer("activity_id").notNull().references(() => scheduleActivities.id, { onDelete: 'cascade' }),
   name: text("name").notNull(),
+  userId: integer("user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   sortOrder: integer("sort_order").default(0).notNull(),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
@@ -125,6 +152,8 @@ export const scheduleTasks = sqliteTable("schedule_tasks", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   activityId: integer("activity_id").notNull().references(() => scheduleActivities.id, { onDelete: 'cascade' }),
   label: text("label").notNull(),
+  // Detalle del paso (qué hay que hacer exactamente, contactos…).
+  description: text("description").default("").notNull(),
   isCompleted: integer("is_completed", { mode: 'boolean' }).default(false).notNull(),
   // Responsable opcional: si se borra el responsable, la tarea queda sin asignar.
   responsibleId: integer("responsible_id").references((): AnySQLiteColumn => scheduleResponsibles.id, { onDelete: 'set null' }),
@@ -157,6 +186,8 @@ export const menuItems = sqliteTable("menu_items", {
   allergens: text("allergens").default("").notNull(), // texto libre: "frutos secos, mariscos"
   // Estado de cierre con el proveedor: idea → confirmado, o descartado.
   status: text("status", { enum: ["IDEA", "CONFIRMED", "DISCARDED"] }).default("IDEA").notNull(),
+  // Visible en el menú que ven los invitados. Oculto por defecto; los descartados nunca se muestran.
+  isPublic: integer("is_public", { mode: 'boolean' }).default(false).notNull(),
   sortOrder: integer("sort_order").default(0).notNull(),
   createdBy: integer("created_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
@@ -208,3 +239,65 @@ export const financeInstallments = sqliteTable("finance_installments", {
   paidBy: integer("paid_by").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
+
+// ─── Padrinos y cortejo ──────────────────────────────────────────────────────
+// Agradecimiento público (en la invitación, solo con sesión) a quienes acompañan
+// a los novios. Nombre libre o vinculado a un invitado; el nombre se guarda
+// siempre, así se sigue mostrando aunque se borre al invitado.
+export const weddingParty = sqliteTable("wedding_party", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  role: text("role").notNull(),                       // "Madrina", "Testigo", "Dama de honor"…
+  name: text("name").notNull(),
+  userId: integer("user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
+  message: text("message").default("").notNull(),   // frase de agradecimiento opcional
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// ─── Planos de mesas ─────────────────────────────────────────────────────────
+// Áreas (Salón, Jardín…) con sus mesas y elementos (pista, DJ, mesa dulce…).
+// Cada área tiene varias alternativas de distribución con posiciones propias;
+// una es la vigente. Los invitados siguen sentados en su mesa: cambiar de
+// alternativa solo mueve dónde está dibujada.
+export const floorAreas = sqliteTable("floor_areas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+export const floorLayouts = sqliteTable("floor_layouts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  areaId: integer("area_id").notNull().references(() => floorAreas.id, { onDelete: 'cascade' }),
+  name: text("name").notNull(),
+  isActive: integer("is_active", { mode: 'boolean' }).default(false).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Elementos del plano que no son mesas. Tamaño en px del lienzo.
+export const floorElements = sqliteTable("floor_elements", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  areaId: integer("area_id").notNull().references(() => floorAreas.id, { onDelete: 'cascade' }),
+  kind: text("kind", { enum: ["DANCE_FLOOR", "SWEETS", "DJ", "BAR", "STAGE", "PHOTO", "ENTRANCE", "OTHER"] }).default("OTHER").notNull(),
+  label: text("label").default("").notNull(),
+  shape: text("shape", { enum: ["RECT", "ROUND"] }).default("RECT").notNull(),
+  width: integer("width").default(160).notNull(),
+  height: integer("height").default(100).notNull(),
+  // Color elegido ("#rrggbb"). Nulo = el color por defecto de su tipo.
+  color: text("color"),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
+// Posición de una mesa o de un elemento en una alternativa (uno de los dos ids).
+export const layoutPositions = sqliteTable("layout_positions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  layoutId: integer("layout_id").notNull().references(() => floorLayouts.id, { onDelete: 'cascade' }),
+  tableId: integer("table_id").references(() => tables.id, { onDelete: 'cascade' }),
+  elementId: integer("element_id").references(() => floorElements.id, { onDelete: 'cascade' }),
+  x: integer("x").notNull(),
+  y: integer("y").notNull(),
+}, (t) => [
+  uniqueIndex("layout_positions_table_unique").on(t.layoutId, t.tableId),
+  uniqueIndex("layout_positions_element_unique").on(t.layoutId, t.elementId),
+]);

@@ -2,93 +2,41 @@
 
 import { useState } from "react";
 import { setConfig } from "@/app/actions/config";
-import { Calendar, Save, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { Save } from "lucide-react";
+import { btnPrimary, inputCls } from "@/app/admin/_components/ui";
+import { useNotify } from "@/app/admin/_components/Notice";
 
-interface SettingsFormProps {
-  initialDeadline: string | null;
-}
-
-export default function SettingsForm({ initialDeadline }: SettingsFormProps) {
+export default function SettingsForm({ initialDeadline }: { initialDeadline: string | null }) {
+  const notify = useNotify();
   const [deadline, setDeadline] = useState(initialDeadline || "");
-  const [isLoading, setIsLoading] = useState(false);
-  const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [saved, setSaved] = useState(initialDeadline || "");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Optimista: el campo no se bloquea mientras se guarda; si falla, vuelve el valor anterior.
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-    setStatus(null);
-
-    try {
-      await setConfig("rsvp_deadline", deadline);
-      setStatus({
-        type: "success",
-        message: "¡La fecha límite de confirmación se ha guardado correctamente!",
+    const prev = saved;
+    setSaved(deadline);
+    setConfig("rsvp_deadline", deadline)
+      .then(() => notify("Plazo guardado"))
+      .catch(() => {
+        setSaved(prev);
+        setDeadline(prev);
+        notify("No se pudo guardar el plazo. Se deshizo el cambio.", "error");
       });
-    } catch (err) {
-      console.error(err);
-      setStatus({
-        type: "error",
-        message: "Hubo un error al guardar la fecha límite. Revisa tus permisos.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="space-y-2">
-        <label className="block text-xs font-sans tracking-widest uppercase font-medium text-on-surface-variant">
-          Fecha y Hora Límite (RSVP)
-        </label>
-        <div className="relative rounded-xl shadow-sm">
-          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4 text-on-surface-variant/80">
-            <Calendar className="h-5 w-5" />
-          </div>
-          <input
-            required
-            type="datetime-local"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 border-none rounded-xl bg-surface-container/70 focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface placeholder-on-surface-variant/50 font-sans shadow-sm"
-          />
-        </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <label className="block">
+        <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Fecha y hora límite</span>
+        <input required type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputCls} />
+      </label>
+      <div className="flex justify-end">
+        <button type="submit" disabled={deadline === saved} className={btnPrimary}>
+          <Save className="w-4 h-4" aria-hidden />
+          Guardar plazo
+        </button>
       </div>
-
-      {status && (
-        <div
-          className={`flex items-start gap-3 p-4 rounded-xl text-sm font-sans animate-in fade-in transition-all ${
-            status.type === "success"
-              ? "bg-wedding-sage-light/10 text-wedding-sage-darkest border border-wedding-sage-light/30"
-              : "bg-wedding-blush-light/10 text-wedding-blush-darkest border border-wedding-blush-light/30"
-          }`}
-        >
-          {status.type === "success" ? (
-            <CheckCircle2 className="h-5 w-5 shrink-0 mt-0.5" />
-          ) : (
-            <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          )}
-          <span>{status.message}</span>
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={isLoading}
-        className="w-full bg-primary hover:bg-primary/95 text-on-primary py-3.5 px-4 rounded-xl transition-all shadow-md font-sans text-sm font-medium flex items-center justify-center gap-2 border-none disabled:opacity-75 disabled:cursor-not-allowed"
-      >
-        {isLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span>Guardando...</span>
-          </>
-        ) : (
-          <>
-            <Save className="w-4 h-4" />
-            <span>Guardar Ajustes</span>
-          </>
-        )}
-      </button>
     </form>
   );
 }

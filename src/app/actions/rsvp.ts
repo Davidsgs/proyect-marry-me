@@ -6,8 +6,9 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { auth } from "@/auth";
 import { getRsvpDeadline } from "@/lib/data";
+import { parseDietary } from "@/lib/diet";
 
-export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CONFIRMED' | 'DECLINED', userUpdates: { userId: number, isConfirmed: boolean }[]) {
+export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CONFIRMED' | 'DECLINED', userUpdates: { userId: number, isConfirmed: boolean, dietary?: string, dietaryNote?: string }[]) {
     // 1. Verify user authentication
     const session = await auth();
     if (!session || !session.user) {
@@ -47,7 +48,12 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
     const memberIds = new Set(members.map((m) => m.id));
     const updates = userUpdates
         .filter((u) => memberIds.has(u.userId))
-        .map((u) => ({ userId: u.userId, isConfirmed: status === "CONFIRMED" && u.isConfirmed }));
+        .map((u) => {
+            const isConfirmed = status === "CONFIRMED" && u.isConfirmed;
+            // La restricción solo cuenta para quien viene; parseDietary valida «Otra» (≤20).
+            const diet = isConfirmed ? parseDietary(u.dietary, u.dietaryNote) : { dietary: "NONE" as const, dietaryNote: "" };
+            return { userId: u.userId, isConfirmed, ...diet };
+        });
     if (status === "CONFIRMED" && !updates.some((u) => u.isConfirmed)) {
         throw new Error("Marca al menos a una persona que asistirá.");
     }
@@ -60,7 +66,7 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
             .where(eq(families.id, familyId)),
         ...updates.map((update) =>
             db.update(users)
-                .set({ isConfirmed: update.isConfirmed })
+                .set({ isConfirmed: update.isConfirmed, dietary: update.dietary, dietaryNote: update.dietaryNote })
                 .where(and(eq(users.id, update.userId), eq(users.familyId, familyId))),
         ),
     ]);
