@@ -7,6 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { cachedFamilies, cachedUsers } from "@/lib/data";
 import { auth } from "@/auth";
 import { hasPermission, BASELINE_ADMIN_PERMS } from "@/lib/permissions";
+import { aliasError, slugifyAlias, uniqueAlias } from "@/lib/alias";
 
 type UserRole = "ADMIN" | "MAIN_GUEST" | "GUEST";
 
@@ -70,6 +71,12 @@ function invalidateFamilies() {
     revalidatePath("/dashboard");
 }
 
+/** Aliases ya usados, para generar uno nuevo sin choques. */
+async function takenAliases(): Promise<Set<string>> {
+    const rows = await db.select({ alias: users.alias }).from(users).all();
+    return new Set(rows.map((r) => r.alias).filter((a): a is string => !!a));
+}
+
 function invalidateUsers() {
     updateTag("users");
     revalidatePath("/admin");
@@ -90,7 +97,7 @@ export async function createFamily(data: { name: string; alias?: string; globalR
     invalidateFamilies();
 }
 
-export async function updateFamily(id: number, data: { name?: string; alias?: string; delegateUserId?: number | null; globalRsvpStatus?: 'PENDING' | 'CONFIRMED' | 'DECLINED' }) {
+export async function updateFamily(id: number, data: { name?: string; alias?: string; delegateUserId?: number | null; globalRsvpStatus?: 'PENDING' | 'CONFIRMED' | 'DECLINED'; isDirectFamily?: boolean }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "families.write")) {
         throw new Error("Sin permisos");
@@ -100,6 +107,7 @@ export async function updateFamily(id: number, data: { name?: string; alias?: st
     if (data.name !== undefined) updateSet.name = data.name;
     if (data.alias !== undefined) updateSet.alias = data.alias;
     if (data.globalRsvpStatus !== undefined) updateSet.globalRsvpStatus = data.globalRsvpStatus;
+    if (data.isDirectFamily !== undefined) updateSet.isDirectFamily = Boolean(data.isDirectFamily);
 
     let touchedUsers = false;
     if (data.delegateUserId !== undefined) {
@@ -164,6 +172,7 @@ export async function createUser(data: { email?: string | null, name: string, la
     const fullname = `${data.name} ${data.lastName}`.trim();
     const email = data.email && data.email.trim() !== "" ? data.email.trim() : null;
     const inserted = await db.insert(users).values({
+        alias: uniqueAlias(slugifyAlias(fullname), await takenAliases()),
         email,
         name: data.name,
         lastName: data.lastName,
@@ -194,10 +203,12 @@ export async function createManyUsers(
     const clean = members.filter((m) => m.name.trim() !== "" || m.lastName.trim() !== "");
     if (clean.length === 0) return;
 
+    const taken = await takenAliases();
     for (const member of clean) {
         const fullname = `${member.name} ${member.lastName}`.trim();
         const email = member.email && member.email.trim() !== "" ? member.email.trim() : null;
         const inserted = await db.insert(users).values({
+            alias: uniqueAlias(slugifyAlias(fullname), taken),
             email,
             name: member.name,
             lastName: member.lastName,
@@ -225,7 +236,7 @@ export async function getUsers() {
     return await fetchAllUsers();
 }
 
-export async function updateUser(id: number, data: { email?: string | null; name?: string; lastName?: string; familyId?: number | null; role?: 'ADMIN' | 'MAIN_GUEST' | 'GUEST'; ageCategory?: 'BABY' | 'CHILD' | 'ADULT' }) {
+export async function updateUser(id: number, data: { email?: string | null; alias?: string; name?: string; lastName?: string; familyId?: number | null; role?: 'ADMIN' | 'MAIN_GUEST' | 'GUEST'; ageCategory?: 'BABY' | 'CHILD' | 'ADULT' }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "users.write")) {
         throw new Error("Sin permisos");
@@ -234,6 +245,14 @@ export async function updateUser(id: number, data: { email?: string | null; name
     const updateSet: Record<string, unknown> = {};
     if (data.email !== undefined) {
         updateSet.email = data.email && data.email.trim() !== "" ? data.email.trim() : null;
+    }
+    if (data.alias !== undefined) {
+        const alias = data.alias.trim().toLowerCase();
+        const err = aliasError(alias);
+        if (err) throw new Error(err);
+        const clash = await db.select({ id: users.id }).from(users).where(and(eq(users.alias, alias), ne(users.id, id))).get();
+        if (clash) throw new Error("Ese alias ya lo usa otra persona");
+        updateSet.alias = alias;
     }
     if (data.name !== undefined) updateSet.name = data.name;
     if (data.lastName !== undefined) updateSet.lastName = data.lastName;

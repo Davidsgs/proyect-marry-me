@@ -1,48 +1,27 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useMemo, useRef, useState } from "react";
+import { GrowText } from "@/components/GrowText";
+import { isTemp, pendingRowCls, tempId, useOptimisticState } from "@/app/admin/_components/optimistic";
+import { ALIAS_MAX, aliasError } from "@/lib/alias";
+import { GuestsCtx, draftUser, nowSql, useGuestsMutate, withoutUser, type Family, type User } from "./guestsStore";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import type { families as familiesTable, users as usersTable } from "@/db/schema";
 import { createFamily, createManyUsers, deleteUser, updateUser } from "@/app/actions/admin";
+import { Plus, Search, Trash2, AlertTriangle, Pencil, Users as UsersIcon, Home, ChevronRight, MousePointerClick } from "lucide-react";
 import {
-    Plus,
-    Search,
-    Trash2,
-    UserCheck,
-    UserCircle,
-    Crown,
-    ShieldCheck,
-    AlertTriangle,
-    MailQuestion,
-    CheckCircle2,
-    Pencil,
-    X,
-    Users as UsersIcon,
-    Home,
-    Loader2,
-    Baby,
-    Smile,
-} from "lucide-react";
-import { StatCard, Tabs, btnPrimary, btnSecondary } from "@/app/admin/_components/ui";
-import FamilyDialog from "./FamilyDialog";
+    Chip, EmptyState, RSVP_CHIP, StatCard, Tabs,
+    btnGhost, btnPrimary, btnSecondary, iconBtn, iconBtnDanger, inputCls, selectCls,
+} from "@/app/admin/_components/ui";
+import { Dialog } from "@/components/Dialog";
+import { useMediaQuery } from "@/lib/useMediaQuery";
+import { dietaryText } from "@/lib/diet";
+import FamilyDetail, { AgePicker } from "./FamilyDetail";
 
-type Family = typeof familiesTable.$inferSelect;
-type User = typeof usersTable.$inferSelect;
 type RsvpStatus = "PENDING" | "CONFIRMED" | "DECLINED";
 type Role = "ADMIN" | "MAIN_GUEST" | "GUEST";
 type AgeCategory = "BABY" | "CHILD" | "ADULT";
 
-const RSVP_LABEL: Record<RsvpStatus, string> = {
-    PENDING: "Pendiente",
-    CONFIRMED: "Confirmada",
-    DECLINED: "No asiste",
-};
-
-const AGE_LABEL: Record<AgeCategory, string> = {
-    ADULT: "Adulto",
-    CHILD: "Niño",
-    BABY: "Bebé",
-};
+const AGE_LABEL: Record<AgeCategory, string> = { ADULT: "Adulto", CHILD: "Niño", BABY: "Bebé" };
 
 interface Props {
     families: Family[];
@@ -55,18 +34,24 @@ interface Props {
 
 export type FamilyFilter = "all" | "pending" | "no-delegate";
 
-export default function GuestsManager({ families, users, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all" }: Props) {
+export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all" }: Props) {
     const confirm = useConfirm();
+    // Familias e invitados con cambios optimistas (ver guestsStore.tsx).
+    const server = useMemo(() => ({ families: serverFamilies, users: serverUsers }), [serverFamilies, serverUsers]);
+    const [data, mutate] = useOptimisticState(server);
+    const { families, users } = data;
+    const isDesktop = useMediaQuery("(min-width: 1024px)");
     const [tab, setTab] = useState<"families" | "users">(initialTab);
     const [familyStatus, setFamilyStatus] = useState<FamilyFilter>(initialFamilyFilter);
     const [openFamilyId, setOpenFamilyId] = useState<number | null>(null);
     const openFamily = openFamilyId != null ? families.find((f) => f.id === openFamilyId) ?? null : null;
     const [query, setQuery] = useState("");
-    const [showFamilyForm, setShowFamilyForm] = useState(false);
-    const [showBulkForm, setShowBulkForm] = useState(false);
-    const [editingUserId, setEditingUserId] = useState<number | null>(null);
+    const [newFamilyOpen, setNewFamilyOpen] = useState(false);
+    const [bulkOpen, setBulkOpen] = useState(false);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
     const [familyFilter, setFamilyFilter] = useState<number | "all">("all");
-    const [, startTransition] = useTransition();
+    // La hoja móvil pide el cierre a la ficha, que comprueba cambios sin guardar.
+    const requestClose = useRef<() => void>(() => setOpenFamilyId(null));
 
     const totalFamilies = families.length;
     const withoutDelegate = families.filter((f) => f.delegateUserId == null).length;
@@ -95,201 +80,231 @@ export default function GuestsManager({ families, users, canWriteFamilies, canWr
             const family = families.find((f) => f.id === u.familyId);
             return (
                 u.fullname.toLowerCase().includes(q) ||
+                (u.alias ?? "").includes(q.replace(/^@/, "")) ||
                 (u.email ?? "").toLowerCase().includes(q) ||
                 (family?.name ?? "").toLowerCase().includes(q)
             );
         });
     }, [users, families, query, familyFilter]);
 
+    const detail = openFamily && (
+        <FamilyDetail
+            key={openFamily.id}
+            family={openFamily}
+            users={users}
+            canWriteFamilies={canWriteFamilies}
+            canWriteUsers={canWriteUsers}
+            onClose={() => setOpenFamilyId(null)}
+            registerClose={(fn) => { requestClose.current = fn; }}
+        />
+    );
+
     return (
+        <GuestsCtx.Provider value={mutate}>
         <div className="space-y-8">
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard
                     label="Familias"
                     value={totalFamilies}
-                    icon={Home}
                     tone={withoutDelegate > 0 ? "warn" : "default"}
                     hint={withoutDelegate > 0 ? `${withoutDelegate} sin delegado` : "Todas con delegado"}
                 />
-                <StatCard label="Sin responder" value={pendingFamilies} icon={MailQuestion} hint={pendingFamilies === 1 ? "familia" : "familias"} />
+                <StatCard label="Sin responder" value={pendingFamilies} hint={pendingFamilies === 1 ? "familia" : "familias"} />
                 <StatCard
                     label="Invitados"
                     value={totalGuests}
-                    icon={UsersIcon}
                     hint={`${adultGuests} ${adultGuests === 1 ? "adulto" : "adultos"} · ${minorGuests} ${minorGuests === 1 ? "menor" : "menores"}`}
                 />
-                <StatCard label="Asisten" value={<>{confirmedGuests}<span className="text-lg text-on-surface-variant"> / {totalGuests}</span></>} icon={CheckCircle2} tone="good" />
+                <StatCard label="Asisten" value={<>{confirmedGuests}<span className="text-sm font-normal text-on-surface-variant"> / {totalGuests}</span></>} tone="good" />
             </div>
 
-            {/* Tabs */}
-            <Tabs
-                label="Ver familias o invitados"
-                value={tab}
-                onChange={(t) => { setTab(t); setQuery(""); }}
-                options={[
-                    { value: "families", label: "Familias", icon: Home, count: totalFamilies },
-                    { value: "users", label: "Invitados", icon: UsersIcon, count: totalGuests },
-                ]}
-            />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <Tabs
+                    label="Ver familias o invitados"
+                    value={tab}
+                    onChange={(t) => { setTab(t); setQuery(""); }}
+                    options={[
+                        { value: "families", label: "Familias", icon: Home, count: totalFamilies },
+                        { value: "users", label: "Invitados", icon: UsersIcon, count: totalGuests },
+                    ]}
+                />
+                {(tab === "families" ? canWriteFamilies : canWriteUsers) && (
+                    <button
+                        type="button"
+                        onClick={() => (tab === "families" ? setNewFamilyOpen(true) : setBulkOpen(true))}
+                        className={btnPrimary}
+                    >
+                        <Plus className="w-4 h-4" aria-hidden />
+                        {tab === "families" ? "Nueva familia" : "Añadir invitados"}
+                    </button>
+                )}
+            </div>
 
-            {/* Action bar */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-                <div className="relative flex-1">
-                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+            {/* Búsqueda y filtros */}
+            <div className="flex flex-col lg:flex-row gap-3 lg:items-center">
+                <label className="relative flex-1">
+                    <span className="sr-only">{tab === "families" ? "Buscar familia" : "Buscar invitado"}</span>
+                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden />
                     <input
+                        type="search"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        placeholder={tab === "families" ? "Buscar familia..." : "Buscar invitado, correo o familia..."}
-                        className="w-full pl-11 pr-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface placeholder-on-surface-variant/50 shadow-sm text-sm"
+                        placeholder={tab === "families" ? "Buscar familia…" : "Buscar invitado, @alias, correo o familia…"}
+                        className={`${inputCls} pl-11 bg-surface-container-lowest`}
                     />
-                </div>
-                {tab === "families" && (
-                    <div className="relative sm:w-56">
-                        <select
-                            value={familyStatus}
-                            onChange={(e) => setFamilyStatus(e.target.value as FamilyFilter)}
-                            aria-label="Filtrar familias"
-                            className="w-full px-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface appearance-none shadow-sm text-sm cursor-pointer"
-                        >
-                            <option value="all">Todas las familias</option>
-                            <option value="pending">Sin responder ({pendingFamilies})</option>
-                            <option value="no-delegate">Sin delegado ({withoutDelegate})</option>
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-on-surface-variant">
-                            <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
+                </label>
+                {tab === "families" ? (
+                    <div role="group" aria-label="Filtrar familias" className="flex gap-1.5 overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+                        <FilterChip active={familyStatus === "all"} onClick={() => setFamilyStatus("all")}>Todas</FilterChip>
+                        <FilterChip active={familyStatus === "pending"} onClick={() => setFamilyStatus("pending")}>Sin responder · {pendingFamilies}</FilterChip>
+                        <FilterChip active={familyStatus === "no-delegate"} onClick={() => setFamilyStatus("no-delegate")} warn={withoutDelegate > 0}>Sin delegado · {withoutDelegate}</FilterChip>
                     </div>
-                )}
-                {tab === "users" && (
-                    <div className="relative sm:w-56">
+                ) : (
+                    <label className="lg:w-64">
+                        <span className="sr-only">Filtrar por familia</span>
                         <select
                             value={familyFilter === "all" ? "all" : familyFilter.toString()}
                             onChange={(e) => setFamilyFilter(e.target.value === "all" ? "all" : Number(e.target.value))}
-                            aria-label="Filtrar por familia"
-                            className="w-full px-4 py-3 border-none rounded-xl bg-surface-container-lowest focus:bg-surface focus:ring-2 focus:ring-primary/50 transition-all outline-none text-on-surface appearance-none shadow-sm text-sm cursor-pointer"
+                            className={`${selectCls} bg-surface-container-lowest`}
                         >
                             <option value="all">Todas las familias</option>
                             {families.map((f) => (
                                 <option key={f.id} value={f.id}>{f.name}</option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-on-surface-variant">
-                            <svg className="fill-current h-3 w-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
-                    </div>
-                )}
-                {(tab === "families" ? canWriteFamilies : canWriteUsers) && (
-                    <button
-                        onClick={() => (tab === "families" ? setShowFamilyForm((v) => !v) : setShowBulkForm((v) => !v))}
-                        className={(tab === "families" ? showFamilyForm : showBulkForm) ? btnSecondary : btnPrimary}
-                    >
-                        {(tab === "families" ? showFamilyForm : showBulkForm) ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                        {(tab === "families" ? showFamilyForm : showBulkForm)
-                            ? "Cerrar"
-                            : tab === "families" ? "Nueva familia" : "Añadir invitados"}
-                    </button>
+                    </label>
                 )}
             </div>
 
-            {/* Inline forms */}
-            {tab === "families" && showFamilyForm && (
-                <FamilyFormInline onDone={() => setShowFamilyForm(false)} />
-            )}
-            {tab === "users" && showBulkForm && (
-                <BulkUserFormInline families={families} onDone={() => setShowBulkForm(false)} />
-            )}
-
-            {openFamily && (
-                <FamilyDialog
-                    key={openFamily.id}
-                    family={openFamily}
-                    users={users}
-                    canWriteFamilies={canWriteFamilies}
-                    canWriteUsers={canWriteUsers}
-                    onClose={() => setOpenFamilyId(null)}
-                />
-            )}
-
-            {/* Content */}
             {tab === "families" ? (
-                <FamiliesGrid
-                    families={filteredFamilies}
-                    users={users}
-                    isEmpty={families.length === 0}
-                    onOpen={(family) => setOpenFamilyId(family.id)}
-                />
+                <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-6 items-start">
+                    <FamiliesList
+                        families={filteredFamilies}
+                        users={users}
+                        isEmpty={families.length === 0}
+                        selectedId={openFamilyId}
+                        onOpen={(family) => setOpenFamilyId(family.id)}
+                    />
+                    {isDesktop && (
+                        <aside aria-labelledby={openFamily ? "family-detail-title" : undefined} className="sticky top-6 max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-3xl bg-surface-container-lowest">
+                            {detail || (
+                                <div className="p-10 text-center flex flex-col items-center justify-center gap-3 min-h-80">
+                                    <MousePointerClick className="w-7 h-7 text-on-surface-variant" strokeWidth={1.5} aria-hidden />
+                                    <p className="text-sm text-on-surface-variant max-w-60">Elige una familia para ver y editar sus datos e integrantes.</p>
+                                </div>
+                            )}
+                        </aside>
+                    )}
+                </div>
             ) : (
-                <UsersGrid
+                <UsersList
                     users={filteredUsers}
                     families={families}
                     isEmpty={users.length === 0}
                     canWrite={canWriteUsers}
-                    editingId={editingUserId}
-                    onEdit={(id) => setEditingUserId(id)}
-                    onCancelEdit={() => setEditingUserId(null)}
-                    onSave={(id, data) => startTransition(async () => {
-                        await updateUser(id, data);
-                        setEditingUserId(null);
-                    })}
+                    onEdit={setEditingUser}
                     onDelete={async (user) => {
                         const ok = await confirm({
                             title: `¿Eliminar a ${user.fullname || user.email}?`,
                             description: "Perderá el acceso a la invitación y se quitará de su mesa.",
                             confirmLabel: "Eliminar",
                         });
-                        if (ok) startTransition(() => deleteUser(user.id));
+                        if (ok) mutate(withoutUser(user.id), () => deleteUser(user.id), { ok: "Invitado eliminado", error: "No se pudo eliminar al invitado" });
                     }}
                 />
             )}
+
+            {/* Ficha de familia en móvil */}
+            {!isDesktop && (
+                <Dialog open={!!openFamily} onClose={() => requestClose.current()} size="lg" labelledBy="family-detail-title">
+                    <div className="-mx-6 -mt-2">{detail}</div>
+                </Dialog>
+            )}
+
+            <Dialog open={newFamilyOpen} onClose={() => setNewFamilyOpen(false)} title="Nueva familia" size="md">
+                <NewFamilyForm onDone={() => setNewFamilyOpen(false)} />
+            </Dialog>
+
+            <Dialog open={bulkOpen} onClose={() => setBulkOpen(false)} title="Añadir invitados" description="Los niños y bebés no necesitan correo porque no inician sesión. El delegado se elige luego en la ficha de la familia." size="xl">
+                <BulkUserForm families={families} onDone={() => setBulkOpen(false)} />
+            </Dialog>
+
+            <Dialog open={!!editingUser} onClose={() => setEditingUser(null)} title="Editar invitado" size="md">
+                {editingUser && (
+                    <UserEditForm
+                        key={editingUser.id}
+                        user={editingUser}
+                        users={users}
+                        families={families}
+                        onDone={() => setEditingUser(null)}
+                    />
+                )}
+            </Dialog>
         </div>
+        </GuestsCtx.Provider>
     );
 }
 
+function FilterChip({ active, onClick, warn, children }: { active: boolean; onClick: () => void; warn?: boolean; children: React.ReactNode }) {
+    return (
+        <button
+            type="button"
+            aria-pressed={active}
+            onClick={onClick}
+            className={`shrink-0 min-h-11 px-4 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                active ? "bg-primary text-on-primary" : warn ? "bg-error/10 text-error hover:bg-error/15" : "bg-surface-container-lowest text-on-surface hover:bg-surface-container-low"
+            }`}
+        >
+            {children}
+        </button>
+    );
+}
 
-
-function FamilyFormInline({ onDone }: { onDone: () => void }) {
-    const [pending, startTransition] = useTransition();
+function NewFamilyForm({ onDone }: { onDone: () => void }) {
+    const mutate = useGuestsMutate();
     return (
         <form
             action={(formData) => {
-                startTransition(async () => {
-                    await createFamily({
-                        name: formData.get("name") as string,
-                        alias: (formData.get("alias") as string) || "",
-                        globalRsvpStatus: formData.get("globalRsvpStatus") as RsvpStatus,
-                    });
-                    onDone();
-                });
+                const data = {
+                    name: (formData.get("name") as string).trim(),
+                    alias: ((formData.get("alias") as string) || "").trim(),
+                    globalRsvpStatus: formData.get("globalRsvpStatus") as RsvpStatus,
+                };
+                mutate(
+                    (d) => ({ ...d, families: [...d.families, { ...data, id: tempId(), delegateUserId: null, isDirectFamily: false, createdAt: nowSql(), updatedAt: nowSql() }] }),
+                    () => createFamily(data),
+                    { ok: "Familia creada", error: "No se pudo crear la familia" },
+                );
+                onDone();
             }}
-            className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm grid grid-cols-1 md:grid-cols-12 gap-4 items-end"
+            className="space-y-4"
         >
-            <div className="md:col-span-4">
-                <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Nombre</label>
-                <input required name="name" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm" placeholder="Familia García López" />
-            </div>
-            <div className="md:col-span-3">
-                <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Alias</label>
-                <input name="alias" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm" placeholder="Tíos paternos" />
-            </div>
-            <div className="md:col-span-3">
-                <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Estado</label>
-                <select name="globalRsvpStatus" className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none shadow-sm cursor-pointer">
+            <label className="block">
+                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Nombre</span>
+                <GrowText required name="name" autoFocus className={inputCls} placeholder="Familia García López" />
+            </label>
+            <label className="block">
+                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Descripción <span className="font-normal">(opcional)</span></span>
+                <GrowText name="alias" className={inputCls} placeholder="Tíos paternos" />
+            </label>
+            <label className="block">
+                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Estado</span>
+                <select name="globalRsvpStatus" className={selectCls} defaultValue="PENDING">
                     <option value="PENDING">Pendiente</option>
-                    <option value="CONFIRMED">Confirmada</option>
+                    <option value="CONFIRMED">Confirmado</option>
                     <option value="DECLINED">No asiste</option>
                 </select>
-            </div>
-            <div className="md:col-span-2">
-                <button disabled={pending} type="submit" className={`${btnPrimary} w-full h-[48px]`}>
-                    {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Añadir
+            </label>
+            <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button type="button" onClick={onDone} className={btnGhost}>Cancelar</button>
+                <button type="submit" className={btnPrimary}>
+                    <Plus className="w-4 h-4" aria-hidden />
+                    Crear familia
                 </button>
             </div>
         </form>
     );
 }
-
 
 type BulkRow = {
     key: number;
@@ -304,8 +319,8 @@ function makeBulkRow(key: number): BulkRow {
     return { key, name: "", lastName: "", email: "", ageCategory: "ADULT", role: "GUEST" };
 }
 
-function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: () => void }) {
-    const [pending, startTransition] = useTransition();
+function BulkUserForm({ families, onDone }: { families: Family[]; onDone: () => void }) {
+    const mutate = useGuestsMutate();
     const [familyId, setFamilyId] = useState<string>("");
     const [sharedLastName, setSharedLastName] = useState("");
     const [rows, setRows] = useState<BulkRow[]>([makeBulkRow(0)]);
@@ -334,433 +349,323 @@ function BulkUserFormInline({ families, onDone }: { families: Family[]; onDone: 
             setError("Añade al menos un invitado con nombre.");
             return;
         }
-        const missingName = members.some((r) => r.name.trim() === "");
-        if (missingName) {
+        if (members.some((r) => r.name.trim() === "")) {
             setError("Cada invitado necesita un nombre.");
             return;
         }
-        const missingEmail = members.some((r) => r.ageCategory === "ADULT" && r.email.trim() === "");
-        if (missingEmail) {
+        if (members.some((r) => r.ageCategory === "ADULT" && r.email.trim() === "")) {
             setError("Los adultos necesitan correo.");
             return;
         }
 
-        startTransition(async () => {
-            await createManyUsers(
-                Number(familyId),
-                members.map((r) => ({
-                    name: r.name.trim(),
-                    lastName: r.lastName.trim(),
-                    email: r.ageCategory === "ADULT" ? r.email.trim() : null,
-                    role: r.ageCategory === "ADULT" ? r.role : "GUEST",
-                    ageCategory: r.ageCategory,
-                }))
-            );
-            onDone();
-        });
+        const fid = Number(familyId);
+        const payload = members.map((r) => ({
+            name: r.name.trim(),
+            lastName: r.lastName.trim(),
+            email: r.ageCategory === "ADULT" ? r.email.trim() : null,
+            role: (r.ageCategory === "ADULT" ? r.role : "GUEST") as Role,
+            ageCategory: r.ageCategory,
+        }));
+        const n = payload.length;
+        mutate(
+            (d) => ({ ...d, users: [...d.users, ...payload.map((u) => draftUser(tempId(), { ...u, familyId: fid }))] }),
+            () => createManyUsers(fid, payload),
+            { ok: `${n} ${n === 1 ? "invitado añadido" : "invitados añadidos"}`, error: "No se pudieron registrar (¿algún correo ya existe?)" },
+        );
+        onDone();
     };
 
     const validCount = rows.filter((r) => r.name.trim() !== "").length;
+    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
 
     return (
-        <div className="bg-surface-container-lowest p-6 rounded-2xl shadow-sm space-y-5">
-            <div className="flex items-center gap-2">
-                <UsersIcon className="w-4 h-4 text-primary" />
-                <p className="text-sm font-sans font-medium text-primary">Añadir invitados a una familia</p>
-            </div>
-
+        <div className="space-y-5">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">Familia</label>
-                    <select
-                        value={familyId}
-                        onChange={(e) => setFamilyId(e.target.value)}
-                        className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface appearance-none shadow-sm cursor-pointer"
-                    >
-                        <option value="" disabled>Selecciona...</option>
+                <label className="block">
+                    <span className={label}>Familia</span>
+                    <select value={familyId} onChange={(e) => setFamilyId(e.target.value)} className={selectCls}>
+                        <option value="" disabled>Selecciona…</option>
                         {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
                     </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-sans font-medium text-on-surface-variant mb-2">
-                        Apellido común <span className="text-on-surface-variant/80 normal-case tracking-normal">(opcional, se aplica a filas sin apellido)</span>
-                    </label>
-                    <input
-                        value={sharedLastName}
-                        onChange={(e) => setSharedLastName(e.target.value)}
-                        className="w-full px-4 py-3 border-none rounded-xl bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-on-surface shadow-sm"
-                        placeholder="García"
-                    />
-                </div>
+                </label>
+                <label className="block">
+                    <span className={label}>Apellido común <span className="font-normal">(opcional, para filas sin apellido)</span></span>
+                    <input value={sharedLastName} onChange={(e) => setSharedLastName(e.target.value)} className={inputCls} placeholder="García" />
+                </label>
             </div>
 
-            <div className="space-y-3">
+            <ol className="space-y-3">
                 {rows.map((row, idx) => {
                     const isMinor = row.ageCategory !== "ADULT";
                     return (
-                        <div key={row.key} className="bg-surface p-4 rounded-xl shadow-sm grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
-                            <span className="hidden md:flex md:col-span-1 items-center justify-center w-7 h-7 rounded-full bg-surface-container text-on-surface-variant text-xs font-medium">{idx + 1}</span>
-                            <input
-                                value={row.name}
-                                onChange={(e) => updateRow(row.key, { name: e.target.value })}
-                                className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm"
-                                placeholder="Nombre(s)"
-                            />
-                            <input
-                                value={row.lastName}
-                                onChange={(e) => updateRow(row.key, { lastName: e.target.value })}
-                                className="md:col-span-2 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm"
-                                placeholder={sharedLastName ? `Apellido (${sharedLastName})` : "Apellido"}
-                            />
-                            <input
-                                type="email"
-                                value={row.email}
-                                onChange={(e) => updateRow(row.key, { email: e.target.value })}
-                                disabled={isMinor}
-                                className="md:col-span-3 px-3 py-2.5 border-none rounded-lg bg-surface-container-lowest focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                                placeholder={isMinor ? "Sin correo (menor)" : "Correo"}
-                            />
-                            <div className="md:col-span-3 flex items-center gap-1">
-                                <div className="flex-1 grid grid-cols-3 gap-1" role="radiogroup" aria-label="Edad">
-                                    {(["ADULT", "CHILD", "BABY"] as AgeCategory[]).map((cat) => (
-                                        <button
-                                            key={cat}
-                                            type="button"
-                                            role="radio"
-                                            aria-checked={row.ageCategory === cat}
-                                            onClick={() => updateRow(row.key, { ageCategory: cat })}
-                                            className={`py-2 rounded-lg text-xs font-sans font-medium transition-all border-none ${row.ageCategory === cat
-                                                ? "bg-primary text-on-primary shadow-sm"
-                                                : "bg-surface-container text-on-surface-variant hover:bg-primary/10"
-                                                }`}
-                                        >
-                                            {AGE_LABEL[cat]}
-                                        </button>
-                                    ))}
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => removeRow(row.key)}
-                                    disabled={rows.length === 1}
-                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed flex-shrink-0"
-                                    aria-label="Quitar fila"
-                                >
+                        <li key={row.key} className="rounded-2xl bg-surface-container-low p-4">
+                            <div className="flex items-center justify-between mb-3 md:hidden">
+                                <span className="text-sm font-medium text-on-surface">Invitado {idx + 1}</span>
+                                <button type="button" onClick={() => removeRow(row.key)} disabled={rows.length === 1} className={iconBtnDanger} aria-label={`Quitar invitado ${idx + 1}`}>
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
-                        </div>
+                            <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_1.3fr_auto_auto] gap-2 md:items-center">
+                                <input aria-label={`Nombre del invitado ${idx + 1}`} value={row.name} onChange={(e) => updateRow(row.key, { name: e.target.value })} className={`${inputCls} bg-surface-container-lowest`} placeholder="Nombre(s)" />
+                                <input aria-label={`Apellido del invitado ${idx + 1}`} value={row.lastName} onChange={(e) => updateRow(row.key, { lastName: e.target.value })} className={`${inputCls} bg-surface-container-lowest`} placeholder={sharedLastName ? `Apellido (${sharedLastName})` : "Apellido"} />
+                                <input
+                                    aria-label={`Correo del invitado ${idx + 1}`}
+                                    type="email"
+                                    value={isMinor ? "" : row.email}
+                                    onChange={(e) => updateRow(row.key, { email: e.target.value })}
+                                    disabled={isMinor}
+                                    className={`${inputCls} bg-surface-container-lowest`}
+                                    placeholder={isMinor ? "Sin correo (menor)" : "Correo"}
+                                />
+                                <AgePicker value={row.ageCategory} onChange={(cat) => updateRow(row.key, { ageCategory: cat })} className="md:w-60" />
+                                <button type="button" onClick={() => removeRow(row.key)} disabled={rows.length === 1} className={`${iconBtnDanger} hidden md:inline-flex`} aria-label={`Quitar invitado ${idx + 1}`}>
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </li>
                     );
                 })}
-            </div>
+            </ol>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                <button
-                    type="button"
-                    onClick={addRow}
-                    className={btnSecondary}
-                >
-                    <Plus className="w-4 h-4" /> Añadir fila
+            {error && <p role="alert" className="text-sm text-error">{error}</p>}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                <button type="button" onClick={addRow} className={btnSecondary}>
+                    <Plus className="w-4 h-4" aria-hidden /> Añadir fila
                 </button>
-                <div className="flex items-center gap-3">
-                    {error && <p className="text-xs text-error font-sans">{error}</p>}
-                    <button
-                        disabled={pending}
-                        type="button"
-                        onClick={handleSubmit}
-                        className={btnPrimary}
-                    >
-                        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                <div className="flex flex-col-reverse sm:flex-row gap-2">
+                    <button type="button" onClick={onDone} className={btnGhost}>Cancelar</button>
+                    <button type="button" onClick={handleSubmit} className={btnPrimary}>
+                        <Plus className="w-4 h-4" aria-hidden />
                         Registrar {validCount > 0 ? `(${validCount})` : ""}
                     </button>
                 </div>
             </div>
-            <p className="text-xs text-on-surface-variant">Los niños y bebés no necesitan correo porque no inician sesión. El delegado se elige luego en la tarjeta de la familia.</p>
         </div>
     );
 }
 
-function FamiliesGrid({
+function FamiliesList({
     families,
     users,
     isEmpty,
+    selectedId,
     onOpen,
 }: {
     families: Family[];
     users: User[];
     isEmpty: boolean;
+    selectedId: number | null;
     onOpen: (family: Family) => void;
 }) {
-    if (isEmpty) {
-        return <EmptyState message="No hay familias registradas aún." />;
-    }
-    if (families.length === 0) {
-        return <EmptyState message="Ningún resultado coincide con tu búsqueda." />;
-    }
+    if (isEmpty) return <EmptyState icon={Home} message="No hay familias registradas aún. Crea la primera con «Nueva familia»." />;
+    if (families.length === 0) return <EmptyState icon={Search} message="Ninguna familia coincide con la búsqueda o el filtro." />;
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <ul className="space-y-1.5">
             {families.map((family) => {
                 const familyUsers = users.filter((u) => u.familyId === family.id);
                 const delegate = familyUsers.find((u) => u.id === family.delegateUserId);
                 const status = family.globalRsvpStatus as RsvpStatus;
-                const statusBadge =
-                    status === "CONFIRMED"
-                        ? "bg-secondary-container text-on-secondary-container"
-                        : status === "DECLINED"
-                            ? "bg-surface-container text-on-surface-variant"
-                            : "bg-primary/10 text-primary";
-                const names = familyUsers.map((u) => u.name);
+                const chip = RSVP_CHIP[status];
+                const selected = selectedId === family.id;
 
                 return (
-                    <button
-                        key={family.id}
-                        type="button"
-                        onClick={() => onOpen(family)}
-                        className="group text-left flex flex-col gap-3 bg-surface-container-lowest p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow"
-                        aria-label={`Abrir la familia ${family.name}`}
-                    >
-                        <div className="flex items-start justify-between gap-2 w-full">
-                            <div className="min-w-0">
-                                <h3 className="font-serif text-lg text-on-surface truncate">{family.name}</h3>
-                                {family.alias && <p className="text-xs text-on-surface-variant italic truncate">{family.alias}</p>}
-                            </div>
-                            <Pencil className="w-4 h-4 shrink-0 mt-1 text-on-surface-variant/80 group-hover:text-primary transition-colors" aria-hidden />
-                        </div>
-
-                        <div className="flex gap-2 flex-wrap">
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${statusBadge}`}>{RSVP_LABEL[status]}</span>
-                            <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant">
-                                {familyUsers.length} {familyUsers.length === 1 ? "integrante" : "integrantes"}
+                    <li key={family.id} aria-busy={isTemp(family.id) || undefined} className={isTemp(family.id) ? pendingRowCls : ""}>
+                        <button
+                            type="button"
+                            onClick={() => onOpen(family)}
+                            aria-current={selected ? "true" : undefined}
+                            className={`group w-full text-left flex items-center gap-4 p-4 rounded-2xl transition-colors ${
+                                selected ? "bg-secondary-container/70" : "bg-surface-container-lowest hover:bg-[#fffdf8]"
+                            }`}
+                        >
+                            <span className="min-w-0 flex-1">
+                                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                    <span className="font-serif text-2xl leading-tight text-on-surface">{family.name}</span>
+                                    <Chip tone={chip.tone}>{chip.label}</Chip>
+                                </span>
+                                <span className="mt-1 block text-sm text-on-surface-variant truncate">
+                                    {family.alias ? `${family.alias} · ` : ""}
+                                    {familyUsers.length} {familyUsers.length === 1 ? "integrante" : "integrantes"}
+                                    {family.isDirectFamily ? " · Familia directa" : ""}
+                                </span>
+                                {delegate ? (
+                                    <span className="mt-0.5 block text-sm text-on-surface-variant truncate">
+                                        Delegado: <span className="text-on-surface">{delegate.name} {delegate.lastName}</span>
+                                    </span>
+                                ) : status === "PENDING" ? (
+                                    <span className="mt-1 flex items-start gap-1.5 text-sm text-error">
+                                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+                                        Sin delegado: nadie puede confirmar.
+                                    </span>
+                                ) : null}
                             </span>
-                        </div>
-
-                        {names.length > 0 && (
-                            <p className="text-sm text-on-surface-variant line-clamp-2">{names.join(", ")}</p>
-                        )}
-
-                        {delegate ? (
-                            <p className="flex items-center gap-1.5 text-xs text-on-surface-variant">
-                                <UserCheck className="w-3.5 h-3.5 text-primary" />
-                                Delegado: <span className="text-on-surface">{delegate.name} {delegate.lastName}</span>
-                            </p>
-                        ) : status === "PENDING" ? (
-                            <p className="flex items-start gap-1.5 text-xs text-error">
-                                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
-                                Sin delegado: nadie puede confirmar por esta familia.
-                            </p>
-                        ) : null}
-                    </button>
+                            <ChevronRight className="w-4 h-4 shrink-0 text-on-surface-variant group-hover:text-primary transition-colors" aria-hidden />
+                        </button>
+                    </li>
                 );
             })}
-        </div>
+        </ul>
     );
 }
 
-function UsersGrid({
+function UsersList({
     users,
     families,
     isEmpty,
     canWrite,
-    editingId,
     onEdit,
-    onCancelEdit,
-    onSave,
     onDelete,
 }: {
     users: User[];
     families: Family[];
     isEmpty: boolean;
     canWrite: boolean;
-    editingId: number | null;
-    onEdit: (id: number) => void;
-    onCancelEdit: () => void;
-    onSave: (id: number, data: { name: string; lastName: string; email: string | null; familyId: number; role: Role; ageCategory: AgeCategory }) => void;
+    onEdit: (user: User) => void;
     onDelete: (user: User) => void;
 }) {
-    if (isEmpty) return <EmptyState message="No hay invitados registrados." />;
-    if (users.length === 0) return <EmptyState message="Ningún resultado coincide con tu búsqueda." />;
+    if (isEmpty) return <EmptyState icon={UsersIcon} message="No hay invitados registrados. Añádelos con «Añadir invitados»." />;
+    if (users.length === 0) return <EmptyState icon={Search} message="Ningún invitado coincide con la búsqueda." />;
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <ul className="grid grid-cols-1 xl:grid-cols-2 gap-1.5">
             {users.map((user) => {
                 const family = families.find((f) => f.id === user.familyId);
-                const isEditing = editingId === user.id;
-
-                if (isEditing) {
-                    return (
-                        <UserEditCard
-                            key={user.id}
-                            user={user}
-                            families={families}
-                            onCancel={onCancelEdit}
-                            onSave={(data) => onSave(user.id, data)}
-                        />
-                    );
-                }
-
                 const ageCategory = user.ageCategory as AgeCategory;
                 const isMinor = ageCategory !== "ADULT";
                 const isDelegate = family?.delegateUserId === user.id;
                 const isAdmin = user.role === "ADMIN";
-
-                let RoleIcon = UserCircle;
-                let roleColor = "text-on-surface-variant";
-                if (isAdmin) { RoleIcon = ShieldCheck; roleColor = "text-primary"; }
-                else if (user.role === "MAIN_GUEST") { RoleIcon = Crown; roleColor = "text-primary"; }
-                if (ageCategory === "BABY") { RoleIcon = Baby; roleColor = "text-on-surface-variant"; }
-                else if (ageCategory === "CHILD") { RoleIcon = Smile; roleColor = "text-on-surface-variant"; }
+                const diet = dietaryText(user.dietary, user.dietaryNote);
 
                 return (
-                    <div key={user.id} className="relative flex bg-surface-container-lowest p-5 rounded-2xl shadow-sm hover:shadow-md transition-shadow group">
-                        <div className={`bg-surface-container p-2 rounded-xl ${roleColor} flex-shrink-0 self-start mt-1`}>
-                            <RoleIcon className="w-5 h-5" />
-                        </div>
-                        <div className="ml-3 flex-1 min-w-0 pr-16">
-                            <h4 className="font-serif text-lg text-on-surface leading-tight truncate">
-                                {user.fullname || `${user.name} ${user.lastName}`}
-                            </h4>
-                            <p className="text-xs text-on-surface-variant truncate italic">
-                                {user.email ?? "Sin correo"}
+                    <li key={user.id} aria-busy={isTemp(user.id) || undefined} className={`group flex items-start gap-3 bg-surface-container-lowest px-4 py-3.5 rounded-2xl ${isTemp(user.id) ? pendingRowCls : ""}`}>
+                        <div className="flex-1 min-w-0">
+                            <p className="flex items-baseline gap-2 min-w-0">
+                                <span className="text-[15px] font-medium text-on-surface truncate">{user.fullname || `${user.name} ${user.lastName}`}</span>
+                                {user.alias && <span className="text-xs text-on-surface-variant truncate shrink-0 max-w-[45%]">@{user.alias}</span>}
                             </p>
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-surface-container-low text-on-surface-variant truncate max-w-[140px]">
-                                    {family?.name ?? "Sin familia"}
-                                </span>
-                                {isMinor ? (
-                                    <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                        {AGE_LABEL[ageCategory]}
-                                    </span>
-                                ) : (
-                                    <>
-                                        {isAdmin && (
-                                            <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                                Admin
-                                            </span>
-                                        )}
-                                        {isDelegate && (
-                                            <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                                Delegado
-                                            </span>
-                                        )}
-                                        {!isAdmin && !isDelegate && (
-                                            <span className="text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-surface-container text-on-surface-variant">
-                                                Acompañante
-                                            </span>
-                                        )}
-                                    </>
-                                )}
-                                {user.isConfirmed && (
-                                    <span className="flex items-center gap-1 text-[10px] font-sans tracking-widest uppercase font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
-                                        <CheckCircle2 className="w-3 h-3" /> Asistirá
-                                    </span>
-                                )}
+                            <p className="text-sm text-on-surface-variant truncate">
+                                {family?.name ?? "Sin familia"} · {isMinor ? AGE_LABEL[ageCategory] : (user.email ?? "Sin correo")}
+                            </p>
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                                {isAdmin && <Chip tone="brand">Admin</Chip>}
+                                {isDelegate ? <Chip tone="brand">Delegado</Chip> : !isMinor && !isAdmin && <Chip>Acompañante</Chip>}
+                                {user.isConfirmed && <Chip tone="good">Confirmado</Chip>}
+                                {diet && <Chip>{diet}</Chip>}
                             </div>
                         </div>
-                        {canWrite && <div className="absolute top-4 right-4 flex items-center gap-1 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                            <button
-                                onClick={() => onEdit(user.id)}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl text-on-surface-variant hover:bg-primary/10 hover:text-primary transition-colors"
-                                aria-label="Editar invitado"
-                            >
-                                <Pencil className="w-4 h-4" />
-                            </button>
-                            <button
-                                onClick={() => onDelete(user)}
-                                className="w-8 h-8 flex items-center justify-center rounded-xl text-error hover:bg-error/10 transition-colors"
-                                aria-label="Eliminar invitado"
-                            >
-                                <Trash2 className="w-4 h-4" />
-                            </button>
-                        </div>}
-                    </div>
+                        {canWrite && (
+                            <div className="flex items-center gap-0.5 pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                <button type="button" onClick={() => onEdit(user)} className={iconBtn} aria-label={`Editar a ${user.name}`}>
+                                    <Pencil className="w-4 h-4" />
+                                </button>
+                                <button type="button" onClick={() => onDelete(user)} className={iconBtnDanger} aria-label={`Eliminar a ${user.name}`}>
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
+                    </li>
                 );
             })}
-        </div>
+        </ul>
     );
 }
 
-function UserEditCard({
-    user,
-    families,
-    onCancel,
-    onSave,
-}: {
-    user: User;
-    families: Family[];
-    onCancel: () => void;
-    onSave: (data: { name: string; lastName: string; email: string | null; familyId: number; role: Role; ageCategory: AgeCategory }) => void;
-}) {
-    const [pending, startTransition] = useTransition();
+function UserEditForm({ user, users, families, onDone }: { user: User; users: User[]; families: Family[]; onDone: () => void }) {
+    const mutate = useGuestsMutate();
     const [ageCategory, setAgeCategory] = useState<AgeCategory>(user.ageCategory as AgeCategory);
+    const [alias, setAlias] = useState(user.alias ?? "");
+    const cleanAlias = alias.trim().toLowerCase();
+    // Validación en el cliente para avisar antes de guardar; el servidor la repite.
+    const aliasProblem = cleanAlias === (user.alias ?? "")
+        ? null
+        : aliasError(cleanAlias) ?? (users.some((u) => u.id !== user.id && u.alias === cleanAlias) ? "Ese alias ya lo usa otra persona." : null);
     const isMinor = ageCategory !== "ADULT";
+    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
 
     return (
         <form
             action={(formData) => {
-                startTransition(() => {
-                    onSave({
-                        name: formData.get("name") as string,
-                        lastName: formData.get("lastName") as string,
-                        email: (formData.get("email") as string) || null,
-                        familyId: Number(formData.get("familyId")),
-                        role: ((formData.get("role") as Role) || "GUEST"),
-                        ageCategory,
-                    });
-                });
+                if (aliasProblem) return;
+                const data = {
+                    ...(cleanAlias !== (user.alias ?? "") ? { alias: cleanAlias } : {}),
+                    name: formData.get("name") as string,
+                    lastName: formData.get("lastName") as string,
+                    email: isMinor ? null : (((formData.get("email") as string) || "").trim() || null),
+                    familyId: Number(formData.get("familyId")),
+                    role: isMinor ? "GUEST" : ((formData.get("role") as Role) || "GUEST"),
+                    ageCategory,
+                };
+                const movedFamily = data.familyId !== user.familyId;
+                mutate(
+                    (d) => ({
+                        // Si cambia de familia y era delegado, la familia anterior se queda sin delegado.
+                        families: movedFamily ? d.families.map((f) => (f.delegateUserId === user.id ? { ...f, delegateUserId: null } : f)) : d.families,
+                        users: d.users.map((u) => (u.id === user.id ? { ...u, ...data, fullname: `${data.name} ${data.lastName}`.trim() } : u)),
+                    }),
+                    () => updateUser(user.id, data),
+                    { ok: "Invitado guardado", error: "No se pudo guardar (¿ese correo o alias ya está en uso?)" },
+                );
+                onDone();
             }}
-            className="bg-surface-container-lowest p-5 rounded-2xl shadow-md ring-2 ring-primary/30 grid grid-cols-2 gap-3"
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
         >
-            <div className="col-span-2 flex items-center justify-between">
-                <p className="text-[10px] font-sans tracking-widest uppercase font-medium text-primary">Editando invitado</p>
-                <button type="button" onClick={onCancel} className="text-on-surface-variant hover:text-on-surface">
-                    <X className="w-4 h-4" />
+            <label className="block">
+                <span className={label}>Nombre</span>
+                <input required name="name" defaultValue={user.name} className={inputCls} />
+            </label>
+            <label className="block">
+                <span className={label}>Apellidos</span>
+                <input required name="lastName" defaultValue={user.lastName} className={inputCls} />
+            </label>
+            <div className="sm:col-span-2">
+                <label htmlFor="user-alias" className={label}>Alias <span className="font-normal">(único; sirve para encontrar a la persona)</span></label>
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-on-surface-variant pointer-events-none" aria-hidden>@</span>
+                    <input
+                        id="user-alias"
+                        value={alias}
+                        onChange={(e) => setAlias(e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+                        maxLength={ALIAS_MAX}
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        spellCheck={false}
+                        aria-invalid={aliasProblem ? true : undefined}
+                        aria-describedby="user-alias-msg"
+                        className={`${inputCls} pl-8`}
+                    />
+                </div>
+                <p id="user-alias-msg" role={aliasProblem ? "alert" : undefined} className={`mt-1.5 text-xs ${aliasProblem ? "text-error" : "text-on-surface-variant"}`}>
+                    {aliasProblem ?? "Minúsculas, números y guiones, por ejemplo «tio-pepe»."}
+                </p>
+            </div>
+            <div className="sm:col-span-2">
+                <span className={label}>Edad</span>
+                <AgePicker value={ageCategory} onChange={setAgeCategory} />
+            </div>
+            <label className="block sm:col-span-2">
+                <span className={label}>Correo {isMinor && <span className="font-normal">(los menores no inician sesión)</span>}</span>
+                <input type="email" name="email" defaultValue={user.email ?? ""} required={!isMinor} disabled={isMinor} className={inputCls} />
+            </label>
+            <label className="block">
+                <span className={label}>Familia</span>
+                <select name="familyId" defaultValue={user.familyId?.toString() ?? ""} className={selectCls}>
+                    {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+                </select>
+            </label>
+            <label className="block">
+                <span className={label}>Rol</span>
+                <select name="role" defaultValue={user.role === "ADMIN" ? "ADMIN" : "GUEST"} disabled={isMinor} className={selectCls}>
+                    <option value="GUEST">Invitado</option>
+                    <option value="ADMIN">Administrador</option>
+                </select>
+            </label>
+            <div className="sm:col-span-2 flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+                <button type="button" onClick={onDone} className={btnGhost}>Cancelar</button>
+                <button type="submit" disabled={!!aliasProblem} className={btnPrimary}>
+                    Guardar cambios
                 </button>
             </div>
-            <input required name="name" defaultValue={user.name} placeholder="Nombre" className="px-3 py-2 border-none rounded-lg bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm" />
-            <input required name="lastName" defaultValue={user.lastName} placeholder="Apellidos" className="px-3 py-2 border-none rounded-lg bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm" />
-            <input
-                type="email"
-                name="email"
-                defaultValue={user.email ?? ""}
-                required={!isMinor}
-                disabled={isMinor}
-                placeholder={isMinor ? "Sin correo (menor)" : "Correo"}
-                className="col-span-2 px-3 py-2 border-none rounded-lg bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            />
-            <div className="col-span-2 grid grid-cols-3 gap-2">
-                {(["ADULT", "CHILD", "BABY"] as AgeCategory[]).map((cat) => (
-                    <button
-                        key={cat}
-                        type="button"
-                        onClick={() => setAgeCategory(cat)}
-                        className={`py-2 rounded-lg text-[10px] font-sans tracking-widest uppercase font-medium transition-all border-none ${ageCategory === cat
-                            ? "bg-primary text-on-primary shadow-sm"
-                            : "bg-surface text-on-surface-variant hover:bg-primary/10"
-                            }`}
-                    >
-                        {AGE_LABEL[cat]}
-                    </button>
-                ))}
-            </div>
-            <select name="familyId" defaultValue={user.familyId?.toString() ?? ""} className="px-3 py-2 border-none rounded-lg bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface appearance-none shadow-sm cursor-pointer">
-                {families.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
-            </select>
-            <select name="role" defaultValue={user.role === "ADMIN" ? "ADMIN" : "GUEST"} disabled={isMinor} className="px-3 py-2 border-none rounded-lg bg-surface focus:ring-2 focus:ring-primary/50 outline-none text-sm text-on-surface appearance-none shadow-sm cursor-pointer disabled:opacity-50">
-                <option value="GUEST">Invitado</option>
-                <option value="ADMIN">Administrador</option>
-            </select>
-            <button disabled={pending} type="submit" className={`${btnPrimary} col-span-2 mt-1`}>
-                {pending && <Loader2 className="w-3 h-3 animate-spin" />}
-                Guardar cambios
-            </button>
         </form>
-    );
-}
-
-function EmptyState({ message }: { message: string }) {
-    return (
-        <div className="bg-surface-container-lowest rounded-2xl p-10 text-center shadow-sm">
-            <p className="text-on-surface-variant font-sans text-sm">{message}</p>
-        </div>
     );
 }
