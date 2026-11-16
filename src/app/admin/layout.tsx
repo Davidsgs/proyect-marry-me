@@ -7,6 +7,7 @@ import AdminMobileNav from "./_components/AdminMobileNav";
 import AdminMobileHeaderActions from "./_components/AdminMobileHeaderActions";
 import { hasPermission } from "@/lib/permissions";
 import { ConfirmProvider } from "./_components/ConfirmDialog";
+import { NoticeProvider } from "./_components/Notice";
 
 export default async function AdminLayout({
   children,
@@ -20,33 +21,29 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface flex flex-col lg:flex-row pb-24 lg:pb-0">
-
-      {/* Mobile Top Header (only visible on small screens) */}
-      <header className="lg:hidden bg-surface-container-low/90 backdrop-blur-md px-6 py-4 w-full sticky top-0 z-50 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3">
-        <Monogram size="sm" />
-        <div className="flex flex-col">
-          <span className="font-serif text-xl tracking-wide text-primary leading-tight">
-            David &amp; Rocío
-          </span>
-          <span className="font-sans text-xs text-on-surface-variant">
-            {WEDDING_DATE_LABEL}
-          </span>
+    <div className="min-h-dvh bg-surface text-on-surface flex flex-col lg:flex-row pb-[calc(5rem+env(safe-area-inset-bottom))] lg:pb-0">
+      {/* Cabecera móvil */}
+      <header className="lg:hidden sticky top-0 z-30 bg-oliva-profundo text-crema pt-[env(safe-area-inset-top)]">
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5">
+          <div className="flex items-center gap-3 min-w-0">
+            <Monogram size="sm" tone="crema" />
+            <div className="min-w-0">
+              <p className="font-serif text-2xl leading-none truncate">David y Rocío</p>
+              <p className="text-xs mt-0.5">{WEDDING_DATE_LABEL}</p>
+            </div>
+          </div>
+          <AdminMobileHeaderActions />
         </div>
-        </div>
-        <AdminMobileHeaderActions />
       </header>
 
-      {/* Navigation Drawer (Desktop) */}
       <AdminSidebar permissions={session?.user?.permissions} />
 
-      {/* Main Content Area */}
-      <main className="flex-1 px-4 sm:px-8 py-8 lg:py-12 lg:ml-72 transition-all duration-300">
-        <ConfirmProvider>{children}</ConfirmProvider>
+      <main className="flex-1 min-w-0 px-4 sm:px-8 py-8 lg:py-12 lg:ml-72">
+        <NoticeProvider>
+          <ConfirmProvider>{children}</ConfirmProvider>
+        </NoticeProvider>
       </main>
 
-      {/* Bottom Navigation (Mobile) */}
       <AdminMobileNav permissions={session?.user?.permissions} />
     </div>
   );
