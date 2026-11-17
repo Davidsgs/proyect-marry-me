@@ -67,8 +67,29 @@ export function EventWhen() {
 
 export function EventPlace() {
     return (
-        <section aria-labelledby="el-lugar" className={field}>
-            <BotanicalShadow variant="rama" sway className="absolute -left-24 -top-16 w-[26rem] max-w-[80vw] text-tinta/30" />
+        <section aria-labelledby="el-lugar" className={`${field} isolate`}>
+            {/* Foto del salón de fondo, en duotono: el archivo ya viene en gris y
+                mix-blend-multiply lo tiñe con el oliva del campo. Multiplicar solo
+                oscurece, así que ningún punto queda más claro que el oliva y el texto
+                crema mantiene al menos 5.5:1. Vive en /privado (solo con sesión): por
+                eso <img> plano y no next/image. Se pide al cargar, con prioridad baja,
+                para que esté lista al llegar a este paso. */}
+            <picture>
+                <source media="(max-width: 40rem)" srcSet="/privado/salon-mobile.webp" />
+                <img
+                    src="/privado/salon-1200.webp"
+                    srcSet="/privado/salon-1200.webp 1200w, /privado/salon-1536.webp 1536w"
+                    sizes="100vw"
+                    alt="Fachada del salón de la Quinta Vaccarezza, entre palmeras"
+                    width={1536}
+                    height={1024}
+                    decoding="async"
+                    fetchPriority="low"
+                    className="mg-zoom absolute inset-0 -z-10 h-full w-full object-cover object-[50%_60%] mix-blend-multiply"
+                />
+            </picture>
+            {/* Viñeta: más oscuro abajo y arriba, donde se apoyan los textos. */}
+            <div aria-hidden className="absolute inset-0 -z-10 bg-linear-to-b from-oliva-profundo/50 via-transparent to-oliva-profundo/80" />
             <div className="relative mx-auto max-w-5xl px-5 sm:px-8 py-14 sm:py-20 lg:py-10 short:py-6">
                 <h2 id="el-lugar" className="sr-only">Lugar y vestimenta</h2>
                 <div className="grid gap-14 lg:grid-cols-[1fr_1.15fr] lg:items-center lg:gap-14">

@@ -227,6 +227,17 @@ body {
     stroke-dashoffset: var(--len, 64);
   }
 }
+/* Foto de fondo que se acerca despacio al entrar el paso. */
+@keyframes mg-zoom {
+  from {
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mg-zoom {
+    animation: mg-zoom 2400ms var(--ease-out-soft) both;
+  }
+}
 @keyframes mg-grow {
   from {
     transform: scaleX(0);
