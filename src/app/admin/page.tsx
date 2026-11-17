@@ -86,8 +86,8 @@ export default async function AdminPage() {
     // Tareas
     const pendingTasks = allTasks.filter((t) => !t.isCompleted);
     const overdueTasks = pendingTasks.filter((t) => t.dueDate && t.dueDate < today);
-    const upcomingTasks = [...pendingTasks]
-        .sort((a, b) => {
+    const upcomingTasks = pendingTasks
+        .toSorted((a, b) => {
             if (!a.dueDate && !b.dueDate) return 0;
             if (!a.dueDate) return 1;
             if (!b.dueDate) return -1;

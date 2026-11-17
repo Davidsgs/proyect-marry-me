@@ -156,7 +156,7 @@ export default function CronogramaManager({ initialActivities, initialSections, 
     function handleSortByTime() {
         if (!editable) return;
         const byTime = (a: Activity, b: Activity) => (!a.time && !b.time ? 0 : !a.time ? 1 : !b.time ? -1 : a.time.localeCompare(b.time));
-        const next = groups.flatMap((g) => [...g.items].sort(byTime)).map((a, i) => ({ ...a, sortOrder: i }));
+        const next = groups.flatMap((g) => g.items.toSorted(byTime)).map((a, i) => ({ ...a, sortOrder: i }));
         mutate(() => next, () => reorderActivities(next.map((a) => a.id)), { ok: "Ordenado por hora", error: "No se pudo reordenar" });
     }
 
