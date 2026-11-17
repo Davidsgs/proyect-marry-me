@@ -10,7 +10,7 @@ import WeddingMenu from "./_components/WeddingMenu";
 import WeddingParty from "./_components/WeddingParty";
 import { Arch } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
-import { DRESS_CODE, SUPPORT_EMAIL, VENUE, WEDDING_DATE_LABEL, WEDDING_WEEKDAY, daysUntilWedding } from "@/lib/wedding";
+import { DRESS_CODE, SUPPORT_EMAIL, VENUE, WEDDING_DATE_LABEL, WEDDING_TIME_LABEL, WEDDING_WEEKDAY, daysUntilWedding } from "@/lib/wedding";
 import { CalendarClock, CalendarHeart, Hourglass, MapPin, Shirt } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
@@ -71,7 +71,7 @@ export default async function DashboardPage() {
         : [];
     const facts: { icon: typeof CalendarHeart; text: string; href?: string }[] = [
         ...answerBy,
-        { icon: CalendarHeart, text: `${WEDDING_WEEKDAY} ${WEDDING_DATE_LABEL.replace(/ de \d{4}$/, "")}` },
+        { icon: CalendarHeart, text: `${WEDDING_WEEKDAY} ${WEDDING_DATE_LABEL.replace(/ de \d{4}$/, "")} · ${WEDDING_TIME_LABEL}` },
         ...(daysLeft > 0 ? [{ icon: Hourglass, text: daysLeft === 1 ? "¡Es mañana!" : `Faltan ${daysLeft} días` }] : []),
         { icon: MapPin, text: VENUE.address.split(" · ").pop() ?? VENUE.address },
         { icon: Shirt, text: DRESS_CODE.style },

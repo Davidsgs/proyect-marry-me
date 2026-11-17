@@ -1,5 +1,5 @@
-import { CalendarHeart, CalendarPlus, Clock, Hourglass, MapPin, Navigation, Shirt } from "lucide-react";
-import { CALENDAR_URL, DRESS_CODE, VENUE, WEDDING_DATE_LABEL, WEDDING_WEEKDAY, daysUntilWedding, type AvoidColor } from "@/lib/wedding";
+import { CalendarHeart, CalendarPlus, Clock, DoorClosed, Hourglass, MapPin, Navigation, Shirt } from "lucide-react";
+import { ARRIVAL_TOLERANCE_MIN, CALENDAR_URL, DRESS_CODE, VENUE, WEDDING_DATE_LABEL, WEDDING_TIME_LABEL, WEDDING_WEEKDAY, daysUntilWedding, type AvoidColor } from "@/lib/wedding";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
 
 // Lo que todo invitado necesita saber del día: cuándo, dónde y cómo vestirse.
@@ -23,7 +23,7 @@ export default function EventDetails() {
                             <span className="block text-4xl sm:text-5xl leading-display">de {rest.join(" de ")}</span>
                         </p>
                         <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-text text-base">
-                            <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" aria-hidden /> {WEDDING_WEEKDAY}. Horario por confirmar.</span>
+                            <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" aria-hidden /> {WEDDING_WEEKDAY} · <span className="tabular-nums">{WEDDING_TIME_LABEL}</span> (hora de Argentina)</span>
                             {daysLeft > 0 && (
                                 <span className="inline-flex items-center gap-1.5 rounded-full bg-crema/15 px-3 py-1 text-sm font-medium">
                                     <Hourglass className="w-4 h-4" aria-hidden />
@@ -31,6 +31,16 @@ export default function EventDetails() {
                                 </span>
                             )}
                         </p>
+                        {/* Puntualidad: la puerta se cierra al empezar la ceremonia. */}
+                        <div className="mt-5 flex items-start gap-3 rounded-2xl bg-crema/15 px-4 py-3.5 max-w-md">
+                            <DoorClosed className="w-5 h-5 shrink-0 mt-0.5" aria-hidden />
+                            <div className="font-text text-base">
+                                <p className="font-medium">Llega con tiempo</p>
+                                <p className="mt-1 leading-relaxed">
+                                    La ceremonia empieza a las <span className="tabular-nums">{WEDDING_TIME_LABEL}</span> y solo habrá {ARRIVAL_TOLERANCE_MIN} minutos de tolerancia. Una vez empezada, la puerta se cierra y vuelve a abrirse recién para la fiesta.
+                                </p>
+                            </div>
+                        </div>
                         <a
                             href={CALENDAR_URL}
                             target="_blank"
