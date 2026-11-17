@@ -1,6 +1,6 @@
 import type { families, users } from "@/db/schema";
 import { Check, Clock, Heart } from "lucide-react";
-import { AttendanceLists } from "./RsvpSubmittedView";
+import { AttendanceLists, InvitationValidity } from "./RsvpSubmittedView";
 import AdultsNote from "./AdultsNote";
 
 interface Props {
@@ -51,6 +51,7 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                         </ul>
                     </div>
                 )}
+                <InvitationValidity count={members.length} />
                 {!family.isDirectFamily && <AdultsNote text={adultsNote} />}
             </div>
         );
@@ -83,6 +84,7 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                         <p className="mg-rise mg-d-4 text-base">Respondió {delegateName}. Si algo cambia, avísale.</p>
                     )}
                 </div>
+                <div className="mg-rise mg-d-5"><InvitationValidity count={members.length} /></div>
                 {!family.isDirectFamily && <div className="mg-rise mg-d-6"><AdultsNote text={adultsNote} /></div>}
             </div>
             <div className="mg-rise mg-d-5">
