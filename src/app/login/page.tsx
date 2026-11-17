@@ -5,6 +5,14 @@ import { Monogram } from '@/components/Monogram';
 import { BotanicalShadow } from '@/components/BotanicalShadow';
 import { Arch, Band } from '@/components/Brand';
 import { WEDDING_DATE_LABEL } from '@/lib/wedding';
+import { Armchair, CalendarCheck, MapPin } from 'lucide-react';
+
+// Qué encuentra el invitado al entrar (sin datos privados: la página es pública).
+const INSIDE = [
+    { icon: CalendarCheck, text: 'Confirmar asistencia' },
+    { icon: Armchair, text: 'Ver tu mesa' },
+    { icon: MapPin, text: 'Cómo llegar' },
+];
 
 const SUPPORT_MAIL =
     "mailto:soporte@davidyrocio.wedding?subject=Problema%20con%20la%20invitación&body=Hola,%20no%20puedo%20entrar%20a%20la%20invitación.%20Mi%20correo%20es:%20";
@@ -36,6 +44,17 @@ export default async function LoginPage({
                     <p className="mt-8 font-text text-base leading-relaxed text-pretty">
                         Entra con la cuenta de Google del correo al que te enviamos la invitación. No necesitas contraseña.
                     </p>
+
+                    <ul aria-label="En tu invitación" className="mt-6 grid grid-cols-3 gap-2">
+                        {INSIDE.map(({ icon: Icon, text }, i) => (
+                            <li key={text} className="animate-rise flex flex-col items-center gap-2 text-center text-[13px] font-medium leading-tight" style={{ animationDelay: `${200 + i * 90}ms` }}>
+                                <span aria-hidden className="w-11 h-11 rounded-full bg-rubor text-rosa-profundo flex items-center justify-center">
+                                    <Icon className="w-5 h-5" />
+                                </span>
+                                {text}
+                            </li>
+                        ))}
+                    </ul>
 
                     {error === "AccessDenied" && (
                         <div role="alert" className="mt-6 rounded-xl bg-error/10 p-4 text-left text-sm text-error space-y-1">
