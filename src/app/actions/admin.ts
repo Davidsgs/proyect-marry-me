@@ -1,7 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { families, users, roles, userRoles, permissions, userPermissions } from "@/db/schema";
+import { families, users, roles, userRoles, permissions, userPermissions, rsvpEvents } from "@/db/schema";
+import { rsvpActor, rsvpEventInsert } from "@/lib/rsvpAudit";
 import { and, eq, ne, inArray } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
 import { cachedFamilies, cachedUsers } from "@/lib/data";
@@ -90,11 +91,15 @@ export async function createFamily(data: { name: string; alias?: string; globalR
     if (!hasPermission(session?.user?.permissions, "families.write")) {
         throw new Error("Sin permisos");
     }
-    await db.insert(families).values({
+    const [created] = await db.insert(families).values({
         name: data.name,
         alias: data.alias || "",
         globalRsvpStatus: data.globalRsvpStatus,
-    });
+    }).returning({ id: families.id });
+    // Creada ya con respuesta: queda registrado que la puso un administrador.
+    if (created && data.globalRsvpStatus !== "PENDING") {
+        await rsvpEventInsert({ familyId: created.id, status: data.globalRsvpStatus, actor: await rsvpActor(session?.user?.id, null) });
+    }
     invalidateFamilies();
 }
 
@@ -138,9 +143,15 @@ export async function updateFamily(id: number, data: { name?: string; alias?: st
     }
 
     if (Object.keys(updateSet).length > 0) {
-        await db.update(families)
-            .set(updateSet)
-            .where(eq(families.id, id));
+        const write = db.update(families).set(updateSet).where(eq(families.id, id));
+        if (data.globalRsvpStatus !== undefined) {
+            // Cambio de estado desde el panel: siempre es de un administrador
+            // (aunque sea delegado de esa familia). Auditoría en el mismo viaje.
+            const actor = await rsvpActor(session?.user?.id, null);
+            await db.batch([write, rsvpEventInsert({ familyId: id, status: data.globalRsvpStatus, actor })]);
+        } else {
+            await write;
+        }
     }
 
     invalidateFamilies();
@@ -160,7 +171,10 @@ export async function deleteFamily(id: number) {
     if (!hasPermission(session?.user?.permissions, "families.write")) {
         throw new Error("Sin permisos");
     }
-    await db.delete(families).where(eq(families.id, id));
+    await db.batch([
+        db.delete(rsvpEvents).where(eq(rsvpEvents.familyId, id)),
+        db.delete(families).where(eq(families.id, id)),
+    ]);
     invalidateFamilies();
     invalidateUsers();
 }

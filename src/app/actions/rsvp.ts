@@ -7,6 +7,7 @@ import { revalidatePath, updateTag } from "next/cache";
 import { auth } from "@/auth";
 import { getRsvpDeadline } from "@/lib/data";
 import { parseDietary } from "@/lib/diet";
+import { rsvpActor, rsvpEventInsert } from "@/lib/rsvpAudit";
 
 export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CONFIRMED' | 'DECLINED', userUpdates: { userId: number, isConfirmed: boolean, dietary?: string, dietaryNote?: string }[]) {
     // 1. Verify user authentication
@@ -44,7 +45,11 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
     if (status !== "CONFIRMED" && status !== "DECLINED") {
         throw new Error("Elige si asistirán o no.");
     }
-    const members = await db.select({ id: users.id }).from(users).where(eq(users.familyId, familyId)).all();
+    const members = await db
+        .select({ id: users.id, name: users.name, lastName: users.lastName, isConfirmed: users.isConfirmed })
+        .from(users)
+        .where(eq(users.familyId, familyId))
+        .all();
     const memberIds = new Set(members.map((m) => m.id));
     const updates = userUpdates
         .filter((u) => memberIds.has(u.userId))
@@ -58,9 +63,19 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
         throw new Error("Marca al menos a una persona que asistirá.");
     }
 
+    // Auditoría: quién respondió y la asistencia resultante de cada integrante.
+    const attending = new Map(updates.map((u) => [u.userId, u.isConfirmed]));
+    const attendees = members.map((m) => ({
+        userId: m.id,
+        name: `${m.name} ${m.lastName}`.trim(),
+        attending: attending.get(m.id) ?? (status === "CONFIRMED" && Boolean(m.isConfirmed)),
+    }));
+    const actor = await rsvpActor(session.user.id, dbFamily.delegateUserId);
+
     // 6-7. Estado de la familia + asistencia de cada miembro (acotado a la familia
-    // aunque el cliente envíe otros ids), en un solo viaje a la base.
+    // aunque el cliente envíe otros ids) + registro de auditoría, en un solo viaje.
     await db.batch([
+        rsvpEventInsert({ familyId, status, actor, attendees }),
         db.update(families)
             .set({ globalRsvpStatus: status })
             .where(eq(families.id, familyId)),
