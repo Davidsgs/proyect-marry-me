@@ -46,6 +46,7 @@ import { Dialog } from "@/components/Dialog";
 import { DatePicker } from "@/components/DatePicker";
 import { GrowText } from "@/components/GrowText";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { isImeEnter } from "@/lib/keys";
 import { PersonPicker, type Person } from "@/app/admin/_components/PersonPicker";
 import { parseLocalDate } from "@/lib/dates";
 import {
@@ -155,7 +156,7 @@ export default function CronogramaManager({ initialActivities, initialSections, 
     function handleSortByTime() {
         if (!editable) return;
         const byTime = (a: Activity, b: Activity) => (!a.time && !b.time ? 0 : !a.time ? 1 : !b.time ? -1 : a.time.localeCompare(b.time));
-        const next = groups.flatMap((g) => [...g.items].sort(byTime)).map((a, i) => ({ ...a, sortOrder: i }));
+        const next = groups.flatMap((g) => g.items.toSorted(byTime)).map((a, i) => ({ ...a, sortOrder: i }));
         mutate(() => next, () => reorderActivities(next.map((a) => a.id)), { ok: "Ordenado por hora", error: "No se pudo reordenar" });
     }
 
@@ -927,7 +928,7 @@ function ActivityDetail({
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
-                                        handleAddTask();
+                                        if (!isImeEnter(e)) handleAddTask();
                                     }
                                 }}
                                 placeholder="Añadir paso…"

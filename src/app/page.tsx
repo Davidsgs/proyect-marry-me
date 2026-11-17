@@ -13,10 +13,16 @@ export default async function Home() {
 
   return (
     <main className="relative min-h-dvh flex items-center justify-center overflow-hidden bg-noche text-crema">
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/background-placeholder.webp')" }}
+      {/* Foto de fondo como <img> (no background-image): es el LCP de la portada y
+          así el navegador la descubre en el HTML y la pide con prioridad alta. */}
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/background-placeholder.webp"
+        alt=""
         aria-hidden
+        fetchPriority="high"
+        decoding="async"
+        className="absolute inset-0 h-full w-full object-cover object-center"
       />
       <div className="absolute inset-0 bg-noche/75" aria-hidden />
 

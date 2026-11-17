@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef } from "react";
+import { useLightDismissFallback } from "@/lib/useLightDismissFallback";
 import { X } from "lucide-react";
 
 // <dialog> nativo: foco atrapado, Escape y clic fuera cierran. En móvil se
-// presenta como hoja inferior; desde sm, centrado.
+// presenta como hoja inferior; desde sm, centrado. El clic fuera usa
+// closedby="any" (con respaldo para Safari): pulsar dentro, arrastrar para
+// seleccionar texto y soltar en el fondo ya no cierra el formulario.
 export function Dialog({
     open,
     onClose,
@@ -33,18 +36,22 @@ export function Dialog({
         if (!open && el.open) el.close();
     }, [open]);
 
+    useLightDismissFallback(ref, onClose);
+
     const width = { sm: "sm:max-w-sm", md: "sm:max-w-lg", lg: "sm:max-w-2xl", xl: "sm:max-w-4xl" }[size];
 
     return (
         <dialog
             ref={ref}
+            {...({ closedby: "any" } as object)}
             aria-labelledby={labelledBy ?? (title ? titleId : undefined)}
             onCancel={(e) => {
                 e.preventDefault();
                 onClose();
             }}
-            onClick={(e) => {
-                if (e.target === ref.current) onClose();
+            // Si el navegador lo cerró igualmente (p. ej. Escape repetido), sincronizar el estado.
+            onClose={() => {
+                if (open) onClose();
             }}
             className={`m-0 mt-auto w-full max-w-none max-h-[92dvh] rounded-t-3xl bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-tinta/35 open:animate-in open:slide-in-from-bottom-6 open:fade-in open:duration-200 sm:m-auto sm:rounded-3xl sm:open:slide-in-from-bottom-0 sm:open:zoom-in-95 ${width}`}
         >

@@ -48,6 +48,8 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
     // se guarda; si falla, vuelve el formulario con lo elegido y un mensaje de error.
     const [optimistic, setOptimistic] = useOptimistic<{ family: Props["family"]; members: Props["members"] } | null>(null);
     const [, startTransition] = useTransition();
+    // Al enviar un «sí», el resumen se abre con pétalos (una vez por envío).
+    const [celebrate, setCelebrate] = useState(false);
 
     const attendingCount = members.filter((m) => memberStatus[m.id]).length;
     const needsSomeone = status === "CONFIRMED" && attendingCount === 0;
@@ -71,6 +73,7 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                 members: members.map((m) => ({ ...m, ...byId.get(m.id) })),
             });
             setEditing(false);
+            setCelebrate(status === "CONFIRMED");
             try {
                 await updateFamilyRsvp(family.id, status, updates);
                 router.refresh();
@@ -90,7 +93,8 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                     members={shown.members}
                     deadline={deadline}
                     isLockedHard={isLockedHard}
-                    onModify={() => setEditing(true)}
+                    onModify={() => { setCelebrate(false); setEditing(true); }}
+                    celebrate={celebrate}
                 />
             </div>
         );

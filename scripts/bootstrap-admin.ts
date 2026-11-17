@@ -3,7 +3,7 @@ config({ path: ".env.local" });
 
 import { eq, and } from "drizzle-orm";
 
-const TARGET_EMAIL = process.argv[2];
+const TARGET_EMAIL = process.argv[2]?.trim().toLowerCase();
 const TARGET_NAME = process.argv[3] ?? "David";
 const TARGET_LAST_NAME = process.argv[4] ?? "García Sánchez";
 

@@ -1,5 +1,6 @@
 import NextAuth from "next-auth"
 import Google from "next-auth/providers/google"
+import { normalizeEmail } from "@/lib/email";
 import { db } from "@/db"
 import { users } from "@/db/schema"
 import { eq } from "drizzle-orm"
@@ -25,7 +26,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             if (account?.provider !== "google") {
                 return false; // Only allow google
             }
-            const email = user?.email;
+            const email = normalizeEmail(user?.email);
             if (!email) {
                 return false; // Return false to indicate access denied
             }
@@ -45,7 +46,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             // When user signs in, user object is available
             if (user?.email) {
                 try {
-                    const dbUser = await db.select().from(users).where(eq(users.email, user.email)).get();
+                    const dbUser = await db.select().from(users).where(eq(users.email, normalizeEmail(user.email)!)).get();
                     if (dbUser) {
                         token.uid = dbUser.id;
                         token.role = dbUser.role;

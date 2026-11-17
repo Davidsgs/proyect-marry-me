@@ -9,6 +9,7 @@ import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 import { getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
+import { declined } from "@/lib/attendance";
 import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
 import {
     CheckCircle2,
@@ -19,6 +20,7 @@ import {
     UserX,
     MailQuestion,
     AlertTriangle,
+    Baby,
     Plus,
     type LucideIcon,
 } from "lucide-react";
@@ -86,8 +88,8 @@ export default async function AdminPage() {
     // Tareas
     const pendingTasks = allTasks.filter((t) => !t.isCompleted);
     const overdueTasks = pendingTasks.filter((t) => t.dueDate && t.dueDate < today);
-    const upcomingTasks = [...pendingTasks]
-        .sort((a, b) => {
+    const upcomingTasks = pendingTasks
+        .toSorted((a, b) => {
             if (!a.dueDate && !b.dueDate) return 0;
             if (!a.dueDate) return 1;
             if (!b.dueDate) return -1;
@@ -123,6 +125,20 @@ export default async function AdminPage() {
             href: "/admin/guests?filtro=sin-responder",
         });
     }
+    // Familias con menores sin marcar como «familia directa»: ven la nota de
+    // celebración sin niños aunque sus niños estén invitados.
+    const familiesWithMinors = new Set(guestUsers.filter((u) => u.ageCategory !== "ADULT").map((u) => u.familyId));
+    const minorsNotDirect = families.filter((f) => !f.isDirectFamily && familiesWithMinors.has(f.id));
+    if (minorsNotDirect.length > 0) {
+        pending.push({
+            key: "minors-not-direct",
+            icon: Baby,
+            tone: "warn",
+            title: `${minorsNotDirect.length} ${minorsNotDirect.length === 1 ? "familia con niños ve" : "familias con niños ven"} la nota «sin niños»`,
+            detail: "Márcalas como familia directa si sus niños están invitados. " + namesPreview(minorsNotDirect.map((f) => f.name)),
+            href: "/admin/guests?filtro=con-ninos",
+        });
+    }
     if (overdueTasks.length > 0) {
         pending.push({
             key: "overdue-tasks",
@@ -149,6 +165,18 @@ export default async function AdminPage() {
             icon: Armchair,
             title: `${confirmedUnseated} ${confirmedUnseated === 1 ? "confirmado sin mesa" : "confirmados sin mesa"}`,
             detail: "Asígnales mesa antes de imprimir el plano.",
+            href: "/admin/tables",
+        });
+    }
+    const seatedNotComing = canReadTables
+        ? guestUsers.filter((u) => u.tableId != null && declined(u, families.find((f) => f.id === u.familyId)))
+        : [];
+    if (seatedNotComing.length > 0) {
+        pending.push({
+            key: "seated-not-coming",
+            icon: UserX,
+            title: `${seatedNotComing.length} ${seatedNotComing.length === 1 ? "persona que no viene ocupa" : "personas que no vienen ocupan"} una silla`,
+            detail: "Libera sus sillas para que no cuenten en el plano. " + namesPreview(seatedNotComing.map((u) => `${u.name} ${u.lastName}`)),
             href: "/admin/tables",
         });
     }

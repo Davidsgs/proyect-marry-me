@@ -6,6 +6,7 @@ import { getTables } from "@/app/actions/tables";
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import PrintButton from "./PrintButton";
 import { dietaryText } from "@/lib/diet";
+import { declined } from "@/lib/attendance";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,8 @@ export default async function SeatingChartPage() {
 
     const [tables, families, users] = await Promise.all([getTables(), getFamilies(), getUsers()]);
 
-    const familyName = (id: number | null) => families.find((f) => f.id === id)?.name ?? "Sin familia";
+    const familyOf = (id: number | null) => families.find((f) => f.id === id);
+    const familyName = (id: number | null) => familyOf(id)?.name ?? "Sin familia";
     const membersOf = (tableId: number) =>
         users
             .filter((u) => u.tableId === tableId && u.familyId != null)
@@ -44,6 +46,7 @@ export default async function SeatingChartPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 print:grid-cols-2 print:gap-4">
                         {tables.map((table) => {
                             const members = membersOf(table.id);
+                            const notComing = members.filter((m) => declined(m, familyOf(m.familyId))).length;
                             return (
                                 <div
                                     key={table.id}
@@ -54,7 +57,10 @@ export default async function SeatingChartPage() {
                                             Mesa {table.number}
                                             {table.name && <span className="text-neutral-600 text-base font-sans"> · {table.name}</span>}
                                         </h2>
-                                        <span className="text-xs tabular-nums text-neutral-600">{members.length}/{table.capacity}</span>
+                                        <span className="text-xs tabular-nums text-neutral-600">
+                                            {members.length}/{table.capacity}
+                                            {notComing > 0 && ` · ${notComing} no ${notComing === 1 ? "viene" : "vienen"}`}
+                                        </span>
                                     </div>
                                     {members.length === 0 ? (
                                         <p className="text-sm text-neutral-600">Sin invitados asignados</p>
@@ -64,10 +70,11 @@ export default async function SeatingChartPage() {
                                                 <li key={m.id} className="flex justify-between gap-2">
                                                     <span>
                                                         <span className="text-neutral-500 mr-2 tabular-nums">{i + 1}.</span>
-                                                        {m.name} {m.lastName}
+                                                        <span className={declined(m, familyOf(m.familyId)) ? "line-through text-neutral-500" : ""}>{m.name} {m.lastName}</span>
                                                         {AGE_TAG[m.ageCategory] && (
                                                             <span className="text-neutral-600"> ({AGE_TAG[m.ageCategory]})</span>
                                                         )}
+                                                        {declined(m, familyOf(m.familyId)) && <span className="ml-1 text-xs text-neutral-600"> · no viene</span>}
                                                         {dietaryText(m.dietary, m.dietaryNote) && (
                                                             <span className="ml-1 text-xs font-medium"> · {dietaryText(m.dietary, m.dietaryNote)}</span>
                                                         )}

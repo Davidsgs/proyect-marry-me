@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { isImeEnter } from "@/lib/keys";
 import { GrowText } from "@/components/GrowText";
 import { isTemp, pendingRowCls, tempId } from "@/app/admin/_components/optimistic";
 import { draftUser, useGuestsMutate, type Family, type User } from "./guestsStore";
@@ -8,7 +9,9 @@ import { createManyUsers, deleteFamily, updateFamily, updateUser } from "@/app/a
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
 import { Checkbox, Chip, btnGhost, btnPrimary, btnSecondary, iconBtn, inputCls, inputSmCls, selectCls } from "@/app/admin/_components/ui";
 import { dietaryText } from "@/lib/diet";
-import { Check, Pencil, Plus, Trash2, UserMinus, X } from "lucide-react";
+import { Check, Copy, MessageCircle, Pencil, Plus, Send, Trash2, UserMinus, X } from "lucide-react";
+import { useNotify } from "@/app/admin/_components/Notice";
+import { WEDDING_DATE_LABEL } from "@/lib/wedding";
 
 type RsvpStatus = "PENDING" | "CONFIRMED" | "DECLINED";
 type AgeCategory = "BABY" | "CHILD" | "ADULT";
@@ -25,6 +28,7 @@ export default function FamilyDetail({
     users,
     canWriteFamilies,
     canWriteUsers,
+    deadlineLabel = null,
     onClose,
     registerClose,
 }: {
@@ -32,6 +36,7 @@ export default function FamilyDetail({
     users: User[];
     canWriteFamilies: boolean;
     canWriteUsers: boolean;
+    deadlineLabel?: string | null;
     onClose: () => void;
     /** Permite al contenedor (hoja móvil) pedir el cierre con la comprobación de cambios. */
     registerClose?: (fn: () => void) => void;
@@ -205,6 +210,10 @@ export default function FamilyDetail({
                     {error && <p role="alert" className="text-sm text-error">{error}</p>}
                 </section>
 
+                {family.globalRsvpStatus === "PENDING" && (
+                    <Reminder family={family} delegate={members.find((m) => m.id === family.delegateUserId) ?? null} deadlineLabel={deadlineLabel} />
+                )}
+
                 {/* Integrantes */}
                 <section aria-labelledby="fd-miembros" className="space-y-3">
                     <div className="flex items-center gap-2">
@@ -277,6 +286,59 @@ export default function FamilyDetail({
 }
 
 // Añadir integrante: una persona nueva o alguien que ya está en Invitados sin familia.
+const noopSubscribe = () => () => {};
+
+// Recordatorio para una familia que aún no respondió: texto listo para copiar o
+// abrir en WhatsApp, dirigido al delegado (quien confirma por todos).
+function Reminder({ family, delegate, deadlineLabel }: { family: Family; delegate: User | null; deadlineLabel: string | null }) {
+    const notify = useNotify();
+    // Dirección de la invitación (este mismo sitio); vacía en el servidor.
+    const url = useSyncExternalStore(noopSubscribe, () => window.location.origin, () => "");
+    const h3 = "text-sm font-semibold text-on-surface flex items-center gap-2";
+
+    if (!delegate?.email) {
+        return (
+            <section aria-labelledby="fd-recordatorio" className="space-y-2">
+                <h3 id="fd-recordatorio" className={h3}><Send className="w-4 h-4" aria-hidden /> Recordatorio</h3>
+                <p className="text-sm text-on-surface-variant">
+                    {delegate ? `${delegate.name} no tiene correo: añádeselo para poder enviarle el recordatorio.` : "Elige un delegado con correo para poder enviarle el recordatorio."}
+                </p>
+            </section>
+        );
+    }
+
+    const message =
+        `¡Hola, ${delegate.name}! Te escribimos por nuestra boda (${WEDDING_DATE_LABEL}). ` +
+        `¿Nos confirmas quiénes de tu familia vienen? Entra en ${url} con tu cuenta de Google (${delegate.email})` +
+        (deadlineLabel ? ` antes del ${deadlineLabel}` : "") +
+        ". ¡Gracias! David y Rocío";
+
+    async function copy() {
+        try {
+            await navigator.clipboard.writeText(message);
+            notify("Recordatorio copiado");
+        } catch {
+            notify("No se pudo copiar el recordatorio. Selecciona el texto y cópialo a mano.", "error");
+        }
+    }
+
+    return (
+        <section aria-labelledby="fd-recordatorio" className="space-y-3">
+            <h3 id="fd-recordatorio" className={h3}><Send className="w-4 h-4" aria-hidden /> Recordatorio para {delegate.name}</h3>
+            <p className="rounded-xl bg-surface-container-low px-4 py-3 text-sm leading-relaxed text-on-surface select-all">{message}</p>
+            <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={copy} className={btnSecondary}>
+                    <Copy className="w-4 h-4" aria-hidden /> Copiar
+                </button>
+                <a href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noopener noreferrer" className={btnSecondary}>
+                    <MessageCircle className="w-4 h-4" aria-hidden /> Enviar por WhatsApp
+                </a>
+            </div>
+            <p className="text-xs text-on-surface-variant">{family.name} aún no respondió. WhatsApp te deja elegir el chat.</p>
+        </section>
+    );
+}
+
 function AddMember({
     familyId,
     familyLastName,
@@ -468,7 +530,7 @@ function MemberEmail({ member, diet, canEdit }: { member: User; diet: string | n
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); save(); }
+                            if (e.key === "Enter") { e.preventDefault(); if (!isImeEnter(e)) save(); }
                             if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancel(); }
                         }}
                         aria-label={`Correo de ${fullName}`}

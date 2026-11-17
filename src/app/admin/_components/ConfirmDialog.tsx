@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useId, useRef, useState } from "react";
+import { useLightDismissFallback } from "@/lib/useLightDismissFallback";
 import { btnDanger, btnGhost, btnPrimary } from "./ui";
 
 // Confirmación propia del panel (sustituye al confirm() del navegador).
@@ -26,14 +27,22 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const resolveRef = useRef<((ok: boolean) => void) | null>(null);
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
+  const titleId = useId();
+  // Solo refs: estable entre renders.
+  const dismiss = useCallback(() => {
+    resolveRef.current?.(false);
+    resolveRef.current = null;
+    dialogRef.current?.close();
+  }, []);
+  useLightDismissFallback(dialogRef, dismiss);
 
   const confirm = useCallback((next: ConfirmOptions) => {
     resolveRef.current?.(false);
     setOpts(next);
     dialogRef.current?.showModal();
-    return new Promise<boolean>((resolve) => {
-      resolveRef.current = resolve;
-    });
+    const { promise, resolve } = Promise.withResolvers<boolean>();
+    resolveRef.current = resolve;
+    return promise;
   }, []);
 
   function close(ok: boolean) {
@@ -49,15 +58,17 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
       {children}
       <dialog
         ref={dialogRef}
-        // Escape o clic fuera = cancelar.
+        // Escape o clic fuera (closedby="any", con respaldo para Safari) = cancelar.
+        {...({ closedby: "any" } as object)}
+        aria-labelledby={titleId}
         onCancel={() => close(false)}
-        onClick={(e) => { if (e.target === dialogRef.current) close(false); }}
+        onClose={() => { resolveRef.current?.(false); resolveRef.current = null; }}
         className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-3xl bg-surface-container-lowest p-0 text-on-surface shadow-xl backdrop:bg-tinta/35 open:animate-in open:fade-in open:zoom-in-95 open:duration-150"
       >
         {opts && (
           <div className="p-6 space-y-5">
             <div className="space-y-2">
-              <h2 className="font-serif text-2xl leading-tight text-on-surface text-balance">{opts.title}</h2>
+              <h2 id={titleId} className="font-serif text-2xl leading-tight text-on-surface text-balance">{opts.title}</h2>
               {opts.description && (
                 <p className="text-sm font-sans text-on-surface-variant text-pretty">{opts.description}</p>
               )}

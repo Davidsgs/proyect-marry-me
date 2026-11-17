@@ -8,6 +8,7 @@ import { cachedFamilies, cachedUsers } from "@/lib/data";
 import { auth } from "@/auth";
 import { hasPermission, BASELINE_ADMIN_PERMS } from "@/lib/permissions";
 import { aliasError, slugifyAlias, uniqueAlias } from "@/lib/alias";
+import { normalizeEmail } from "@/lib/email";
 
 type UserRole = "ADMIN" | "MAIN_GUEST" | "GUEST";
 
@@ -170,7 +171,7 @@ export async function createUser(data: { email?: string | null, name: string, la
         throw new Error("Sin permisos");
     }
     const fullname = `${data.name} ${data.lastName}`.trim();
-    const email = data.email && data.email.trim() !== "" ? data.email.trim() : null;
+    const email = normalizeEmail(data.email);
     const inserted = await db.insert(users).values({
         alias: uniqueAlias(slugifyAlias(fullname), await takenAliases()),
         email,
@@ -206,7 +207,7 @@ export async function createManyUsers(
     const taken = await takenAliases();
     for (const member of clean) {
         const fullname = `${member.name} ${member.lastName}`.trim();
-        const email = member.email && member.email.trim() !== "" ? member.email.trim() : null;
+        const email = normalizeEmail(member.email);
         const inserted = await db.insert(users).values({
             alias: uniqueAlias(slugifyAlias(fullname), taken),
             email,
@@ -244,7 +245,7 @@ export async function updateUser(id: number, data: { email?: string | null; alia
 
     const updateSet: Record<string, unknown> = {};
     if (data.email !== undefined) {
-        updateSet.email = data.email && data.email.trim() !== "" ? data.email.trim() : null;
+        updateSet.email = normalizeEmail(data.email);
     }
     if (data.alias !== undefined) {
         const alias = data.alias.trim().toLowerCase();
