@@ -1,6 +1,7 @@
 "use client";
 
 import { useImperativeHandle, useLayoutEffect, useRef } from "react";
+import { isImeEnter } from "@/lib/keys";
 
 // Campo de texto que crece hacia abajo cuando el contenido no cabe, para poder
 // leerlo entero. Por defecto es de una línea: Enter envía el formulario y los
@@ -44,8 +45,9 @@ export function GrowText({ multiline = false, className = "", onKeyDown, onChang
             }}
             onKeyDown={(e) => {
                 onKeyDown?.(e);
-                if (e.defaultPrevented || multiline || e.key !== "Enter" || e.shiftKey || e.nativeEvent.isComposing) return;
+                if (e.defaultPrevented || multiline || e.key !== "Enter" || e.shiftKey) return;
                 e.preventDefault();
+                if (isImeEnter(e)) return;
                 e.currentTarget.form?.requestSubmit();
             }}
             className={`field-sizing-content resize-none ${multiline ? "max-h-[60vh] overflow-y-auto" : "overflow-hidden leading-6"} ${className}`}

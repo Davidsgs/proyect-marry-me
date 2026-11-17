@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { isImeEnter } from "@/lib/keys";
 import { GrowText } from "@/components/GrowText";
 import { isTemp, pendingRowCls, tempId } from "@/app/admin/_components/optimistic";
 import { draftUser, useGuestsMutate, type Family, type User } from "./guestsStore";
@@ -468,7 +469,7 @@ function MemberEmail({ member, diet, canEdit }: { member: User; diet: string | n
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); save(); }
+                            if (e.key === "Enter") { e.preventDefault(); if (!isImeEnter(e)) save(); }
                             if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); cancel(); }
                         }}
                         aria-label={`Correo de ${fullName}`}

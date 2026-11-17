@@ -46,6 +46,7 @@ import { Dialog } from "@/components/Dialog";
 import { DatePicker } from "@/components/DatePicker";
 import { GrowText } from "@/components/GrowText";
 import { useMediaQuery } from "@/lib/useMediaQuery";
+import { isImeEnter } from "@/lib/keys";
 import { PersonPicker, type Person } from "@/app/admin/_components/PersonPicker";
 import { parseLocalDate } from "@/lib/dates";
 import {
@@ -927,7 +928,7 @@ function ActivityDetail({
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
-                                        handleAddTask();
+                                        if (!isImeEnter(e)) handleAddTask();
                                     }
                                 }}
                                 placeholder="Añadir paso…"

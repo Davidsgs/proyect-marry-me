@@ -3,6 +3,7 @@
 import { useId, useRef, useState } from "react";
 import { Plus, UserCheck } from "lucide-react";
 import { inputSmCls } from "./ui";
+import { isImeEnter } from "@/lib/keys";
 
 /** Invitado que se puede elegir (solo nombre y alias; nunca correos). */
 export type Person = { id: number; name: string; alias: string | null };
@@ -61,6 +62,7 @@ export function PersonPicker({
                     onKeyDown={(e) => {
                         if (e.key === "Enter") {
                             e.preventDefault();
+                            if (isImeEnter(e)) return;
                             if (onFree) addFree();
                             else if (matches.length === 1) pick(matches[0]);
                         } else if (e.key === "ArrowDown" && matches.length) {
