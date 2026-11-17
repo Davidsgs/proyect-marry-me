@@ -35,7 +35,7 @@ import { Checkbox, EmptyState, btnGhost, btnPrimary, btnSecondary, iconBtn, icon
 import { Dialog } from "@/components/Dialog";
 import { GrowText } from "@/components/GrowText";
 import {
-    Move, Plus, Pencil, Trash2, Star, Copy, Shapes, Check, Pipette, ZoomIn, ZoomOut, LocateFixed,
+    Move, Plus, Pencil, Trash2, Star, Copy, Shapes, Check, Pipette, ZoomIn, ZoomOut, LocateFixed, Grid3x3,
     Music, Cake, Disc3, Wine, Mic, Camera, DoorOpen, type LucideIcon,
 } from "lucide-react";
 
@@ -51,10 +51,11 @@ const GAP_X = 200;
 const GAP_Y = 150;
 const PAD = 20;
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
-// Zoom del plano: límites y paso de los botones.
+// Zoom del plano: límites, paso de los botones y lado de cada celda de la cuadrícula.
 const ZOOM_MIN = 0.3;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 1.2;
+const GRID = 40;
 const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 // Elementos del plano que no son mesas: nombre, icono, color de marca y tamaño inicial.
@@ -140,9 +141,10 @@ export default function TablePlan({
         useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     );
     // ── Vista del lienzo: zoom (rueda en PC, pellizco en el móvil, botones), arrastre
-    // del fondo para desplazarse y centrar. Las posiciones guardadas
+    // del fondo para desplazarse, centrar y cuadrícula. Las posiciones guardadas
     // siguen en coordenadas del plano: el zoom solo cambia cómo se ve.
     const [zoom, setZoom] = useState(1);
+    const [grid, setGrid] = useState(false);
     const viewport = useRef<HTMLDivElement>(null);
     // Zoom vigente para los manejadores de rueda y pellizco (se actualiza tras cada render).
     const zoomRef = useRef(zoom);
@@ -536,11 +538,20 @@ export default function TablePlan({
                     <button type="button" onClick={fit} className={btnGhost}>
                         <LocateFixed className="w-4 h-4" aria-hidden /> Centrar
                     </button>
+                    <button type="button" onClick={() => setGrid((g) => !g)} aria-pressed={grid} className={`${btnGhost} ${grid ? "bg-secondary-container text-on-secondary-container hover:bg-secondary-container" : ""}`}>
+                        <Grid3x3 className="w-4 h-4" aria-hidden /> Cuadrícula
+                    </button>
                 </div>
                 {/* touch-action: un dedo desplaza (nativo); el pellizco lo maneja el plano. */}
                 <div
                     ref={viewport}
                     onPointerDown={panStart}
+                    // Cuadrícula en toda la ventana: escala con el zoom y se desplaza con el plano (local).
+                    style={grid ? {
+                        backgroundImage: "linear-gradient(rgba(54,64,51,0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(54,64,51,0.1) 1px, transparent 1px)",
+                        backgroundSize: `${GRID * zoom}px ${GRID * zoom}px`,
+                        backgroundAttachment: "local",
+                    } : undefined}
                     className="flex h-[min(70vh,40rem)] overflow-auto overscroll-contain rounded-2xl bg-surface-container-low [touch-action:pan-x_pan-y] cursor-grab active:cursor-grabbing"
                 >
                     <DndContext id="tables-plan" sensors={sensors} onDragEnd={onDragEnd} onDragCancel={endDrag}>
