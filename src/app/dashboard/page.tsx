@@ -10,7 +10,8 @@ import WeddingMenu from "./_components/WeddingMenu";
 import WeddingParty from "./_components/WeddingParty";
 import { Arch } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
-import { SUPPORT_EMAIL } from "@/lib/wedding";
+import { DRESS_CODE, SUPPORT_EMAIL, VENUE, WEDDING_DATE_LABEL, WEDDING_WEEKDAY, daysUntilWedding } from "@/lib/wedding";
+import { CalendarHeart, Hourglass, MapPin, Shirt } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -62,6 +63,14 @@ export default async function DashboardPage() {
     }
 
     const isDelegate = session?.user?.id === family.delegateUserId || session?.user?.permissions?.includes('admin.dashboard');
+    const daysLeft = daysUntilWedding();
+    // Lo esencial de un vistazo, bajo el saludo; cada dato lleva a «El gran día».
+    const facts = [
+        { icon: CalendarHeart, text: `${WEDDING_WEEKDAY} ${WEDDING_DATE_LABEL.replace(/ de \d{4}$/, "")}` },
+        ...(daysLeft > 0 ? [{ icon: Hourglass, text: daysLeft === 1 ? "¡Es mañana!" : `Faltan ${daysLeft} días` }] : []),
+        { icon: MapPin, text: VENUE.address.split(" · ").pop() ?? VENUE.address },
+        { icon: Shirt, text: DRESS_CODE.style },
+    ];
 
     return (
         <>
@@ -79,6 +88,16 @@ export default async function DashboardPage() {
                             Nos hace muy felices compartir este día con ustedes.
                             {isDelegate ? " Cuéntanos quiénes vendrán." : ""}
                         </p>
+                        <ul aria-label="Lo esencial" className="mt-7 flex flex-wrap justify-center gap-2 animate-rise [animation-delay:80ms]">
+                            {facts.map(({ icon: Icon, text }) => (
+                                <li key={text}>
+                                    <a href="#el-dia" className="inline-flex items-center gap-2 min-h-11 px-4 rounded-full bg-crema/70 font-sans text-sm font-medium text-tinta hover:bg-crema transition-colors">
+                                        <Icon className="w-4 h-4 text-rosa-profundo shrink-0" aria-hidden />
+                                        {text}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
                     </div>
 
                     <section
