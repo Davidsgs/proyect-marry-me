@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
     DndContext,
     PointerSensor,
@@ -35,7 +35,7 @@ import { Checkbox, EmptyState, btnGhost, btnPrimary, btnSecondary, iconBtn, icon
 import { Dialog } from "@/components/Dialog";
 import { GrowText } from "@/components/GrowText";
 import {
-    Move, Plus, Pencil, Trash2, Star, Copy, Shapes, Check, Pipette,
+    Move, Plus, Pencil, Trash2, Star, Copy, Shapes, Check, Pipette, ZoomIn, ZoomOut, LocateFixed,
     Music, Cake, Disc3, Wine, Mic, Camera, DoorOpen, type LucideIcon,
 } from "lucide-react";
 
@@ -51,6 +51,11 @@ const GAP_X = 200;
 const GAP_Y = 150;
 const PAD = 20;
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
+// Zoom del plano: límites y paso de los botones.
+const ZOOM_MIN = 0.3;
+const ZOOM_MAX = 2;
+const ZOOM_STEP = 1.2;
+const clampZoom = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
 
 // Elementos del plano que no son mesas: nombre, icono, color de marca y tamaño inicial.
 export const ELEMENT_KINDS: { kind: ElementKind; label: string; icon: LucideIcon; cls: string; size: [number, number]; shape: ElementShape }[] = [
@@ -134,6 +139,125 @@ export default function TablePlan({
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
         useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
     );
+    // ── Vista del lienzo: zoom (rueda en PC, pellizco en el móvil, botones), arrastre
+    // del fondo para desplazarse y centrar. Las posiciones guardadas
+    // siguen en coordenadas del plano: el zoom solo cambia cómo se ve.
+    const [zoom, setZoom] = useState(1);
+    const viewport = useRef<HTMLDivElement>(null);
+    // Zoom vigente para los manejadores de rueda y pellizco (se actualiza tras cada render).
+    const zoomRef = useRef(zoom);
+    useLayoutEffect(() => {
+        zoomRef.current = zoom;
+    }, [zoom]);
+    // Punto que debe quedar quieto al cambiar el zoom (bajo el cursor o los dedos).
+    const anchor = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+
+    function zoomAt(next: number, px?: number, py?: number) {
+        const el = viewport.current;
+        const z = zoomRef.current;
+        const target = clampZoom(next);
+        if (!el || target === z) return;
+        const ax = px ?? el.clientWidth / 2;
+        const ay = py ?? el.clientHeight / 2;
+        anchor.current = { x: (el.scrollLeft + ax) / z, y: (el.scrollTop + ay) / z, px: ax, py: ay };
+        setZoom(target);
+    }
+
+    // «Centrar»: el zoom que hace entrar todo (sin pasar del 100 %) y el contenido en el
+    // medio. Mide las piezas en el DOM (offset* no incluye la escala del lienzo).
+    function fit() {
+        const el = viewport.current;
+        const nodes = el ? Array.from(el.querySelectorAll<HTMLElement>("[data-plan-node]")) : [];
+        if (!el || nodes.length === 0) return;
+        const minX = Math.min(...nodes.map((n) => n.offsetLeft));
+        const minY = Math.min(...nodes.map((n) => n.offsetTop));
+        const maxX = Math.max(...nodes.map((n) => n.offsetLeft + n.offsetWidth));
+        const maxY = Math.max(...nodes.map((n) => n.offsetTop + n.offsetHeight));
+        const margin = 32;
+        const z = clampZoom(Math.min(1, (el.clientWidth - margin * 2) / (maxX - minX), (el.clientHeight - margin * 2) / (maxY - minY)));
+        const a = { x: (minX + maxX) / 2, y: (minY + maxY) / 2, px: el.clientWidth / 2, py: el.clientHeight / 2 };
+        if (z === zoomRef.current) {
+            el.scrollLeft = a.x * z - a.px;
+            el.scrollTop = a.y * z - a.py;
+        } else {
+            anchor.current = a;
+            setZoom(z);
+        }
+    }
+
+    // Tras cambiar el zoom, desplaza para que el punto de anclaje no se mueva.
+    useLayoutEffect(() => {
+        const el = viewport.current;
+        const a = anchor.current;
+        if (!el || !a) return;
+        anchor.current = null;
+        el.scrollLeft = a.x * zoom - a.px;
+        el.scrollTop = a.y * zoom - a.py;
+    }, [zoom]);
+
+    // Rueda y pellizco: escuchas no pasivas para poder evitar el scroll y el zoom de la página.
+    useEffect(() => {
+        const el = viewport.current;
+        if (!el) return;
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault();
+            const r = el.getBoundingClientRect();
+            zoomAt(zoomRef.current * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+        };
+        let pinch: { dist: number; zoom: number } | null = null;
+        const distOf = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+        const onTouchStart = (e: TouchEvent) => {
+            if (e.touches.length === 2) pinch = { dist: distOf(e.touches), zoom: zoomRef.current };
+        };
+        const onTouchMove = (e: TouchEvent) => {
+            if (!pinch || e.touches.length !== 2) return;
+            e.preventDefault();
+            const r = el.getBoundingClientRect();
+            const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
+            const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
+            zoomAt(pinch.zoom * (distOf(e.touches) / pinch.dist), mx, my);
+        };
+        const onTouchEnd = (e: TouchEvent) => {
+            if (e.touches.length < 2) pinch = null;
+        };
+        el.addEventListener("wheel", onWheel, { passive: false });
+        el.addEventListener("touchstart", onTouchStart, { passive: true });
+        el.addEventListener("touchmove", onTouchMove, { passive: false });
+        el.addEventListener("touchend", onTouchEnd);
+        el.addEventListener("touchcancel", onTouchEnd);
+        return () => {
+            el.removeEventListener("wheel", onWheel);
+            el.removeEventListener("touchstart", onTouchStart);
+            el.removeEventListener("touchmove", onTouchMove);
+            el.removeEventListener("touchend", onTouchEnd);
+            el.removeEventListener("touchcancel", onTouchEnd);
+        };
+    });
+
+    // Al abrir el plano o cambiar de área o alternativa, se encuadra todo.
+    useEffect(() => {
+        const id = requestAnimationFrame(() => fit());
+        return () => cancelAnimationFrame(id);
+    }, [areaId, layoutByArea]);
+
+    // Con el ratón, arrastrar el fondo desplaza el plano (la rueda ahora hace zoom).
+    function panStart(e: React.PointerEvent<HTMLDivElement>) {
+        const el = viewport.current;
+        if (!el || e.pointerType !== "mouse" || e.button !== 0) return;
+        if ((e.target as HTMLElement).closest("[data-plan-node]")) return;
+        const start = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
+        const move = (ev: PointerEvent) => {
+            el.scrollLeft = start.left - (ev.clientX - start.x);
+            el.scrollTop = start.top - (ev.clientY - start.y);
+        };
+        const up = () => {
+            window.removeEventListener("pointermove", move);
+            window.removeEventListener("pointerup", up);
+        };
+        window.addEventListener("pointermove", move);
+        window.addEventListener("pointerup", up);
+    }
+
     // Al soltar tras arrastrar, el navegador dispara también un clic: no abrir el editor.
     const justDragged = useRef(false);
     const openIfClick = (fn: () => void) => () => {
@@ -171,6 +295,7 @@ export default function TablePlan({
     const canvasW = Math.max(COLS * GAP_X + PAD * 2, ...placedTables.map(({ pos }) => pos.x + NODE_W + PAD), ...placedElements.map(({ e, pos }) => pos.x + e.width + PAD));
     const canvasH = Math.max(520, ...placedTables.map(({ pos }) => pos.y + NODE_H + PAD), ...placedElements.map(({ e, pos }) => pos.y + e.height + PAD));
 
+
     function upsertPos(layoutId: number, item: { tableId: number } | { elementId: number }, pos: Pos): Patch<FloorPlan> {
         return (p) => {
             const isTable = "tableId" in item;
@@ -194,7 +319,8 @@ export default function TablePlan({
             ? placedTables.find((p) => p.t.id === id)?.pos
             : placedElements.find((p) => p.e.id === id)?.pos;
         if (!base) return;
-        const pos = { x: Math.max(0, Math.round(base.x + event.delta.x)), y: Math.max(0, Math.round(base.y + event.delta.y)) };
+        // El arrastre llega en píxeles de pantalla: con zoom, se pasan a coordenadas del plano.
+        const pos = { x: Math.max(0, Math.round(base.x + event.delta.x / zoom)), y: Math.max(0, Math.round(base.y + event.delta.y / zoom)) };
         const item = type === "t" ? { tableId: id } : { elementId: id };
         mutate(upsertPos(layout.id, item, pos), () => setItemPosition(layout.id, item, pos.x, pos.y), { error: type === "t" ? "No se pudo mover la mesa" : "No se pudo mover el elemento" });
     }
@@ -396,23 +522,49 @@ export default function TablePlan({
                 {canWrite
                     ? "Arrastra mesas y elementos (en el móvil, mantén pulsado) para recrear la distribución. Toca uno para editarlo. Todo se guarda solo."
                     : "Distribución del área (solo lectura)."}
+                {" "}Acerca o aleja con la rueda del ratón o pellizcando.
             </p>
 
             {areaTables.length === 0 && areaElements.length === 0 ? (
                 <EmptyState message={canWrite ? "Esta área está vacía. Asigna mesas desde «Editar mesa» o añade elementos como la pista o la mesa dulce." : "Esta área está vacía."} />
             ) : (
-                <div className="overflow-auto overscroll-contain rounded-2xl bg-surface-container-low">
+                <div className="space-y-2">
+                <div role="toolbar" aria-label="Vista del plano" className="flex flex-wrap items-center justify-end gap-1">
+                    <button type="button" onClick={() => zoomAt(zoom / ZOOM_STEP)} disabled={zoom <= ZOOM_MIN} className={iconBtn} aria-label="Alejar"><ZoomOut className="w-4 h-4" /></button>
+                    <span className="min-w-12 text-center text-label font-medium tabular-nums text-on-surface-variant" aria-live="polite">{Math.round(zoom * 100)} %</span>
+                    <button type="button" onClick={() => zoomAt(zoom * ZOOM_STEP)} disabled={zoom >= ZOOM_MAX} className={iconBtn} aria-label="Acercar"><ZoomIn className="w-4 h-4" /></button>
+                    <button type="button" onClick={fit} className={btnGhost}>
+                        <LocateFixed className="w-4 h-4" aria-hidden /> Centrar
+                    </button>
+                </div>
+                {/* touch-action: un dedo desplaza (nativo); el pellizco lo maneja el plano. */}
+                <div
+                    ref={viewport}
+                    onPointerDown={panStart}
+                    className="flex h-[min(70vh,40rem)] overflow-auto overscroll-contain rounded-2xl bg-surface-container-low [touch-action:pan-x_pan-y] cursor-grab active:cursor-grabbing"
+                >
                     <DndContext id="tables-plan" sensors={sensors} onDragEnd={onDragEnd} onDragCancel={endDrag}>
-                        <div className="relative" style={{ width: canvasW, height: canvasH }}>
+                        {/* El tamaño escalado da el área de scroll; m-auto centra el plano si es más chico que la ventana. */}
+                        <div className="relative m-auto shrink-0" style={{ width: canvasW * zoom, height: canvasH * zoom }}>
+                        <div
+                            className="absolute left-0 top-0 origin-top-left"
+                            style={{
+                                width: canvasW,
+                                height: canvasH,
+                                transform: `scale(${zoom})`,
+                            }}
+                        >
                             {/* Elementos debajo de las mesas: la pista suele quedar rodeada de mesas */}
                             {placedElements.map(({ e, pos }) => (
-                                <ElementNode key={e.id} element={e} pos={pos} canWrite={canWrite && !layoutBusy} onOpen={openIfClick(() => setDialog({ kind: "element-edit", element: e }))} />
+                                <ElementNode key={e.id} element={e} pos={pos} zoom={zoom} canWrite={canWrite && !layoutBusy} onOpen={openIfClick(() => setDialog({ kind: "element-edit", element: e }))} />
                             ))}
                             {placedTables.map(({ t, pos }) => (
-                                <TableNode key={t.id} table={t} pos={pos} count={membersByTable.get(t.id)?.length ?? 0} canWrite={canWrite && !layoutBusy} onOpen={openIfClick(() => onEditTable(t))} />
+                                <TableNode key={t.id} table={t} pos={pos} zoom={zoom} count={membersByTable.get(t.id)?.length ?? 0} canWrite={canWrite && !layoutBusy} onOpen={openIfClick(() => onEditTable(t))} />
                             ))}
                         </div>
+                        </div>
                     </DndContext>
+                </div>
                 </div>
             )}
 
@@ -453,24 +605,26 @@ export default function TablePlan({
 
 // ── Piezas del lienzo ────────────────────────────────────────────────────────
 
-function useNodeDrag(id: string, canWrite: boolean, pos: Pos) {
+function useNodeDrag(id: string, canWrite: boolean, pos: Pos, zoom: number) {
     const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id, disabled: !canWrite });
     const style: React.CSSProperties = {
         position: "absolute",
         left: pos.x,
         top: pos.y,
-        transform: transform ? CSS.Translate.toString(transform) : undefined,
+        // El lienzo está escalado: el desplazamiento del arrastre (en pantalla) se divide por el zoom.
+        transform: transform ? CSS.Translate.toString({ ...transform, x: transform.x / zoom, y: transform.y / zoom }) : undefined,
         zIndex: isDragging ? 50 : undefined,
     };
     return { attributes, listeners, setNodeRef, isDragging, style };
 }
 
-function TableNode({ table, pos, count, canWrite, onOpen }: { table: Table; pos: Pos; count: number; canWrite: boolean; onOpen: () => void }) {
-    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`t-${table.id}`, canWrite && !isTemp(table.id), pos);
+function TableNode({ table, pos, zoom, count, canWrite, onOpen }: { table: Table; pos: Pos; zoom: number; count: number; canWrite: boolean; onOpen: () => void }) {
+    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`t-${table.id}`, canWrite && !isTemp(table.id), pos, zoom);
     const over = count > table.capacity;
     return (
         <div
             ref={setNodeRef}
+            data-plan-node
             style={{ ...style, width: NODE_W, zIndex: style.zIndex ?? 2 }}
             {...listeners}
             {...attributes}
@@ -491,14 +645,15 @@ function TableNode({ table, pos, count, canWrite, onOpen }: { table: Table; pos:
     );
 }
 
-function ElementNode({ element, pos, canWrite, onOpen }: { element: FloorElement; pos: Pos; canWrite: boolean; onOpen: () => void }) {
-    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`e-${element.id}`, canWrite && !isTemp(element.id), pos);
+function ElementNode({ element, pos, zoom, canWrite, onOpen }: { element: FloorElement; pos: Pos; zoom: number; canWrite: boolean; onOpen: () => void }) {
+    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`e-${element.id}`, canWrite && !isTemp(element.id), pos, zoom);
     const meta = KIND[element.kind];
     const Icon = meta.icon;
     const name = element.label || meta.label;
     return (
         <div
             ref={setNodeRef}
+            data-plan-node
             style={{ ...style, width: element.width, height: element.height, zIndex: style.zIndex ?? 1, ...colorStyle(element.color) }}
             {...listeners}
             {...attributes}
