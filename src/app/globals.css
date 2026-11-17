@@ -182,6 +182,36 @@ body {
   }
 }
 
+/* Transiciones entre páginas (src/app/template.tsx): la página que sale se
+   desvanece rápido y la nueva entra subiendo un poco. Sin «menos movimiento»
+   no se anima nada: el cambio es instantáneo, como antes. */
+@keyframes page-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  ::view-transition-old(.page-out) {
+    animation: page-out 140ms ease-out both;
+  }
+  ::view-transition-new(.page-in) {
+    animation: page-in 240ms var(--ease-out-soft) both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
 @utility pb-safe {
   padding-bottom: env(safe-area-inset-bottom);
 }
