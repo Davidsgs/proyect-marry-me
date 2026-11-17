@@ -7,9 +7,11 @@ import { isTemp, pendingRowCls, tempId } from "@/app/admin/_components/optimisti
 import { draftUser, useGuestsMutate, type Family, type User } from "./guestsStore";
 import { createManyUsers, deleteFamily, updateFamily, updateUser } from "@/app/actions/admin";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import { Checkbox, Chip, btnGhost, btnPrimary, btnSecondary, iconBtn, inputCls, inputSmCls, selectCls } from "@/app/admin/_components/ui";
+import { Checkbox, Chip, RSVP_CHIP, btnGhost, btnPrimary, btnSecondary, iconBtn, inputCls, inputSmCls, selectCls } from "@/app/admin/_components/ui";
 import { dietaryText } from "@/lib/diet";
-import { Check, Copy, MessageCircle, Pencil, Plus, Send, Trash2, UserMinus, X } from "lucide-react";
+import { formatSqlTimestamp } from "@/lib/dates";
+import type { RsvpEvent } from "@/lib/rsvpAudit";
+import { Check, Copy, History, MessageCircle, Pencil, Plus, Send, Trash2, UserMinus, X } from "lucide-react";
 import { useNotify } from "@/app/admin/_components/Notice";
 import { WEDDING_DATE_LABEL } from "@/lib/wedding";
 
@@ -29,6 +31,7 @@ export default function FamilyDetail({
     canWriteFamilies,
     canWriteUsers,
     deadlineLabel = null,
+    history = [],
     onClose,
     registerClose,
 }: {
@@ -37,6 +40,8 @@ export default function FamilyDetail({
     canWriteFamilies: boolean;
     canWriteUsers: boolean;
     deadlineLabel?: string | null;
+    /** Historial de respuestas de esta familia, el más reciente primero. */
+    history?: RsvpEvent[];
     onClose: () => void;
     /** Permite al contenedor (hoja móvil) pedir el cierre con la comprobación de cambios. */
     registerClose?: (fn: () => void) => void;
@@ -267,6 +272,8 @@ export default function FamilyDetail({
                         />
                     )}
                 </section>
+
+                <RsvpHistory family={family} history={history} />
             </div>
 
             {canWriteFamilies && (
@@ -282,6 +289,56 @@ export default function FamilyDetail({
                 </footer>
             )}
         </div>
+    );
+}
+
+const ACTOR_LABEL = { DELEGATE: "Delegado", ADMIN: "Administrador" } as const;
+
+// Historial de respuestas (auditoría): quién respondió —el delegado desde la
+// invitación o un administrador desde el panel—, cuándo, y quién viene y quién no.
+function RsvpHistory({ family, history }: { family: Family; history: RsvpEvent[] }) {
+    return (
+        <section aria-labelledby="fd-historial" className="space-y-3">
+            <h3 id="fd-historial" className="text-sm font-semibold text-on-surface flex items-center gap-2">
+                <History className="w-4 h-4" aria-hidden /> Historial de respuestas
+            </h3>
+            {history.length === 0 ? (
+                <p className="text-sm text-on-surface-variant">
+                    {family.globalRsvpStatus === "PENDING"
+                        ? "Aún no hay respuestas."
+                        : "Respondió antes de que se guardara el historial: no se sabe quién lo hizo."}
+                </p>
+            ) : (
+                <ol className="space-y-1.5">
+                    {history.map((e) => {
+                        const chip = RSVP_CHIP[e.status];
+                        const coming = e.attendees.filter((a) => a.attending).map((a) => a.name);
+                        const notComing = e.attendees.filter((a) => !a.attending).map((a) => a.name);
+                        return (
+                            <li key={e.id} className="rounded-xl bg-surface-container-low px-4 py-3 space-y-1">
+                                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-on-surface">
+                                    <Chip tone={chip.tone}>{chip.label}</Chip>
+                                    <span className="font-medium">{e.actorName || "Alguien ya borrado"}</span>
+                                    <Chip tone={e.actorKind === "DELEGATE" ? "brand" : "neutral"}>{ACTOR_LABEL[e.actorKind]}</Chip>
+                                    <time dateTime={e.createdAt.replace(" ", "T") + "Z"} className="ml-auto text-xs text-on-surface-variant tabular-nums">
+                                        {formatSqlTimestamp(e.createdAt)}
+                                    </time>
+                                </p>
+                                {e.attendees.length === 0 ? (
+                                    <p className="text-xs text-on-surface-variant">Cambió el estado de la familia desde el panel.</p>
+                                ) : (
+                                    <p className="text-xs text-on-surface-variant">
+                                        {coming.length > 0 && <>Vienen: <span className="text-on-surface">{coming.join(", ")}</span></>}
+                                        {coming.length > 0 && notComing.length > 0 && " · "}
+                                        {notComing.length > 0 && <>No vienen: <span className="text-on-surface">{notComing.join(", ")}</span></>}
+                                    </p>
+                                )}
+                            </li>
+                        );
+                    })}
+                </ol>
+            )}
+        </section>
     );
 }
 

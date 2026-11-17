@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import { PageHeader } from "@/app/admin/_components/ui";
-import { getRsvpDeadline } from "@/lib/data";
+import { cachedRsvpEvents, getRsvpDeadline } from "@/lib/data";
 import GuestsManager, { type FamilyFilter } from "./_components/GuestsManager";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +20,7 @@ export default async function GuestsPage({ searchParams }: { searchParams: Promi
         redirect("/admin");
     }
 
-    const [families, users, deadline] = await Promise.all([getFamilies(), getUsers(), getRsvpDeadline()]);
+    const [families, users, deadline, rsvpEvents] = await Promise.all([getFamilies(), getUsers(), getRsvpDeadline(), cachedRsvpEvents()]);
     const deadlineLabel = deadline ? deadline.toLocaleDateString("es-AR", { day: "numeric", month: "long" }) : null;
 
     return (
@@ -35,6 +35,7 @@ export default async function GuestsPage({ searchParams }: { searchParams: Promi
                 initialTab={tab === "invitados" ? "users" : "families"}
                 initialFamilyFilter={FILTERS[filtro ?? ""] ?? "all"}
                 deadlineLabel={deadlineLabel}
+                rsvpEvents={rsvpEvents}
             />
         </div>
     );

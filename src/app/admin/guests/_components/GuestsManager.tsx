@@ -16,6 +16,7 @@ import { Dialog } from "@/components/Dialog";
 import { useMediaQuery } from "@/lib/useMediaQuery";
 import { dietaryText } from "@/lib/diet";
 import FamilyDetail, { AgePicker } from "./FamilyDetail";
+import type { RsvpEvent } from "@/lib/rsvpAudit";
 
 type RsvpStatus = "PENDING" | "CONFIRMED" | "DECLINED";
 type Role = "ADMIN" | "MAIN_GUEST" | "GUEST";
@@ -32,13 +33,15 @@ interface Props {
     initialFamilyFilter?: FamilyFilter;
     /** Plazo para responder («1 de marzo»), para el recordatorio a familias pendientes. */
     deadlineLabel?: string | null;
+    /** Historial de respuestas (más reciente primero), para la ficha de cada familia. */
+    rsvpEvents?: RsvpEvent[];
 }
 
 // "minors": familias con menores que no están marcadas como «familia directa»
 // (ven la nota de celebración sin niños aunque traigan niños).
 export type FamilyFilter = "all" | "pending" | "no-delegate" | "minors";
 
-export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all", deadlineLabel = null }: Props) {
+export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all", deadlineLabel = null, rsvpEvents = [] }: Props) {
     const confirm = useConfirm();
     // Familias e invitados con cambios optimistas (ver guestsStore.tsx).
     const server = useMemo(() => ({ families: serverFamilies, users: serverUsers }), [serverFamilies, serverUsers]);
@@ -105,6 +108,7 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
             canWriteFamilies={canWriteFamilies}
             canWriteUsers={canWriteUsers}
             deadlineLabel={deadlineLabel}
+            history={rsvpEvents.filter((e) => e.familyId === openFamily.id)}
             onClose={() => setOpenFamilyId(null)}
             registerClose={(fn) => { requestClose.current = fn; }}
         />
