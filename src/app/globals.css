@@ -274,6 +274,34 @@ body {
     animation-name: mg-grow;
   }
 }
+/* Resaltado tipo marcador (rubor con texto en tinta, 7:1) para los datos que
+   no hay que pasar por alto. Con mg-mark el trazo se pinta de izquierda a
+   derecha al entrar el paso. */
+mark.hl {
+  background-color: transparent;
+  background-image: linear-gradient(var(--color-rubor), var(--color-rubor));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: var(--color-tinta);
+  border-radius: 0.3em;
+  padding: 0.05em 0.3em;
+  font-weight: 600;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@keyframes mg-mark {
+  from {
+    background-size: 0% 100%;
+    color: inherit;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  mark.hl.mg-mark {
+    animation: mg-mark 650ms var(--ease-out-soft) both;
+    animation-delay: calc(400ms + var(--d, 0) * 70ms);
+  }
+}
+
 @utility mg-d-* {
   --d: --value(integer);
 }

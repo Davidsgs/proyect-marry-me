@@ -47,8 +47,10 @@ export function EventWhen() {
                         <div className="mg-rise mg-d-8 mt-6 flex flex-col items-center gap-2 rounded-2xl bg-crema/15 px-5 py-4 max-w-md">
                             <DoorClosed className="w-6 h-6" aria-hidden />
                             <p className="font-text text-base font-medium">Llega con tiempo</p>
-                            <p className="font-text text-base leading-relaxed">
-                                La ceremonia empieza a las <span className="tabular-nums">{WEDDING_TIME_LABEL}</span> y solo habrá {ARRIVAL_TOLERANCE_MIN} minutos de tolerancia. Una vez empezada, la puerta se cierra y vuelve a abrirse recién para la fiesta.
+                            <p className="font-text text-base leading-loose">
+                                La ceremonia empieza a las <mark className="hl mg-mark mg-d-9 tabular-nums">{WEDDING_TIME_LABEL}</mark> y solo habrá{" "}
+                                <mark className="hl mg-mark mg-d-11">{ARRIVAL_TOLERANCE_MIN} minutos de tolerancia</mark>. Una vez empezada,{" "}
+                                <mark className="hl mg-mark mg-d-13">la puerta se cierra</mark> y vuelve a abrirse recién para la fiesta.
                             </p>
                         </div>
 
