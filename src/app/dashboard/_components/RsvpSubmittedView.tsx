@@ -1,7 +1,7 @@
 "use client";
 
 import type { families, users } from "@/db/schema";
-import { CalendarClock, Check, Heart, Lock, Pencil, UserCheck, UserMinus, Utensils } from "lucide-react";
+import { CalendarClock, Check, Heart, Lock, Pencil, UserCheck, UserMinus, Users, Utensils } from "lucide-react";
 import { PetalBurst } from "@/components/Brand";
 import { dietaryText } from "@/lib/diet";
 import { formatDeadline } from "./RsvpForm";
@@ -44,6 +44,7 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
                         : "Lamentamos que no puedan venir. Los tendremos muy presentes ese día."}
                 </p>
             </div>
+            {isConfirmed && <div className="mg-rise mg-d-5"><InvitationValidity count={members.length} /></div>}
 
             {isLockedHard ? (
                 <div className="mg-rise mg-d-6 p-5 rounded-2xl bg-surface-container-low flex flex-col items-center gap-2 text-center">
@@ -118,6 +119,22 @@ export function AttendanceLists({ attending, notAttending }: { attending: Member
                     </ul>
                 </div>
             )}
+        </div>
+    );
+}
+
+// Para cuántos vale la invitación (todos los integrantes de la familia) y la
+// letra chica: no se cede el lugar de quien no viene.
+export function InvitationValidity({ count }: { count: number }) {
+    return (
+        <div className="text-center space-y-1.5">
+            <p className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3.5 py-1 text-sm text-on-surface">
+                <Users className="w-4 h-4 text-oliva-profundo" aria-hidden />
+                Invitación válida para <strong className="font-semibold tabular-nums">{count}</strong> {count === 1 ? "persona" : "personas"}
+            </p>
+            <p className="mx-auto max-w-sm text-xs text-on-surface-variant text-pretty">
+                La invitación es personal e intransferible: si alguien no puede venir, su lugar no puede cederse a otra persona.
+            </p>
         </div>
     );
 }

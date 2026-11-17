@@ -6,7 +6,7 @@ import { updateFamilyRsvp } from "@/app/actions/rsvp";
 import type { families, users } from "@/db/schema";
 import { Check, X, CalendarClock } from "lucide-react";
 import { DIETARY, DIETARY_LABEL, DIETARY_NOTE_MAX, type Dietary } from "@/lib/diet";
-import RsvpSubmittedView from "./RsvpSubmittedView";
+import RsvpSubmittedView, { InvitationValidity } from "./RsvpSubmittedView";
 import AdultsNote from "./AdultsNote";
 
 interface Props {
@@ -123,6 +123,8 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                         <span>Puedes responder o cambiar tu respuesta hasta el <strong className="font-medium text-on-surface">{formattedDeadline}</strong>.</span>
                     </p>
                 )}
+                {/* Con «Sí», el aviso va al pie de la lista de quiénes vienen. */}
+                {!wide && <div className="mg-rise mg-d-3"><InvitationValidity count={members.length} /></div>}
             </div>
 
             {error && (
@@ -259,6 +261,7 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                             Escribe cuál es la restricción en «Otra».
                         </p>
                     )}
+                    <InvitationValidity count={members.length} />
                 </fieldset>
             )}
         </form>
