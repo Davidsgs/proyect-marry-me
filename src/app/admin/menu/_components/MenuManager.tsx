@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { isTemp, pendingRowCls, tempId, useOptimisticState, type Patch } from "@/app/admin/_components/optimistic";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import { Checkbox, EmptyState, Field, btnPrimary, btnGhost, btnGhostSm, iconBtn, iconBtnDanger, inputCls, selectCls } from "@/app/admin/_components/ui";
+import { Checkbox, EmptyState, Field, btnPrimary, btnSecondary, btnGhost, btnGhostSm, iconBtn, iconBtnDanger, inputCls, selectCls } from "@/app/admin/_components/ui";
 import { Dialog } from "@/components/Dialog";
 import { GrowText } from "@/components/GrowText";
 import {
@@ -26,13 +26,14 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import {
   Plus, Trash2, Pencil, Save, GripVertical, Clock,
-  UtensilsCrossed, Wine, Cake, IceCreamCone, Salad, CookingPot, Sandwich, HelpCircle,
+  UtensilsCrossed, HelpCircle,
   Leaf, WheatOff, MilkOff, AlertTriangle, Eye, EyeOff,
 } from "lucide-react";
 import {
   createMenuItem, updateMenuItem, deleteMenuItem, setMenuItemStatus, setMenuItemPublic, showMenuItems, moveMenuItem,
   type MenuItem, type MenuMoment, type MenuType, type MenuStatus,
 } from "@/app/actions/menu";
+import { MENU_TYPES, MENU_TYPE_META } from "@/lib/menuTypes";
 
 type Mutate = (patch: Patch<MenuItem[]>, action: () => Promise<unknown>, msg: { ok?: string; error: string }) => Promise<boolean>;
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
@@ -43,17 +44,8 @@ interface Props {
   canWrite: boolean;
 }
 
-const TYPES: { value: MenuType; label: string; icon: typeof UtensilsCrossed }[] = [
-  { value: "PASAPALO", label: "Pasapalo", icon: Sandwich },
-  { value: "ENTRADA", label: "Entrada", icon: Salad },
-  { value: "PRINCIPAL", label: "Principal", icon: CookingPot },
-  { value: "POSTRE", label: "Postre", icon: IceCreamCone },
-  { value: "BEBIDA", label: "Bebida", icon: Wine },
-  { value: "TORTA", label: "Torta", icon: Cake },
-  { value: "OTRO", label: "Otro", icon: UtensilsCrossed },
-];
-
-const TYPE_META = Object.fromEntries(TYPES.map((t) => [t.value, t])) as Record<MenuType, (typeof TYPES)[number]>;
+const TYPES = MENU_TYPES;
+const TYPE_META = MENU_TYPE_META;
 
 // Idea = en estudio; Confirmado = cerrado con el proveedor; Descartado = no va,
 // pero se conserva por si se recupera.
@@ -289,17 +281,19 @@ function MomentGroup({
   return (
     <section
       ref={setNodeRef}
-      className={`rounded-2xl transition-colors ${
+      // En móvil los momentos vacíos no se muestran: arrastrar entre momentos
+      // lejanos no es práctico ahí y el momento se elige al crear o editar el ítem.
+      className={`rounded-2xl transition-colors ${items.length === 0 ? "max-sm:hidden" : ""} ${
         isOver ? "bg-secondary-container/50 ring-2 ring-primary/30" : isUnassigned ? "bg-surface-container-low" : ""
       }`}
     >
-      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 pt-4 pb-2">
+      <header className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 sm:px-4 pt-4 pb-2">
         {isUnassigned ? (
           <HelpCircle className="w-5 h-5 text-error shrink-0" aria-hidden />
         ) : (
           <Clock className="w-5 h-5 text-on-surface-variant shrink-0" aria-hidden />
         )}
-        <h2 className="font-serif text-3xl leading-display text-primary">{title}</h2>
+        <h2 className="font-serif text-2xl sm:text-3xl leading-display text-primary">{title}</h2>
         {time && (
           <span className="text-sm font-medium text-on-secondary-container bg-secondary-container px-2.5 py-0.5 rounded-full tabular-nums">
             {time}
@@ -310,7 +304,7 @@ function MomentGroup({
         </span>
       </header>
 
-      <div className="px-4 pb-4 space-y-2">
+      <div className="sm:px-4 pb-4 space-y-2">
         {items.length === 0 && (
           <p className="text-sm text-on-surface-variant rounded-xl outline-2 outline-dashed outline-outline-variant px-4 py-3">
             Arrastra aquí un ítem, o elige este momento al crearlo.
@@ -346,6 +340,7 @@ function ItemRow({
 }) {
   const confirm = useConfirm();
   const [editing, setEditing] = useState(false);
+  const [viewing, setViewing] = useState(false);
   const temp = isTemp(item.id);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
@@ -363,10 +358,20 @@ function ItemRow({
     <Dialog open={editing && canWrite} onClose={() => setEditing(false)} title={`Editar «${item.name}»`} size="lg">
       {editing && <ItemForm item={item} moments={moments} mutate={mutate} onDone={() => setEditing(false)} />}
     </Dialog>
+    <Dialog open={viewing} onClose={() => setViewing(false)} title={item.name} size="lg">
+      <ItemDetail
+        item={item}
+        moment={moments.find((m) => m.id === item.activityId) ?? null}
+        onEdit={canWrite ? () => { setViewing(false); setEditing(true); } : undefined}
+        onClose={() => setViewing(false)}
+      />
+    </Dialog>
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-start gap-3 p-4 rounded-xl bg-surface-container-lowest transition-colors hover:bg-[#fffdf8] ${
+      // relative: el nombre es un botón que se estira a toda la fila (clic en
+      // cualquier parte abre el detalle); arrastre y acciones quedan por encima.
+      className={`group relative flex flex-wrap sm:flex-nowrap items-start gap-3 p-4 rounded-xl bg-surface-container-lowest transition-colors hover:bg-[#fffdf8] ${
         isDragging ? "opacity-40" : ""
       } ${discarded ? "opacity-60" : ""} ${temp ? pendingRowCls : ""}`}
       aria-busy={temp || undefined}
@@ -375,7 +380,7 @@ function ItemRow({
         <button
           {...attributes}
           {...listeners}
-          className="shrink-0 -ml-2 -my-1 w-8 h-11 flex items-center justify-center text-on-surface-variant hover:text-primary cursor-grab active:cursor-grabbing touch-none"
+          className="relative z-10 shrink-0 -ml-2 -my-1 w-8 h-11 flex items-center justify-center text-on-surface-variant hover:text-primary cursor-grab active:cursor-grabbing touch-none"
           aria-label={`Reordenar o mover «${item.name}»`}
         >
           <GripVertical className="w-4 h-4" />
@@ -386,11 +391,16 @@ function ItemRow({
         <TypeIcon className="w-4 h-4" aria-hidden />
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <p className={`text-item font-medium text-on-surface ${discarded ? "line-through" : ""}`}>
+      <div className="flex-1 min-w-0 basis-0">
+        <div className="flex items-center gap-x-2 gap-y-0.5 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setViewing(true)}
+            aria-haspopup="dialog"
+            className={`text-left text-item font-medium text-on-surface hover:text-primary after:absolute after:inset-0 after:rounded-xl after:content-[''] ${discarded ? "line-through" : ""}`}
+          >
             {item.name}
-          </p>
+          </button>
           <span className="text-xs text-on-surface-variant">{TYPE_META[item.type].label}</span>
           {!canWrite && <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${status.cls}`}>{status.label}</span>}
           {!canWrite && shownToGuests && (
@@ -428,7 +438,9 @@ function ItemRow({
       </div>
 
       {canWrite && (
-        <div className="flex flex-wrap justify-end items-center gap-1 shrink-0">
+        // Móvil: bandeja a todo el ancho bajo el contenido (antes las acciones
+        // dejaban al nombre en una columna de una letra y el borrar se salía).
+        <div className="relative z-10 flex items-center gap-1 w-full sm:w-auto shrink-0 max-sm:-mb-1">
           <select
             value={item.status}
             onChange={(e) => {
@@ -436,7 +448,7 @@ function ItemRow({
               mutate((s) => s.map((i) => i.id === item.id ? { ...i, status: next } : i), () => setMenuItemStatus(item.id, next), { error: "No se pudo cambiar el estado" });
             }}
             aria-label={`Estado de ${item.name}`}
-            className={`min-h-11 pointer-fine:min-h-8 text-label font-medium pl-2.5 pr-1 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
+            className={`max-sm:mr-auto min-h-11 pointer-fine:min-h-8 text-label font-medium pl-2.5 pr-1 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
           >
             <option value="IDEA">Idea</option>
             <option value="CONFIRMED">Confirmado</option>
@@ -478,6 +490,80 @@ function ItemRow({
       )}
     </div>
     </>
+  );
+}
+
+// Ficha completa de un ítem (clic en la fila): todo lo que se cargó, incluido lo
+// que los invitados nunca ven (proveedor, cantidades, notas).
+function ItemDetail({ item, moment, onEdit, onClose }: { item: MenuItem; moment: MenuMoment | null; onEdit?: () => void; onClose: () => void }) {
+  const TypeIcon = TYPE_META[item.type].icon;
+  const status = STATUS_META[item.status];
+  const discarded = item.status === "DISCARDED";
+  const diets = [
+    item.isVegan ? { icon: Leaf, label: "Vegano" } : item.isVegetarian ? { icon: Leaf, label: "Vegetariano" } : null,
+    item.isGlutenFree ? { icon: WheatOff, label: "Sin gluten" } : null,
+    item.isLactoseFree ? { icon: MilkOff, label: "Sin lactosa" } : null,
+  ].filter((d): d is { icon: typeof Leaf; label: string } => d !== null);
+  const rows: [string, React.ReactNode][] = [
+    ["Momento", moment ? <>{moment.title}{moment.time && <span className="tabular-nums"> · {moment.time} h</span>}</> : <span className="text-error">Sin momento del cronograma</span>],
+    ["Cantidad", item.quantity != null ? <span className="tabular-nums">{item.quantity} {item.unit || "un."}</span> : "Sin definir"],
+    ["Proveedor", item.supplier || "Sin definir"],
+  ];
+
+  return (
+    <div className="space-y-5">
+      <p className="flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1 text-sm font-medium text-on-surface">
+          <TypeIcon className="w-4 h-4 text-primary" aria-hidden /> {TYPE_META[item.type].label}
+        </span>
+        <span className={`rounded-full px-3 py-1 text-sm font-medium ${status.cls}`}>{status.label}</span>
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-container-low px-3 py-1 text-sm text-on-surface-variant">
+          {item.isPublic && !discarded ? <Eye className="w-4 h-4" aria-hidden /> : <EyeOff className="w-4 h-4" aria-hidden />}
+          {discarded ? "Descartado: no lo ven los invitados" : item.isPublic ? "Visible para invitados" : "Oculto para invitados"}
+        </span>
+      </p>
+
+      <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+        {rows.map(([term, value]) => (
+          <div key={term}>
+            <dt className="text-label font-medium text-on-surface-variant">{term}</dt>
+            <dd className="mt-0.5 text-sm text-on-surface">{value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      {item.description && (
+        <div>
+          <h3 className="text-label font-medium text-on-surface-variant">Descripción (la ven los invitados)</h3>
+          <p className="mt-1 text-sm text-on-surface whitespace-pre-line">{item.description}</p>
+        </div>
+      )}
+      {item.notes && (
+        <div className="rounded-xl bg-surface-container-low px-4 py-3">
+          <h3 className="text-label font-medium text-on-surface-variant">Notas internas</h3>
+          <p className="mt-1 text-sm text-on-surface whitespace-pre-line">{item.notes}</p>
+        </div>
+      )}
+      {(diets.length > 0 || item.allergens) && (
+        <div className="flex flex-wrap gap-1.5">
+          {diets.map((d) => <DietTag key={d.label} icon={d.icon} label={d.label} />)}
+          {item.allergens && (
+            <span className="text-xs font-medium px-2.5 py-0.5 rounded-full bg-error/10 text-error flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" aria-hidden /> Contiene: {item.allergens}
+            </span>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+        <button type="button" onClick={onClose} className={btnSecondary}>Cerrar</button>
+        {onEdit && (
+          <button type="button" onClick={onEdit} className={btnPrimary}>
+            <Pencil className="w-4 h-4" aria-hidden /> Editar
+          </button>
+        )}
+      </div>
+    </div>
   );
 }
 
