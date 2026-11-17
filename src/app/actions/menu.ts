@@ -7,7 +7,7 @@ import { revalidatePath, updateTag, unstable_cache } from "next/cache";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 
-export type MenuType = "PASAPALO" | "ENTRADA" | "PRINCIPAL" | "POSTRE" | "BEBIDA" | "TORTA" | "OTRO";
+export type MenuType = "PASAPALO" | "ENTRADA" | "PRINCIPAL" | "ACOMPANAMIENTO" | "POSTRE" | "BEBIDA" | "TORTA" | "OTRO";
 export type MenuStatus = "IDEA" | "CONFIRMED" | "DISCARDED";
 
 export type MenuItem = typeof menuItems.$inferSelect;

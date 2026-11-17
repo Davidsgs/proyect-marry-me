@@ -170,7 +170,7 @@ export const menuItems = sqliteTable("menu_items", {
   activityId: integer("activity_id").references((): AnySQLiteColumn => scheduleActivities.id, { onDelete: 'set null' }),
   name: text("name").notNull(),
   type: text("type", {
-    enum: ["PASAPALO", "ENTRADA", "PRINCIPAL", "POSTRE", "BEBIDA", "TORTA", "OTRO"],
+    enum: ["PASAPALO", "ENTRADA", "PRINCIPAL", "ACOMPANAMIENTO", "POSTRE", "BEBIDA", "TORTA", "OTRO"],
   }).default("OTRO").notNull(),
   description: text("description").default("").notNull(),
   // Cantidad estimada a servir (porciones, unidades, botellas…). null = sin definir.
