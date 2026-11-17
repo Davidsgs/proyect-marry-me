@@ -1,0 +1,27 @@
+# Lint y build en cada PR y en cada push a master. No hay suite de tests:
+# el build de Next es el chequeo de tipos. No necesita secretos (sin
+# TURSO_DATABASE_URL, src/db/index.ts usa un SQLite local vacío).
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Lint y build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build

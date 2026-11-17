@@ -7,7 +7,7 @@ import { isTemp, pendingRowCls, tempId } from "@/app/admin/_components/optimisti
 import { draftUser, useGuestsMutate, type Family, type User } from "./guestsStore";
 import { createManyUsers, deleteFamily, updateFamily, updateUser } from "@/app/actions/admin";
 import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
-import { Checkbox, Chip, RSVP_CHIP, btnGhost, btnPrimary, btnSecondary, iconBtn, inputCls, inputSmCls, selectCls } from "@/app/admin/_components/ui";
+import { Checkbox, Chip, RsvpChip, btnGhost, btnPrimary, btnSecondary, iconBtn, inputCls, inputSmCls, rsvpSelectCls, selectCls } from "@/app/admin/_components/ui";
 import { dietaryText } from "@/lib/diet";
 import { formatSqlTimestamp } from "@/lib/dates";
 import type { RsvpEvent } from "@/lib/rsvpAudit";
@@ -171,7 +171,7 @@ export default function FamilyDetail({
                         </div>
                         <div>
                             <label htmlFor="fd-status" className={labelCls}>Estado de la respuesta</label>
-                            <select id="fd-status" value={status} onChange={(e) => setStatus(e.target.value as RsvpStatus)} disabled={!canWriteFamilies} className={selectCls}>
+                            <select id="fd-status" value={status} onChange={(e) => setStatus(e.target.value as RsvpStatus)} disabled={!canWriteFamilies} className={rsvpSelectCls}>
                                 <option value="PENDING">Pendiente</option>
                                 <option value="CONFIRMED">Confirmado</option>
                                 <option value="DECLINED">No asiste</option>
@@ -236,7 +236,7 @@ export default function FamilyDetail({
                                             <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm font-medium text-on-surface">
                                                 <span className="truncate">{m.name} {m.lastName}</span>
                                                 {delegateId === m.id && <Chip tone="brand">Delegado</Chip>}
-                                                {m.isConfirmed && <Chip tone="good">Confirmado</Chip>}
+                                                {m.isConfirmed && <Chip tone="yes">Confirmado</Chip>}
                                             </span>
                                             {m.ageCategory === "ADULT" ? (
                                                 <MemberEmail member={m} diet={diet} canEdit={canWriteUsers} />
@@ -311,13 +311,12 @@ function RsvpHistory({ family, history }: { family: Family; history: RsvpEvent[]
             ) : (
                 <ol className="space-y-1.5">
                     {history.map((e) => {
-                        const chip = RSVP_CHIP[e.status];
                         const coming = e.attendees.filter((a) => a.attending).map((a) => a.name);
                         const notComing = e.attendees.filter((a) => !a.attending).map((a) => a.name);
                         return (
                             <li key={e.id} className="rounded-xl bg-surface-container-low px-4 py-3 space-y-1">
                                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-on-surface">
-                                    <Chip tone={chip.tone}>{chip.label}</Chip>
+                                    <RsvpChip status={e.status} />
                                     <span className="font-medium">{e.actorName || "Alguien ya borrado"}</span>
                                     <Chip tone={e.actorKind === "DELEGATE" ? "brand" : "neutral"}>{ACTOR_LABEL[e.actorKind]}</Chip>
                                     <time dateTime={e.createdAt.replace(" ", "T") + "Z"} className="ml-auto text-xs text-on-surface-variant tabular-nums">

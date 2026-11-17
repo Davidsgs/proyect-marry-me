@@ -93,6 +93,7 @@ Siete rasgos que deben reconocerse sin leer el texto: campos de color plenos, so
 - **Campos:** `rosa` (login), `rubor` (invitación, bienvenida, error, historia), `oliva-profundo` («El gran día», bandas, barra lateral). `noche` solo en la portada `/` (decisión de la pareja: foto con velo y monograma dorado).
 - **Papel:** `crema` y las superficies del panel (`surface` → `surface-container-low` → `surface-container`; `surface-container-lowest` es la hoja que se apoya encima). Sin blanco ni negro puros.
 - **Acción:** un solo color, `primary` = `oliva-profundo`. Salvia (`secondary-container`) = viene / confirmado / bien. `error` = fallos y borrados.
+- **Estado de una familia** (`RsvpChip` y `rsvpSelectCls` en `ui.tsx`): Confirmado = `salvia` con tinta (5.8:1), No asiste = `rosa` con tinta (5.0:1), Pendiente = `ambar` con `on-ambar` (6.3:1). Siempre con ícono (✓, ✕, reloj), nunca solo color. `ambar` es el único color fuera del manual y solo se usa para «Pendiente».
 - **Texto:** `tinta` para leer sobre cualquier campo claro. `crema` sobre `oliva-profundo` (5.5:1).
 - **Prohibido (contraste medido):** crema sobre `rosa` (1.9:1), `oliva` sobre `rubor` (2.7:1). `oliva` y `rosa-profundo` como texto solo a 24px o más sobre `crema` / `rubor`.
 

@@ -2,7 +2,7 @@
 // páginas de servidor como en los managers de cliente. Una sola definición de
 // botones, campos, estados vacíos y chips: no copiarlas en cada sección.
 import Link from "next/link";
-import { ChevronRight, type LucideIcon } from "lucide-react";
+import { Check, ChevronRight, Clock, X, type LucideIcon } from "lucide-react";
 
 // ─── Botones ─────────────────────────────────────────────────────────────────
 const focusRing = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
@@ -30,6 +30,15 @@ export const inputSmCls =
   "min-h-9 px-3 py-1.5 rounded-lg bg-surface-container-low text-on-surface text-sm outline-none transition-[background-color,box-shadow] duration-150 focus:bg-surface-container-lowest focus:ring-2 focus:ring-primary/45";
 // Select nativo con flecha propia (la del sistema no respeta la paleta).
 export const selectCls = `${inputCls} appearance-none pr-10 cursor-pointer bg-[url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235c5f52'%3E%3Cpath d='M5.3 7.3a1 1 0 0 1 1.4 0L10 10.6l3.3-3.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 0 1 0-1.4Z'/%3E%3C/svg%3E")] bg-[length:1.1rem] bg-[right_0.75rem_center] bg-no-repeat`;
+// Select del estado de una familia: se tiñe con el color del estado elegido
+// (sin hooks, con :has sobre la opción marcada) y cada opción lleva su color
+// en la lista desplegable donde el navegador lo permite (escritorio).
+export const rsvpSelectCls =
+  `${selectCls} font-medium` +
+  " [&:has(option[value=CONFIRMED]:checked)]:bg-salvia [&:has(option[value=CONFIRMED]:checked)]:text-tinta" +
+  " [&:has(option[value=DECLINED]:checked)]:bg-rosa [&:has(option[value=DECLINED]:checked)]:text-tinta" +
+  " [&:has(option[value=PENDING]:checked)]:bg-ambar [&:has(option[value=PENDING]:checked)]:text-on-ambar" +
+  " [&>option[value=CONFIRMED]]:bg-salvia [&>option[value=DECLINED]]:bg-rosa [&>option[value=PENDING]]:bg-ambar [&>option]:text-tinta";
 
 export function Field({
   label,
@@ -125,6 +134,10 @@ const CHIP_TONE = {
   warn: "bg-error/10 text-error",
   neutral: "bg-surface-container text-on-surface-variant",
   brand: "bg-primary-container text-on-primary-container",
+  // Estados de respuesta de una familia: tres colores bien distintos (AA ≥5:1).
+  yes: "bg-salvia text-tinta",
+  no: "bg-rosa text-tinta",
+  wait: "bg-ambar text-on-ambar",
 } as const;
 
 export function Chip({ tone = "neutral", children, className = "" }: { tone?: keyof typeof CHIP_TONE; children: React.ReactNode; className?: string }) {
@@ -135,11 +148,22 @@ export function Chip({ tone = "neutral", children, className = "" }: { tone?: ke
   );
 }
 
+// Color + ícono: el estado no depende solo del color.
 export const RSVP_CHIP = {
-  CONFIRMED: { tone: "good", label: "Confirmado" },
-  DECLINED: { tone: "warn", label: "No asiste" },
-  PENDING: { tone: "neutral", label: "Pendiente" },
+  CONFIRMED: { tone: "yes", label: "Confirmado", icon: Check },
+  DECLINED: { tone: "no", label: "No asiste", icon: X },
+  PENDING: { tone: "wait", label: "Pendiente", icon: Clock },
 } as const;
+
+export function RsvpChip({ status, className = "" }: { status: keyof typeof RSVP_CHIP; className?: string }) {
+  const { tone, label, icon: Icon } = RSVP_CHIP[status];
+  return (
+    <Chip tone={tone} className={className}>
+      <Icon className="w-3 h-3" strokeWidth={2.5} aria-hidden />
+      {label}
+    </Chip>
+  );
+}
 
 // ─── Encabezado de página ────────────────────────────────────────────────────
 export function PageHeader({

@@ -73,3 +73,6 @@ PLAN.md
 # fotos privadas de la pareja: solo en el servidor, nunca en el repo (es público)
 /public/privado/*
 !/public/privado/LEEME.txt
+# Excepción: fachada del salón (fondo de «Lugar y vestimenta»). Sin ella Vercel
+# no la despliega; en la web sigue sirviéndose solo con sesión (src/proxy.ts).
+!/public/privado/salon-*.webp

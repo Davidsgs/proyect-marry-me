@@ -19,19 +19,25 @@ export default async function OurStory() {
             <BotanicalShadow variant="orquidea" sway className="absolute -top-24 -left-32 w-[30rem] max-w-[90vw] -scale-x-100 text-rosa-profundo/20" />
             <BotanicalShadow variant="espiga" className="absolute -bottom-20 -right-20 w-[24rem] max-w-[70vw] text-rosa-profundo/20" />
 
-            <div className="relative mx-auto max-w-5xl px-5 sm:px-8 py-16 sm:py-24">
+            <div className="relative mx-auto max-w-5xl px-5 sm:px-8 py-14 sm:py-20 lg:py-8">
                 <div className="relative grid items-center gap-8 lg:grid-cols-[1fr_minmax(0,34rem)_1fr]">
-                    {first && <Polaroid {...first} rotate={TILT[0]} className="mx-auto w-48 sm:w-56 lg:-mr-10 lg:mt-24 relative z-10" />}
-                    <Arch as="article" className="reveal lg:col-start-2" innerClassName="text-center">
-                        <h2 id="historia" className="font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo">Nuestra historia</h2>
-                        <Sprig className="mx-auto mt-5 text-rosa-profundo" />
-                        <div className="mt-5 space-y-4 font-text text-base sm:text-lg leading-relaxed text-pretty">
-                            {paragraphs.map((p, i) => <p key={i} className="whitespace-pre-line">{p}</p>)}
+                    {first && <Polaroid {...first} rotate={TILT[0]} className="mg-pop mg-d-6 mx-auto w-48 sm:w-56 lg:-mr-10 lg:mt-24 relative z-10" />}
+                    {/* Sin fotos, el arco ocupa las tres columnas y el texto va a dos
+                        columnas en escritorio, para que el paso entre en la pantalla. */}
+                    <Arch
+                        as="article"
+                        className={`mg-rise ${first ? "lg:col-start-2" : "lg:col-span-3 mx-auto w-full max-w-3xl"}`}
+                        innerClassName="text-center short:pt-20"
+                    >
+                        <h2 id="historia" className="mg-mask mg-d-2 font-serif text-5xl sm:text-6xl short:text-5xl leading-display text-oliva-profundo">Nuestra historia</h2>
+                        <Sprig className="mg-grow mg-d-4 mx-auto mt-5 short:mt-3 text-rosa-profundo" />
+                        <div className={`mt-5 short:mt-3 space-y-4 font-text text-base sm:text-lg short:text-base leading-relaxed text-pretty ${first ? "" : "lg:columns-2 lg:gap-12"}`}>
+                            {paragraphs.map((p, i) => <p key={i} style={{ "--d": 5 + i } as React.CSSProperties} className="mg-rise whitespace-pre-line">{p}</p>)}
                         </div>
                     </Arch>
-                    {second && <Polaroid {...second} rotate={TILT[1]} tone="oliva" className="mx-auto w-48 sm:w-56 lg:-ml-10 lg:-mt-24 relative z-10" />}
+                    {second && <Polaroid {...second} rotate={TILT[1]} tone="oliva" className="mg-pop mg-d-8 mx-auto w-48 sm:w-56 lg:-ml-10 lg:-mt-24 relative z-10" />}
                 </div>
-                {third && <Polaroid {...third} rotate={TILT[2]} tone="crema" className="mx-auto mt-10 w-52 sm:w-64" />}
+                {third && <Polaroid {...third} rotate={TILT[2]} tone="crema" className="mg-pop mg-d-10 mx-auto mt-10 w-52 sm:w-64" />}
             </div>
         </section>
     );

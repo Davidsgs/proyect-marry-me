@@ -9,8 +9,8 @@ import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
 import { createFamily, createManyUsers, deleteUser, updateUser } from "@/app/actions/admin";
 import { Plus, Search, Trash2, AlertTriangle, Pencil, Users as UsersIcon, Home, ChevronRight, MousePointerClick } from "lucide-react";
 import {
-    Chip, EmptyState, RSVP_CHIP, StatCard, Tabs,
-    btnGhost, btnPrimary, btnSecondary, iconBtn, iconBtnDanger, inputCls, selectCls,
+    Chip, EmptyState, RsvpChip, StatCard, Tabs,
+    btnGhost, btnPrimary, btnSecondary, iconBtn, iconBtnDanger, inputCls, rsvpSelectCls, selectCls,
 } from "@/app/admin/_components/ui";
 import { Dialog } from "@/components/Dialog";
 import { useMediaQuery } from "@/lib/useMediaQuery";
@@ -307,7 +307,7 @@ function NewFamilyForm({ onDone }: { onDone: () => void }) {
             </label>
             <label className="block">
                 <span className="block text-label font-medium text-on-surface-variant mb-1.5">Estado</span>
-                <select name="globalRsvpStatus" className={selectCls} defaultValue="PENDING">
+                <select name="globalRsvpStatus" className={rsvpSelectCls} defaultValue="PENDING">
                     <option value="PENDING">Pendiente</option>
                     <option value="CONFIRMED">Confirmado</option>
                     <option value="DECLINED">No asiste</option>
@@ -484,7 +484,6 @@ function FamiliesList({
                 const familyUsers = users.filter((u) => u.familyId === family.id);
                 const delegate = familyUsers.find((u) => u.id === family.delegateUserId);
                 const status = family.globalRsvpStatus as RsvpStatus;
-                const chip = RSVP_CHIP[status];
                 const selected = selectedId === family.id;
 
                 return (
@@ -500,7 +499,7 @@ function FamiliesList({
                             <span className="min-w-0 flex-1">
                                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                     <span className="font-serif text-2xl leading-tight text-on-surface">{family.name}</span>
-                                    <Chip tone={chip.tone}>{chip.label}</Chip>
+                                    <RsvpChip status={status} />
                                 </span>
                                 <span className="mt-1 block text-sm text-on-surface-variant truncate">
                                     {family.alias ? `${family.alias} · ` : ""}
@@ -568,7 +567,7 @@ function UsersList({
                             <div className="flex flex-wrap gap-1.5 mt-2">
                                 {isAdmin && <Chip tone="brand">Admin</Chip>}
                                 {isDelegate ? <Chip tone="brand">Delegado</Chip> : !isMinor && !isAdmin && <Chip>Acompañante</Chip>}
-                                {user.isConfirmed && <Chip tone="good">Confirmado</Chip>}
+                                {user.isConfirmed && <Chip tone="yes">Confirmado</Chip>}
                                 {diet && <Chip>{diet}</Chip>}
                             </div>
                         </div>

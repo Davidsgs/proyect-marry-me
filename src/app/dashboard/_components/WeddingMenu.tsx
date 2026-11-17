@@ -12,14 +12,15 @@ export default async function WeddingMenu() {
 
     return (
         <section aria-labelledby="menu" className="bg-surface-container-low">
-            <div className="mx-auto max-w-3xl px-4 sm:px-8 py-16 sm:py-24">
-                <h2 id="menu" className="reveal font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo text-center">Menú</h2>
-                <p className="reveal mt-4 font-text text-lg leading-relaxed text-center text-pretty">Lo que compartiremos esa noche.</p>
+            <div className="mx-auto max-w-6xl px-4 sm:px-8 py-14 sm:py-20 lg:py-8">
+                <h2 id="menu" className="mg-mask font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo text-center">Menú</h2>
+                <p className="mg-rise mg-d-2 mt-4 font-text text-lg leading-relaxed text-center text-pretty">Lo que compartiremos esa noche.</p>
 
-                <div className="reveal mt-10 rounded-[2rem] bg-crema shadow-md px-6 py-10 sm:px-14 sm:py-14 space-y-10 text-center">
+                {/* En escritorio, un momento por columna para que la carta entre en la pantalla. */}
+                <div className="mg-rise mg-d-3 mt-10 lg:mt-6 rounded-[2rem] bg-crema shadow-md px-6 py-10 sm:px-14 sm:py-14 lg:p-10 grid gap-10 lg:grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] text-center">
                     {groups.map((g, gi) => (
                         <div key={g.id ?? "otros"}>
-                            {gi > 0 && <Sprig className="mx-auto mb-10 text-oliva" />}
+                            {gi > 0 && <Sprig className="mx-auto mb-10 text-oliva lg:hidden" />}
                             <h3 className="font-serif text-3xl sm:text-4xl leading-tight text-oliva-profundo">{g.title}</h3>
                             {g.time && (
                                 <p className="mt-1 inline-flex items-center gap-1.5 text-sm font-medium tabular-nums text-rosa-profundo">

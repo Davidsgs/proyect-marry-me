@@ -36,6 +36,10 @@
   --color-on-surface-variant: #5c5f52;       /* ≥4.5:1 hasta surface-container */
   --color-outline-variant: rgba(54, 64, 51, 0.16);
   --color-error: #a8423a;                    /* ≥4.7:1 sobre todas las superficies */
+  /* Estado «Pendiente» de una familia: el único color fuera del manual, para
+     que los tres estados se distingan de un vistazo (on-ambar sobre ambar: 6.3:1). */
+  --color-ambar: #ecd7a0;
+  --color-on-ambar: #5a4716;
   --color-on-error: #faf8f3;
 
   /* Portada: única superficie oscura (decisión de la pareja, 2026-11-16) */
@@ -175,6 +179,150 @@ body {
     }
   }
 }
+
+/* Carrusel de la invitación, estilo motion graphics: el campo de color del paso
+   nuevo barre la pantalla desde el lado hacia el que se avanza y, encima, cada
+   texto y componente entra escalonado (mg-d-N = N pasos de 70 ms). Las
+   animaciones se reinician solas al pasar el paso de `hidden` a visible.
+   Con «menos movimiento» todo aparece quieto. */
+/* clip-path no interpola contra «none»: los dos extremos van explícitos. */
+@keyframes step-wipe-next {
+  from {
+    clip-path: inset(0 0 0 100%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes step-wipe-prev {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes mg-rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.5rem, 0);
+  }
+}
+/* Texto que sube desde detrás de una línea. El margen negativo deja ver los
+   acentos de Marcellus, que sobresalen de la caja. */
+@keyframes mg-mask {
+  from {
+    clip-path: inset(100% -0.3em -0.3em -0.3em);
+    transform: translate3d(0, 0.5em, 0);
+  }
+  to {
+    clip-path: inset(-0.3em -0.3em -0.3em -0.3em);
+    transform: none;
+  }
+}
+@keyframes mg-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.55);
+  }
+}
+@keyframes mg-draw {
+  from {
+    stroke-dashoffset: var(--len, 64);
+  }
+}
+/* Foto de fondo que se acerca despacio al entrar el paso. */
+@keyframes mg-zoom {
+  from {
+    transform: scale(1.12);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mg-zoom {
+    animation: mg-zoom 2400ms var(--ease-out-soft) both;
+  }
+}
+@keyframes mg-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .animate-step-next {
+    animation: step-wipe-next 620ms cubic-bezier(0.77, 0, 0.18, 1) both;
+  }
+  .animate-step-prev {
+    animation: step-wipe-prev 620ms cubic-bezier(0.77, 0, 0.18, 1) both;
+  }
+  .mg-rise,
+  .mg-mask,
+  .mg-pop,
+  .mg-draw,
+  .mg-grow {
+    animation-duration: 700ms;
+    animation-timing-function: var(--ease-out-soft);
+    animation-fill-mode: both;
+    animation-delay: calc(180ms + var(--d, 0) * 70ms);
+  }
+  .mg-rise {
+    animation-name: mg-rise;
+  }
+  .mg-mask {
+    animation-name: mg-mask;
+    animation-duration: 900ms;
+  }
+  .mg-pop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation-name: mg-pop;
+    animation-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  /* El trazo se dibuja después de que aparece su muestra. */
+  .mg-draw {
+    stroke-dasharray: var(--len, 64);
+    animation-name: mg-draw;
+    animation-duration: 500ms;
+    animation-delay: calc(560ms + var(--d, 0) * 70ms);
+  }
+  .mg-grow {
+    transform-origin: center;
+    animation-name: mg-grow;
+  }
+}
+/* Resaltado tipo marcador (rubor con texto en tinta, 7:1) para los datos que
+   no hay que pasar por alto. Con mg-mark el trazo se pinta de izquierda a
+   derecha al entrar el paso. */
+mark.hl {
+  background-color: transparent;
+  background-image: linear-gradient(var(--color-rubor), var(--color-rubor));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  color: var(--color-tinta);
+  border-radius: 0.3em;
+  padding: 0.05em 0.3em;
+  font-weight: 600;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+@keyframes mg-mark {
+  from {
+    background-size: 0% 100%;
+    color: inherit;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  mark.hl.mg-mark {
+    animation: mg-mark 650ms var(--ease-out-soft) both;
+    animation-delay: calc(400ms + var(--d, 0) * 70ms);
+  }
+}
+
+@utility mg-d-* {
+  --d: --value(integer);
+}
+
+/* Pantallas de escritorio bajas (portátiles): cada paso entra sin scroll. */
+@custom-variant short (@media (min-width: 64rem) and (max-height: 50rem));
 
 /* Pétalos que salen del ícono al confirmar asistencia: una sola vez. */
 @keyframes petal {
