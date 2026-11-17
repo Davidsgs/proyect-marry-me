@@ -25,10 +25,10 @@ export default async function LoginPage({
 }) {
     const resolvedParams = await searchParams;
     const error = resolvedParams?.error;
-    // Tras entrar: /welcome deja elegir a los admins y manda a los invitados a su panel.
+    // Tras entrar: la portada, que ofrece «Ver mi invitación» y, a los admins, el panel.
     const callbackUrl = typeof resolvedParams?.callbackUrl === "string" && resolvedParams.callbackUrl.startsWith("/") && !resolvedParams.callbackUrl.startsWith("//")
         ? resolvedParams.callbackUrl
-        : "/welcome";
+        : "/";
 
     return (
         <main className="relative min-h-dvh overflow-hidden bg-rosa text-tinta flex flex-col">
