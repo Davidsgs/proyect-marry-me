@@ -1,13 +1,14 @@
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import { WEDDING_DATE_LABEL, daysUntilWedding } from "@/lib/wedding";
-import { parseLocalDate, todayLocalISO } from "@/lib/dates";
+import { formatSqlTimestamp, parseLocalDate, todayLocalISO } from "@/lib/dates";
+import type { RsvpEvent } from "@/lib/rsvpAudit";
 import { getTasks } from "@/app/actions/tasks";
 import { getTables } from "@/app/actions/tables";
 import { getSchedule } from "@/app/actions/schedule";
 import { getFinanceSummary } from "@/app/actions/finance";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
-import { getRsvpDeadline } from "@/lib/data";
+import { cachedRsvpEvents, getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { declined } from "@/lib/attendance";
 import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
@@ -48,9 +49,10 @@ export default async function AdminPage() {
     const canReadGuests = hasPermission(perms, "families.read") && hasPermission(perms, "users.read");
     const canWriteUsers = hasPermission(perms, "users.write");
 
-    const [families, users, allTasks, tables, schedule, finance, deadline] = await Promise.all([
+    const [families, users, rsvpEvents, allTasks, tables, schedule, finance, deadline] = await Promise.all([
         canReadGuests ? getFamilies() : [],
         canReadGuests ? getUsers() : [],
+        canReadGuests ? cachedRsvpEvents() : [],
         canReadTasks ? getTasks() : [],
         canReadTables ? getTables() : [],
         canReadSchedule ? getSchedule() : [],
@@ -97,10 +99,14 @@ export default async function AdminPage() {
         })
         .slice(0, 4);
 
-    // Confirmaciones recientes
+    // Confirmaciones recientes: por la fecha de su última respuesta auditada (sin
+    // historial, por la última edición de la familia) y con quién respondió.
+    const lastEvent = new Map<number, RsvpEvent>();
+    for (const e of rsvpEvents) if (!lastEvent.has(e.familyId)) lastEvent.set(e.familyId, e);
+    const answeredAt = (f: { id: number; updatedAt: string }) => lastEvent.get(f.id)?.createdAt ?? f.updatedAt ?? "";
     const recentConfirmedFamilies = families
         .filter((f) => f.globalRsvpStatus === "CONFIRMED")
-        .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+        .toSorted((a, b) => answeredAt(b).localeCompare(answeredAt(a)))
         .slice(0, 5);
 
     // «Por resolver»: lo que la pareja tiene que perseguir, de más a menos urgente.
@@ -382,9 +388,18 @@ export default async function AdminPage() {
                                 {recentConfirmedFamilies.map((f) => {
                                     const familyUsers = users.filter((u) => u.familyId === f.id);
                                     const attending = familyUsers.filter((u) => u.isConfirmed).length;
+                                    const event = lastEvent.get(f.id);
                                     return (
                                         <li key={f.id} className="bg-surface-container-lowest px-4 py-3 rounded-xl flex items-center gap-3">
-                                            <span className="text-sm text-on-surface flex-1 min-w-0 truncate">{f.name}</span>
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block text-sm text-on-surface truncate">{f.name}</span>
+                                                {event && (
+                                                    <span className="block text-xs text-on-surface-variant truncate">
+                                                        {event.actorKind === "DELEGATE" ? "Delegado" : "Administrador"}
+                                                        {event.actorName && `: ${event.actorName}`} · {formatSqlTimestamp(event.createdAt)}
+                                                    </span>
+                                                )}
+                                            </span>
                                             <span className="text-xs text-on-secondary-container font-medium tabular-nums shrink-0">
                                                 {attending} de {familyUsers.length} asisten
                                             </span>
