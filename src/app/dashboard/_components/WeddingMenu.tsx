@@ -13,7 +13,7 @@ export default async function WeddingMenu() {
     return (
         <section aria-labelledby="menu" className="bg-surface-container-low">
             <div className="mx-auto max-w-3xl px-4 sm:px-8 py-16 sm:py-24">
-                <h2 id="menu" className="reveal font-serif text-5xl sm:text-6xl leading-none text-oliva-profundo text-center">Menú</h2>
+                <h2 id="menu" className="reveal font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo text-center">Menú</h2>
                 <p className="reveal mt-4 font-text text-lg leading-relaxed text-center text-pretty">Lo que compartiremos esa noche.</p>
 
                 <div className="reveal mt-10 rounded-[2rem] bg-crema shadow-md px-6 py-10 sm:px-14 sm:py-14 space-y-10 text-center">

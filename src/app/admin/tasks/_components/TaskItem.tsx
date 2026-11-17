@@ -85,7 +85,7 @@ export default function TaskItem({ task, canWrite }: Props) {
 
                 {/* Tocar abre el detalle con el texto completo (útil en móvil) */}
                 <button type="button" onClick={() => setMode("view")} className="flex-1 min-w-0 py-3 text-left cursor-pointer">
-                    <p className={`flex items-center gap-1.5 text-[15px] font-medium ${task.isCompleted ? "line-through text-on-surface-variant" : "text-on-surface"}`}>
+                    <p className={`flex items-center gap-1.5 text-item font-medium ${task.isCompleted ? "line-through text-on-surface-variant" : "text-on-surface"}`}>
                         {!task.isCompleted && <PriorityIcon priority={task.priority} />}
                         <span className="truncate">{task.title}</span>
                     </p>
@@ -236,7 +236,7 @@ function EditTaskForm({ task, onCancel, onSave }: {
     const [date, setDate] = useState(task.dueDate ?? "");
     const [priority, setPriority] = useState<Priority>(task.priority);
     const [error, setError] = useState<string | null>(null);
-    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const label = "block text-label font-medium text-on-surface-variant mb-1.5";
 
     function save() {
         if (!title.trim()) return setError("La tarea necesita un título.");

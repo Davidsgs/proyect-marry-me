@@ -28,7 +28,7 @@ export default function SettingsForm({ initialDeadline }: { initialDeadline: str
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <label className="block">
-        <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Fecha y hora límite</span>
+        <span className="block text-label font-medium text-on-surface-variant mb-1.5">Fecha y hora límite</span>
         <input required type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)} className={inputCls} />
       </label>
       <div className="flex justify-end">

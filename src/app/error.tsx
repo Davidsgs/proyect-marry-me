@@ -22,7 +22,7 @@ export default function Error({
         <main className="min-h-dvh bg-rubor text-tinta flex items-center justify-center px-4 py-12">
             <Arch className="w-full max-w-md" innerClassName="text-center space-y-6">
                 <Monogram size="md" className="mx-auto" />
-                <h1 className="font-serif text-5xl leading-none text-oliva-profundo">Algo no salió bien</h1>
+                <h1 className="font-serif text-5xl leading-display text-oliva-profundo">Algo no salió bien</h1>
                 <p className="font-text text-base leading-relaxed">
                     Puede ser un problema de conexión. Vuelve a intentarlo; si sigue pasando, escríbenos y lo resolvemos.
                 </p>

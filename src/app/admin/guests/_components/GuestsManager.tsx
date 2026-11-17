@@ -294,15 +294,15 @@ function NewFamilyForm({ onDone }: { onDone: () => void }) {
             className="space-y-4"
         >
             <label className="block">
-                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Nombre</span>
+                <span className="block text-label font-medium text-on-surface-variant mb-1.5">Nombre</span>
                 <GrowText required name="name" autoFocus className={inputCls} placeholder="Familia García López" />
             </label>
             <label className="block">
-                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Descripción <span className="font-normal">(opcional)</span></span>
+                <span className="block text-label font-medium text-on-surface-variant mb-1.5">Descripción <span className="font-normal">(opcional)</span></span>
                 <GrowText name="alias" className={inputCls} placeholder="Tíos paternos" />
             </label>
             <label className="block">
-                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Estado</span>
+                <span className="block text-label font-medium text-on-surface-variant mb-1.5">Estado</span>
                 <select name="globalRsvpStatus" className={selectCls} defaultValue="PENDING">
                     <option value="PENDING">Pendiente</option>
                     <option value="CONFIRMED">Confirmado</option>
@@ -390,7 +390,7 @@ function BulkUserForm({ families, onDone }: { families: Family[]; onDone: () => 
     };
 
     const validCount = rows.filter((r) => r.name.trim() !== "").length;
-    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const label = "block text-label font-medium text-on-surface-variant mb-1.5";
 
     return (
         <div className="space-y-5">
@@ -555,7 +555,7 @@ function UsersList({
                     <li key={user.id} aria-busy={isTemp(user.id) || undefined} className={`group flex items-start gap-3 bg-surface-container-lowest px-4 py-3.5 rounded-2xl ${isTemp(user.id) ? pendingRowCls : ""}`}>
                         <div className="flex-1 min-w-0">
                             <p className="flex items-baseline gap-2 min-w-0">
-                                <span className="text-[15px] font-medium text-on-surface truncate">{user.fullname || `${user.name} ${user.lastName}`}</span>
+                                <span className="text-item font-medium text-on-surface truncate">{user.fullname || `${user.name} ${user.lastName}`}</span>
                                 {user.alias && <span className="text-xs text-on-surface-variant truncate shrink-0 max-w-[45%]">@{user.alias}</span>}
                             </p>
                             <p className="text-sm text-on-surface-variant truncate">
@@ -595,7 +595,7 @@ function UserEditForm({ user, users, families, onDone }: { user: User; users: Us
         ? null
         : aliasError(cleanAlias) ?? (users.some((u) => u.id !== user.id && u.alias === cleanAlias) ? "Ese alias ya lo usa otra persona." : null);
     const isMinor = ageCategory !== "ADULT";
-    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const label = "block text-label font-medium text-on-surface-variant mb-1.5";
 
     return (
         <form

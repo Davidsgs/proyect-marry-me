@@ -19,7 +19,7 @@ export function PriorityIcon({ priority, className = "w-4 h-4" }: { priority: Pr
 export function PriorityPicker({ value, onChange, idPrefix }: { value: Priority; onChange: (p: Priority) => void; idPrefix: string }) {
     return (
         <fieldset>
-            <legend id={`${idPrefix}-prio`} className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Importancia</legend>
+            <legend id={`${idPrefix}-prio`} className="block text-label font-medium text-on-surface-variant mb-1.5">Importancia</legend>
             <div role="radiogroup" aria-labelledby={`${idPrefix}-prio`} className="flex flex-wrap gap-2">
                 {PRIORITIES.map((p) => {
                     const { icon: Icon, cls } = PRIORITY_ICON[p];
@@ -31,7 +31,7 @@ export function PriorityPicker({ value, onChange, idPrefix }: { value: Priority;
                             role="radio"
                             aria-checked={on}
                             onClick={() => onChange(p)}
-                            className={`inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                            className={`inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-label font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                                 on ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
                             }`}
                         >

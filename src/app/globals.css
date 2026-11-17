@@ -51,6 +51,16 @@
   --shadow-xl: 0 28px 64px -24px rgba(54, 64, 51, 0.4);
 
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* Escala tipográfica: pasos fuera de la escala de Tailwind, en rem para
+     respetar el tamaño de letra del navegador. */
+  --text-label: 0.8125rem;           /* 13px: etiquetas, chips, botones chicos */
+  --text-label--line-height: 1.5;
+  --text-item: 0.9375rem;            /* 15px: título de fila o de ítem */
+  --text-item--line-height: 1.5;
+  /* Títulos grandes en Marcellus: aire para los acentos de mayúsculas (Ú, Í)
+     cuando el título se parte en dos líneas. */
+  --leading-display: 1.1;
 }
 
 img,
@@ -93,6 +103,13 @@ body {
   }
   a {
     text-underline-offset: 0.25em;
+  }
+  /* Títulos parejos y párrafos sin palabra suelta en la última línea. */
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+  p, li, dd, blockquote, figcaption {
+    text-wrap: pretty;
   }
   /* Diálogos modales: el scroll dentro o sobre el fondo no arrastra la página. */
   dialog:modal {

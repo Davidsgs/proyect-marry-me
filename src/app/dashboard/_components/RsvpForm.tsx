@@ -105,7 +105,7 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
     return (
         <form onSubmit={handleSubmit} className="space-y-8">
             <div className="space-y-3">
-                <h2 className="font-serif text-4xl sm:text-5xl leading-none text-oliva-profundo">¿Nos acompañan?</h2>
+                <h2 className="font-serif text-4xl sm:text-5xl leading-display text-oliva-profundo">¿Nos acompañan?</h2>
                 {formattedDeadline && (
                     <p className="text-sm text-on-surface-variant flex items-start gap-2">
                         <CalendarClock className="w-4 h-4 text-oliva-profundo shrink-0 mt-0.5" aria-hidden />

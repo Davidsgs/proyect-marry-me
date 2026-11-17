@@ -22,7 +22,7 @@ function addDaysISO(from: string, days: number) {
 
 const fmtLong = new Intl.DateTimeFormat("es-AR", { weekday: "long", day: "numeric", month: "long" });
 
-const chipBase = "inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-[13px] font-medium transition-colors ";
+const chipBase = "inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-label font-medium transition-colors ";
 const chipIdle = "bg-surface-container-low text-on-surface hover:bg-surface-container ";
 const chipOn = "bg-primary text-on-primary ";
 const chipCls = chipBase + "bg-surface-container-low text-on-surface hover:bg-surface-container aria-pressed:bg-primary aria-pressed:text-on-primary";
@@ -94,7 +94,7 @@ export default function TaskForm() {
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Añadir una tarea, por ejemplo «Pagar al fotógrafo»"
-                    className="flex-1 min-w-0 min-h-12 bg-transparent px-1 py-3 text-base sm:text-[15px] text-on-surface placeholder:text-on-surface-variant/80 outline-none"
+                    className="flex-1 min-w-0 min-h-12 bg-transparent px-1 py-3 text-base sm:text-item text-on-surface placeholder:text-on-surface-variant/80 outline-none"
                 />
                 <button type="submit" disabled={!canSubmit} className={`${btnPrimary} hidden sm:inline-flex disabled:opacity-50`}>
                     Añadir
@@ -104,7 +104,7 @@ export default function TaskForm() {
             {open && (
                 <div className="px-2 pb-2 pt-1 space-y-4">
                     <div>
-                        <label htmlFor="task-desc" className="block text-[13px] font-medium text-on-surface-variant mb-1.5">
+                        <label htmlFor="task-desc" className="block text-label font-medium text-on-surface-variant mb-1.5">
                             Detalle <span className="font-normal">(opcional)</span>
                         </label>
                         <GrowText
@@ -120,7 +120,7 @@ export default function TaskForm() {
                     <PriorityPicker value={priority} onChange={setPriority} idPrefix="task-new" />
 
                     <fieldset>
-                        <legend className="block text-[13px] font-medium text-on-surface-variant mb-1.5">
+                        <legend className="block text-label font-medium text-on-surface-variant mb-1.5">
                             Fecha límite <span className="font-normal">(opcional)</span>
                         </legend>
                         <div className="flex flex-wrap gap-2">
@@ -139,7 +139,7 @@ export default function TaskForm() {
                                 triggerClassName={chipBase + (dueDate && !isQuick ? chipOn : chipIdle)}
                             />
                         </div>
-                        <p className="mt-2 text-[13px] text-on-surface-variant" aria-live="polite">
+                        <p className="mt-2 text-label text-on-surface-variant" aria-live="polite">
                             {dueDate ? (
                                 <>
                                     Vence el <span className="font-medium text-on-surface">{fmtLong.format(parseLocalDate(dueDate))}</span>.{" "}

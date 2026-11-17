@@ -47,7 +47,7 @@ export default async function LoginPage({
 
                     <ul aria-label="En tu invitación" className="mt-6 grid grid-cols-3 gap-2">
                         {INSIDE.map(({ icon: Icon, text }, i) => (
-                            <li key={text} className="animate-rise flex flex-col items-center gap-2 text-center text-[13px] font-medium leading-tight" style={{ animationDelay: `${200 + i * 90}ms` }}>
+                            <li key={text} className="animate-rise flex flex-col items-center gap-2 text-center text-label font-medium leading-tight" style={{ animationDelay: `${200 + i * 90}ms` }}>
                                 <span aria-hidden className="w-11 h-11 rounded-full bg-rubor text-rosa-profundo flex items-center justify-center">
                                     <Icon className="w-5 h-5" />
                                 </span>
@@ -81,7 +81,7 @@ export default async function LoginPage({
 
             <Band className="relative">
                 <p>www.davidyrocio.wedding</p>
-                <p className="mt-1 text-[13px]">
+                <p className="mt-1 text-label">
                     Al entrar aceptas los{" "}
                     <Link href="/terminos" className="underline hover:no-underline">términos y condiciones</Link>{" "}
                     y la{" "}

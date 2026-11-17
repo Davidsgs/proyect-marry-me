@@ -34,7 +34,7 @@ export default function StoryForm({ initial }: { initial: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="story-text" className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Texto</label>
+        <label htmlFor="story-text" className="block text-label font-medium text-on-surface-variant mb-1.5">Texto</label>
         <GrowText
           multiline
           id="story-text"

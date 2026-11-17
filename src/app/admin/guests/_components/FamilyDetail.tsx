@@ -17,7 +17,7 @@ type RsvpStatus = "PENDING" | "CONFIRMED" | "DECLINED";
 type AgeCategory = "BABY" | "CHILD" | "ADULT";
 
 const AGE_LABEL: Record<AgeCategory, string> = { ADULT: "Adulto", CHILD: "Niño", BABY: "Bebé" };
-const labelCls = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+const labelCls = "block text-label font-medium text-on-surface-variant mb-1.5";
 
 // Ficha de una familia: datos (nombre, descripción, estado, delegado, familia
 // directa) e integrantes. Se muestra en el panel lateral (escritorio) o en una

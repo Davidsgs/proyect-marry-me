@@ -36,7 +36,7 @@ export default function AdultsNoteForm({ initial }: { initial: string }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="adults-note" className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Texto de la nota</label>
+        <label htmlFor="adults-note" className="block text-label font-medium text-on-surface-variant mb-1.5">Texto de la nota</label>
         <GrowText
           multiline
           id="adults-note"
@@ -52,7 +52,7 @@ export default function AdultsNoteForm({ initial }: { initial: string }) {
       </div>
 
       <div>
-        <p className="text-[13px] font-medium text-on-surface-variant mb-1.5">Así lo verán los invitados</p>
+        <p className="text-label font-medium text-on-surface-variant mb-1.5">Así lo verán los invitados</p>
         <AdultsNote text={text} />
       </div>
 

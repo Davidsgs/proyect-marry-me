@@ -310,7 +310,7 @@ export default function TablesManager({ initialTables, families, users, floor, c
                                         className="w-full min-h-14 flex items-center justify-between gap-3 px-4 rounded-xl bg-surface-container-low text-left hover:bg-surface-container disabled:opacity-60 transition-colors"
                                     >
                                         <span className="min-w-0">
-                                            <span className="block text-[15px] font-medium text-on-surface">Mesa {t.number}</span>
+                                            <span className="block text-item font-medium text-on-surface">Mesa {t.number}</span>
                                             {t.name && <span className="block text-xs text-on-surface-variant truncate">{t.name}</span>}
                                         </span>
                                         <span className={`text-sm tabular-nums shrink-0 ${free <= 0 ? "text-error" : "text-on-secondary-container"}`}>
@@ -415,7 +415,7 @@ function UnassignedPool({
         >
             <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none lg:pointer-events-none [&::-webkit-details-marker]:hidden">
                 <span>
-                    <span className="block font-serif text-3xl leading-none text-on-surface">Sin mesa</span>
+                    <span className="block font-serif text-3xl leading-display text-on-surface">Sin mesa</span>
                     <span className={`mt-1 block text-sm ${unassigned.length > 0 ? "text-error" : "text-on-secondary-container"}`}>
                         {unassigned.length === 0 ? "Todos tienen mesa" : unassigned.length === 1 ? "1 invitado por sentar" : `${unassigned.length} invitados por sentar`}
                     </span>
@@ -432,12 +432,12 @@ function UnassignedPool({
                         {groups.map(({ family, members }) => (
                             <div key={family?.id ?? "none"} className="space-y-2">
                                 <div className="flex items-center justify-between gap-2">
-                                    <span className="text-[13px] font-medium text-on-surface-variant truncate">{family?.name ?? "Sin familia"}</span>
+                                    <span className="text-label font-medium text-on-surface-variant truncate">{family?.name ?? "Sin familia"}</span>
                                     {canWrite && onPick && family && members.length > 1 && (
                                         <button
                                             type="button"
                                             onClick={() => onPick({ kind: "family", family, count: members.length })}
-                                            className="shrink-0 min-h-9 px-2.5 rounded-lg text-[13px] font-medium text-primary hover:bg-surface-container-low transition-colors"
+                                            className="shrink-0 min-h-9 px-2.5 rounded-lg text-label font-medium text-primary hover:bg-surface-container-low transition-colors"
                                         >
                                             Sentar familia
                                         </button>
@@ -493,7 +493,7 @@ function TableCard({
         >
             <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                    <h3 className="font-serif text-3xl leading-none text-on-surface">Mesa {table.number}</h3>
+                    <h3 className="font-serif text-3xl leading-display text-on-surface">Mesa {table.number}</h3>
                     {(table.name || areaName) && (
                         <p className="mt-1 text-sm text-on-surface-variant truncate">{[table.name, areaName].filter(Boolean).join(" · ")}</p>
                     )}
@@ -613,7 +613,7 @@ function TableForm({ table, tables, areas, defaultAreaId, defaultNumber, onSave,
     onDone: () => void;
 }) {
     const [error, setError] = useState<string | null>(null);
-    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const label = "block text-label font-medium text-on-surface-variant mb-1.5";
     return (
         <form
             action={(formData) => {

@@ -23,7 +23,7 @@ export default async function OurStory() {
                 <div className="relative grid items-center gap-8 lg:grid-cols-[1fr_minmax(0,34rem)_1fr]">
                     {first && <Polaroid {...first} rotate={TILT[0]} className="mx-auto w-48 sm:w-56 lg:-mr-10 lg:mt-24 relative z-10" />}
                     <Arch as="article" className="reveal lg:col-start-2" innerClassName="text-center">
-                        <h2 id="historia" className="font-serif text-5xl sm:text-6xl leading-none text-oliva-profundo">Nuestra historia</h2>
+                        <h2 id="historia" className="font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo">Nuestra historia</h2>
                         <Sprig className="mx-auto mt-5 text-rosa-profundo" />
                         <div className="mt-5 space-y-4 font-text text-base sm:text-lg leading-relaxed text-pretty">
                             {paragraphs.map((p, i) => <p key={i} className="whitespace-pre-line">{p}</p>)}

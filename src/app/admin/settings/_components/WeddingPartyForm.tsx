@@ -130,7 +130,7 @@ function MemberForm({
     const matches = !userId && q.length >= 2
         ? people.filter((p) => norm(p.name).includes(q) || (p.alias ?? "").includes(q)).slice(0, 5)
         : [];
-    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const label = "block text-label font-medium text-on-surface-variant mb-1.5";
     const canSave = role.trim() && name.trim();
 
     return (

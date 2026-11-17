@@ -12,7 +12,7 @@ export default function EventDetails() {
         <section aria-labelledby="el-dia" className="relative overflow-hidden bg-oliva-profundo text-crema">
             <BotanicalShadow variant="espiga" sway className="absolute -right-24 -bottom-16 w-[28rem] max-w-[80vw] text-tinta/30" />
             <div className="relative mx-auto max-w-5xl px-5 sm:px-8 py-16 sm:py-24">
-                <h2 id="el-dia" className="reveal font-serif text-5xl sm:text-6xl leading-none scroll-mt-6">El gran día</h2>
+                <h2 id="el-dia" className="reveal font-serif text-5xl sm:text-6xl leading-display scroll-mt-6">El gran día</h2>
 
                 <div className="reveal mt-10 grid gap-12 md:grid-cols-[1.1fr_1fr] md:gap-16">
                     {/* Cuándo: la fecha es lo primero que se busca */}
@@ -20,7 +20,7 @@ export default function EventDetails() {
                         <h3 className={label}><CalendarHeart className="w-4 h-4" aria-hidden /> Cuándo</h3>
                         <p className="mt-2 font-serif leading-[0.9]">
                             <span className="block text-8xl sm:text-9xl">{day}</span>
-                            <span className="block text-4xl sm:text-5xl">de {rest.join(" de ")}</span>
+                            <span className="block text-4xl sm:text-5xl leading-display">de {rest.join(" de ")}</span>
                         </p>
                         <p className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-text text-base">
                             <span className="inline-flex items-center gap-1.5"><Clock className="w-4 h-4" aria-hidden /> {WEDDING_WEEKDAY}. Horario por confirmar.</span>
