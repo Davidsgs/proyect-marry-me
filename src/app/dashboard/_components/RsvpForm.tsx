@@ -21,16 +21,16 @@ interface Props {
 type Status = "PENDING" | "CONFIRMED" | "DECLINED";
 type Diet = { dietary: Dietary; note: string };
 
+// Fecha y hora por separado y con zona fija: el formato combinado cambia entre
+// el ICU de Node («, 23:59») y el del navegador («a las 23:59»), y eso rompía la
+// hidratación; sin zona, un servidor en UTC mostraría otra hora.
+const TZ = "America/Argentina/Buenos_Aires";
 export function formatDeadline(deadline: Date | null): string {
     if (!deadline) return "";
-    return new Intl.DateTimeFormat("es-AR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: false,
-    }).format(new Date(deadline));
+    const d = new Date(deadline);
+    const date = new Intl.DateTimeFormat("es-AR", { day: "numeric", month: "long", year: "numeric", timeZone: TZ }).format(d);
+    const time = new Intl.DateTimeFormat("es-AR", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: TZ }).format(d);
+    return `${date} a las ${time}`;
 }
 
 export default function RsvpForm({ family, members, isLocked, isLockedHard, deadline, adultsNote }: Props) {

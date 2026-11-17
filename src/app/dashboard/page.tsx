@@ -67,7 +67,7 @@ export default async function DashboardPage() {
     // Lo esencial de un vistazo, bajo el saludo; cada dato lleva a «El gran día».
     // Delegado sin responder y con plazo: el primer dato es el plazo y lleva a la confirmación.
     const answerBy = isDelegate && !hasResponded && deadline && !isPastDeadline
-        ? [{ icon: CalendarClock, text: `Responde antes del ${deadline.toLocaleDateString("es-AR", { day: "numeric", month: "long" })}`, href: "#confirmar" }]
+        ? [{ icon: CalendarClock, text: `Responde antes del ${deadline.toLocaleDateString("es-AR", { day: "numeric", month: "long", timeZone: "America/Argentina/Buenos_Aires" })}`, href: "#confirmar" }]
         : [];
     const facts: { icon: typeof CalendarHeart; text: string; href?: string }[] = [
         ...answerBy,
