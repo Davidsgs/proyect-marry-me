@@ -132,18 +132,18 @@ body {
   }
 }
 
+/* Movimiento opcional: estático por defecto, se anima solo si el usuario no
+   pidió reducir el movimiento. */
 @utility animate-sway {
-  animation: sway 14s var(--ease-out-soft) infinite;
   transform-origin: 0% 0%;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: sway 14s var(--ease-out-soft) infinite;
   }
 }
 
 @utility animate-rise {
-  animation: rise 700ms var(--ease-out-soft) both;
-  @media (prefers-reduced-motion: reduce) {
-    animation: none;
+  @media (prefers-reduced-motion: no-preference) {
+    animation: rise 700ms var(--ease-out-soft) both;
   }
 }
 
