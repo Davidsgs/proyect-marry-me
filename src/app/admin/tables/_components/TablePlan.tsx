@@ -318,7 +318,7 @@ export default function TablePlan({
     }
 
     const chip = (on: boolean) =>
-        `inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+        `inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-label font-medium transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
             on ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
         }`;
     const layoutBusy = !layout || isTemp(layout.id);
@@ -327,7 +327,7 @@ export default function TablePlan({
         <div className="space-y-4">
             {/* Áreas */}
             <div className="flex flex-wrap items-center gap-2">
-                <span id="plan-areas" className="text-[13px] font-medium text-on-surface-variant mr-1">Área</span>
+                <span id="plan-areas" className="text-label font-medium text-on-surface-variant mr-1">Área</span>
                 <div role="radiogroup" aria-labelledby="plan-areas" className="flex flex-wrap gap-2">
                     {areas.map((a) => (
                         <button key={a.id} type="button" role="radio" aria-checked={a.id === area.id} onClick={() => onAreaChange(a.id)} className={`${chip(a.id === area.id)} ${isTemp(a.id) ? pendingRowCls : ""}`}>
@@ -347,7 +347,7 @@ export default function TablePlan({
             {/* Alternativas del área */}
             <div className="rounded-2xl bg-surface-container-lowest p-3 sm:p-4 space-y-3">
                 <div className="flex flex-wrap items-center gap-2">
-                    <span id="plan-layouts" className="text-[13px] font-medium text-on-surface-variant mr-1">Alternativa</span>
+                    <span id="plan-layouts" className="text-label font-medium text-on-surface-variant mr-1">Alternativa</span>
                     <div role="radiogroup" aria-labelledby="plan-layouts" className="flex flex-wrap gap-2">
                         {areaLayouts.map((l) => (
                             <button
@@ -364,7 +364,7 @@ export default function TablePlan({
                         ))}
                     </div>
                 </div>
-                <p className="text-[13px] text-on-surface-variant">
+                <p className="text-label text-on-surface-variant">
                     {layout?.isActive
                         ? <>«{layout.name}» es la distribución <span className="font-medium text-on-surface">vigente</span>, la que se usará el día de la boda.</>
                         : <>Estás viendo «{layout?.name}», una alternativa de prueba. La vigente se marca con <Star className="inline w-3 h-3 fill-current align-[-1px]" aria-label="estrella" role="img" />.</>}
@@ -530,7 +530,7 @@ function NameForm({ initial, placeholder, submitLabel, copyFrom, onSave, onCance
     return (
         <form onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSave(name.trim(), copy); }} className="space-y-4">
             <label className="block">
-                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Nombre</span>
+                <span className="block text-label font-medium text-on-surface-variant mb-1.5">Nombre</span>
                 <GrowText autoFocus required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} className={inputCls} />
             </label>
             {copyFrom && <Checkbox checked={copy} onChange={setCopy} label={`Empezar con las posiciones de «${copyFrom}»`} />}
@@ -556,7 +556,7 @@ function ElementForm({ initial, onSave, onDelete, onCancel }: {
     const [color, setColor] = useState<string | null>(initial?.color ?? null);
     const customColor = color && !ELEMENT_COLORS.some((c) => c.hex === color) ? color : null;
     const meta = KIND[kind];
-    const lbl = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const lbl = "block text-label font-medium text-on-surface-variant mb-1.5";
 
     function pickKind(k: ElementKind) {
         setKind(k);
@@ -582,7 +582,7 @@ function ElementForm({ initial, onSave, onDelete, onCancel }: {
                             role="radio"
                             aria-checked={kind === k.kind}
                             onClick={() => pickKind(k.kind)}
-                            className={`inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-[13px] font-medium transition-colors cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-9 px-3.5 rounded-full text-label font-medium transition-colors cursor-pointer ${
                                 kind === k.kind ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface hover:bg-surface-container"
                             }`}
                         >
@@ -627,7 +627,7 @@ function ElementForm({ initial, onSave, onDelete, onCancel }: {
                                 aria-checked={color === null}
                                 onClick={() => setColor(null)}
                                 title="El color de su tipo"
-                                className={`inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-8 pl-1.5 pr-3 rounded-full text-[13px] font-medium cursor-pointer ${
+                                className={`inline-flex items-center gap-1.5 min-h-11 pointer-fine:min-h-8 pl-1.5 pr-3 rounded-full text-label font-medium cursor-pointer ${
                                     color === null ? "ring-2 ring-primary ring-offset-2 ring-offset-surface-container-lowest" : ""
                                 } bg-surface-container-low text-on-surface hover:bg-surface-container`}
                             >

@@ -31,7 +31,7 @@ export default function AdminSidebar({ permissions }: { permissions?: string[] }
                 key={item.href}
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex items-center gap-3.5 min-h-11 px-4 rounded-xl text-[15px] font-medium transition-colors duration-150 ${
+                className={`flex items-center gap-3.5 min-h-11 px-4 rounded-xl text-item font-medium transition-colors duration-150 ${
                   active ? "bg-crema text-oliva-profundo shadow-sm" : "text-crema hover:bg-crema/10"
                 }`}
               >

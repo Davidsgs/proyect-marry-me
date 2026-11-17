@@ -446,7 +446,7 @@ function SectionGroup({ group, editable, showSectionTitle, children }: { group: 
         <section ref={setNodeRef} aria-labelledby={showSectionTitle ? headingId : undefined} className={`rounded-3xl transition-colors ${isOver ? "bg-secondary-container/50 ring-2 ring-primary/30 p-2 -m-2" : ""}`}>
             {showSectionTitle && (
                 <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3 px-1">
-                    <h2 id={headingId} className="font-serif text-3xl leading-none text-primary">{section?.name ?? "Sin sección"}</h2>
+                    <h2 id={headingId} className="font-serif text-3xl leading-display text-primary">{section?.name ?? "Sin sección"}</h2>
                     {section?.date && (
                         <span className="text-sm text-on-surface-variant first-letter:uppercase">{fmtSectionDate.format(parseLocalDate(section.date))}</span>
                     )}
@@ -562,7 +562,7 @@ function SectionsEditor({
 function SectionForm({ initial, onSave, onCancel }: { initial?: ScheduleSection; onSave: (data: { name: string; date: string | null }) => void; onCancel: () => void }) {
     const [name, setName] = useState(initial?.name ?? "");
     const [date, setDate] = useState(initial?.date ?? "");
-    const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const label = "block text-label font-medium text-on-surface-variant mb-1.5";
 
     return (
         <form
@@ -1100,7 +1100,7 @@ function TaskRow({
                 <select
                     value={task.responsibleId ?? ""}
                     onChange={(e) => onAssign(e.target.value === "" ? null : Number(e.target.value))}
-                    className={`${inputSmCls} shrink-0 max-w-32 text-[13px] cursor-pointer`}
+                    className={`${inputSmCls} shrink-0 max-w-32 text-label cursor-pointer`}
                     aria-label={`Responsable de «${task.label}»`}
                 >
                     <option value="">Sin responsable</option>
@@ -1158,7 +1158,7 @@ function TaskDetail({
     const [description, setDescription] = useState(task.description);
     const [responsibleId, setResponsibleId] = useState<number | null>(task.responsibleId);
     const assignee = responsibles.find((r) => r.id === task.responsibleId) ?? null;
-    const lbl = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+    const lbl = "block text-label font-medium text-on-surface-variant mb-1.5";
     const h = "text-sm font-semibold text-on-surface mb-2";
 
     const status = (
@@ -1306,17 +1306,17 @@ function NewActivityForm({ sections, onCreate, onDone }: { sections: ScheduleSec
             className="space-y-4"
         >
             <label className="block">
-                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Título de la actividad</span>
+                <span className="block text-label font-medium text-on-surface-variant mb-1.5">Título de la actividad</span>
                 <GrowText required autoFocus name="title" placeholder="Ceremonia, recepción, primer baile…" className={inputCls} />
             </label>
             {sections.length > 0 && (
                 <label className="block">
-                    <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Sección</span>
+                    <span className="block text-label font-medium text-on-surface-variant mb-1.5">Sección</span>
                     <SectionSelect sections={sections} value={firstSection} name="sectionId" />
                 </label>
             )}
             <label className="block">
-                <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">Hora <span className="font-normal">(opcional)</span></span>
+                <span className="block text-label font-medium text-on-surface-variant mb-1.5">Hora <span className="font-normal">(opcional)</span></span>
                 <input type="time" name="time" className={inputCls} />
             </label>
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">

@@ -19,7 +19,7 @@ export default async function Gifts() {
                     <span aria-hidden className="mb-5 w-14 h-14 rounded-full bg-rubor text-rosa-profundo flex items-center justify-center">
                         <Gift className="w-6 h-6" />
                     </span>
-                    <h2 id="regalos" className="font-serif text-5xl sm:text-6xl leading-none text-oliva-profundo">Regalos</h2>
+                    <h2 id="regalos" className="font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo">Regalos</h2>
                     <p className="mt-4 font-text text-lg leading-relaxed text-pretty">
                         {note || "Su presencia es nuestro mejor regalo. Si además desean hacernos un obsequio, pueden hacerlo por transferencia."}
                     </p>

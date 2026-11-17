@@ -10,7 +10,7 @@ interface Props {
     adultsNote: string | null;
 }
 
-const title = "font-serif text-4xl sm:text-5xl leading-none text-oliva-profundo text-balance";
+const title = "font-serif text-4xl sm:text-5xl leading-display text-oliva-profundo text-balance";
 
 // Vista para acompañantes: ven la respuesta de su familia, pero la confirma el delegado.
 export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: Props) {

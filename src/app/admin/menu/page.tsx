@@ -44,7 +44,7 @@ export default async function MenuPage() {
       </div>
 
       <section aria-labelledby="restricciones" className="rounded-2xl bg-surface-container-lowest p-5 sm:p-6">
-        <h2 id="restricciones" className="font-serif text-3xl leading-none text-primary">Restricciones de los invitados</h2>
+        <h2 id="restricciones" className="font-serif text-3xl leading-display text-primary">Restricciones de los invitados</h2>
         <p className="mt-2 text-sm text-on-surface-variant">
           Lo que indicaron los {attending.length} {attending.length === 1 ? "invitado confirmado" : "invitados confirmados"} al responder.
         </p>

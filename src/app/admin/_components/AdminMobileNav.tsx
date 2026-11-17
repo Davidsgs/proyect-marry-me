@@ -23,7 +23,7 @@ export default function AdminMobileNav({ permissions }: { permissions?: string[]
   const moreActive = moreItems.some((i) => isActive(pathname, i.href));
 
   const slot = (active: boolean) =>
-    `flex-1 flex flex-col items-center justify-center gap-1 min-h-14 rounded-xl text-[12px] font-medium transition-colors duration-150 ${
+    `flex-1 flex flex-col items-center justify-center gap-1 min-h-14 rounded-xl text-xs font-medium transition-colors duration-150 ${
       active ? "text-oliva-profundo" : "text-on-surface-variant"
     }`;
   const pill = (active: boolean) =>

@@ -14,7 +14,7 @@ export const btnDanger = `${btnBase} bg-error text-on-error shadow-sm hover:bg-[
 export const btnGhost = `${btnBase} text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low`;
 
 // Compactos (dentro de filas y formularios en línea).
-const btnSmBase = `inline-flex items-center justify-center gap-1.5 min-h-9 px-3 py-1.5 rounded-lg font-sans text-[13px] font-medium transition-[background-color,color] duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${focusRing}`;
+const btnSmBase = `inline-flex items-center justify-center gap-1.5 min-h-9 px-3 py-1.5 rounded-lg font-sans text-label font-medium transition-[background-color,color] duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${focusRing}`;
 export const btnPrimarySm = `${btnSmBase} bg-primary text-on-primary hover:bg-[#4a5745]`;
 export const btnGhostSm = `${btnSmBase} text-on-surface-variant hover:text-on-surface hover:bg-surface-container`;
 
@@ -50,7 +50,7 @@ export function Field({
   children: React.ReactNode;
 }) {
   const text = (
-    <span className="block text-[13px] font-medium text-on-surface-variant mb-1.5">
+    <span className="block text-label font-medium text-on-surface-variant mb-1.5">
       {label} {optional && <span className="font-normal">(opcional)</span>}
     </span>
   );
@@ -191,7 +191,7 @@ export function StatCard({
   const body = (
     <>
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13px] font-medium text-on-surface-variant">{label}</p>
+        <p className="text-label font-medium text-on-surface-variant">{label}</p>
         {href ? (
           <ChevronRight className="w-4 h-4 text-on-surface-variant transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
         ) : (

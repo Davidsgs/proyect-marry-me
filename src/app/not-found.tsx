@@ -10,7 +10,7 @@ export default function NotFound() {
             <BotanicalShadow variant="rama" className="absolute -top-16 -left-24 w-[30rem] max-w-[90vw] text-rosa-profundo/20" />
             <Arch className="relative w-full max-w-md animate-rise" innerClassName="text-center">
                 <Monogram size="md" className="mx-auto" />
-                <h1 className="mt-5 font-serif text-5xl leading-none text-oliva-profundo text-balance">No encontramos esta página</h1>
+                <h1 className="mt-5 font-serif text-5xl leading-display text-oliva-profundo text-balance">No encontramos esta página</h1>
                 <p className="mt-4 font-text text-base leading-relaxed text-pretty">
                     Puede que el enlace esté incompleto o haya cambiado. Tu invitación sigue en su sitio.
                 </p>

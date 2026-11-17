@@ -301,3 +301,19 @@ export const layoutPositions = sqliteTable("layout_positions", {
   uniqueIndex("layout_positions_table_unique").on(t.layoutId, t.tableId),
   uniqueIndex("layout_positions_element_unique").on(t.layoutId, t.elementId),
 ]);
+
+// Auditoría de respuestas: una fila por cada confirmación del delegado o cambio
+// de estado hecho por un administrador. Solo se agregan filas, nunca se editan.
+export const rsvpEvents = sqliteTable("rsvp_events", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  familyId: integer("family_id").notNull().references(() => families.id, { onDelete: 'cascade' }),
+  status: text("status", { enum: ["PENDING", "CONFIRMED", "DECLINED"] }).notNull(),
+  // Quién lo hizo. Nombre copiado: el historial se lee igual si la persona se borra.
+  actorUserId: integer("actor_user_id").references(() => users.id, { onDelete: 'set null' }),
+  actorName: text("actor_name").default("").notNull(),
+  actorKind: text("actor_kind", { enum: ["DELEGATE", "ADMIN"] }).notNull(),
+  // JSON [{ userId, name, attending }]: asistencia de cada integrante en ese
+  // momento. "[]" cuando el administrador solo cambió el estado de la familia.
+  attendees: text("attendees").default("[]").notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});

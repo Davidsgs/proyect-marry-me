@@ -11,7 +11,7 @@ export default async function MyTableCard({ currentUserId }: { currentUserId: nu
             <div className="mx-auto max-w-5xl px-5 sm:px-8 py-16 sm:py-24 grid gap-10 md:grid-cols-[auto_1fr] md:items-center md:gap-16">
                 <div className="reveal flex items-end gap-6 sm:gap-8">
                     <div>
-                        <h2 id="tu-mesa" className="font-serif text-5xl sm:text-6xl leading-none text-oliva-profundo">Tu mesa</h2>
+                        <h2 id="tu-mesa" className="font-serif text-5xl sm:text-6xl leading-display text-oliva-profundo">Tu mesa</h2>
                         {result && (
                             <p className="mt-4 font-serif leading-none text-tinta">
                                 <span className="sr-only">Mesa </span>

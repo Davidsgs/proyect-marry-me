@@ -4,9 +4,10 @@
 // OJO: este módulo NO es "use server"; no exponer estas funciones como acciones
 // (no comprueban permisos: eso lo hace quien llama).
 import { unstable_cache } from "next/cache";
-import { asc, eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { eventConfig, families, tables, users, weddingParty } from "@/db/schema";
+import { eventConfig, families, rsvpEvents, tables, users, weddingParty } from "@/db/schema";
+import type { RsvpAttendee, RsvpEvent } from "@/lib/rsvpAudit";
 
 export const cachedFamilies = unstable_cache(
     async () => db.select().from(families).all(),
@@ -25,6 +26,40 @@ export const cachedTables = unstable_cache(
     ["all-tables"],
     { tags: ["tables"] },
 );
+
+/**
+ * Historial de respuestas, el más reciente primero. Tag "families": toda
+ * escritura que lo amplía ya invalida familias.
+ */
+export const cachedRsvpEvents = unstable_cache(
+    async (): Promise<RsvpEvent[]> => {
+        const rows = await db
+            .select({
+                id: rsvpEvents.id,
+                familyId: rsvpEvents.familyId,
+                status: rsvpEvents.status,
+                actorName: rsvpEvents.actorName,
+                actorKind: rsvpEvents.actorKind,
+                attendees: rsvpEvents.attendees,
+                createdAt: rsvpEvents.createdAt,
+            })
+            .from(rsvpEvents)
+            .orderBy(desc(rsvpEvents.createdAt), desc(rsvpEvents.id))
+            .all();
+        return rows.map((r) => ({ ...r, attendees: parseAttendees(r.attendees) }));
+    },
+    ["rsvp-events"],
+    { tags: ["families"] },
+);
+
+function parseAttendees(raw: string): RsvpAttendee[] {
+    try {
+        const list = JSON.parse(raw);
+        return Array.isArray(list) ? list : [];
+    } catch {
+        return [];
+    }
+}
 
 /** Padrinos y cortejo en su orden (tag "wedding-party"). */
 export const cachedWeddingParty = unstable_cache(

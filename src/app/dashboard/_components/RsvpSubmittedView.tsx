@@ -33,7 +33,7 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
                     {isConfirmed ? <Check className="w-7 h-7" strokeWidth={2.5} aria-hidden /> : <Heart className="w-6 h-6" aria-hidden />}
                     {celebrate && isConfirmed && <PetalBurst />}
                 </span>
-                <h2 className="font-serif text-4xl sm:text-5xl leading-none text-oliva-profundo text-balance">
+                <h2 className="font-serif text-4xl sm:text-5xl leading-display text-oliva-profundo text-balance">
                     {isConfirmed ? "¡Gracias por confirmar!" : "Gracias por avisarnos"}
                 </h2>
                 <p className="max-w-md mx-auto text-base leading-relaxed text-pretty">

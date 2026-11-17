@@ -67,7 +67,7 @@ export default function TaskList({ canWrite }: { canWrite: boolean }) {
             {pending.length + completed.length > 1 && (
                 <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                        <span id="task-sort-label" className="text-[13px] font-medium text-on-surface-variant">Ordenar por</span>
+                        <span id="task-sort-label" className="text-label font-medium text-on-surface-variant">Ordenar por</span>
                         <div role="radiogroup" aria-labelledby="task-sort-label" className="flex w-full sm:w-fit gap-1 bg-surface-container-low rounded-xl p-1">
                             {SORTS.map((s) => {
                                 const active = s.value === sort;
@@ -88,12 +88,12 @@ export default function TaskList({ canWrite }: { canWrite: boolean }) {
                             })}
                         </div>
                     </div>
-                    <p className="text-[13px] text-on-surface-variant" aria-live="polite">{hint}</p>
+                    <p className="text-label text-on-surface-variant" aria-live="polite">{hint}</p>
                 </div>
             )}
 
             <div className="space-y-3">
-                <h2 className="font-serif text-3xl leading-none text-primary flex items-baseline gap-2">
+                <h2 className="font-serif text-3xl leading-display text-primary flex items-baseline gap-2">
                     Pendientes
                     <span className="font-sans text-sm text-on-surface-variant tabular-nums">{pending.length}</span>
                 </h2>
@@ -109,7 +109,7 @@ export default function TaskList({ canWrite }: { canWrite: boolean }) {
 
             {completed.length > 0 && (
                 <details className="group">
-                    <summary className="cursor-pointer min-h-11 font-serif text-3xl leading-none text-primary flex items-center gap-2 list-none [&::-webkit-details-marker]:hidden">
+                    <summary className="cursor-pointer min-h-11 font-serif text-3xl leading-display text-primary flex items-center gap-2 list-none [&::-webkit-details-marker]:hidden">
                         <ChevronDown className="w-5 h-5 text-on-surface-variant transition-transform group-open:rotate-180" aria-hidden />
                         Completadas
                         <span className="font-sans text-sm text-on-surface-variant tabular-nums">{completed.length}</span>

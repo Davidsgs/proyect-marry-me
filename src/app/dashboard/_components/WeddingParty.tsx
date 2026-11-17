@@ -23,7 +23,7 @@ export default async function WeddingParty() {
         <section aria-labelledby="cortejo" className="relative overflow-hidden bg-oliva-profundo text-crema">
             <BotanicalShadow variant="rama" sway className="absolute -left-24 -top-16 w-[26rem] max-w-[80vw] text-tinta/30" />
             <div className="relative mx-auto max-w-5xl px-5 sm:px-8 py-16 sm:py-24">
-                <h2 id="cortejo" className="reveal font-serif text-5xl sm:text-6xl leading-none">Nuestro cortejo</h2>
+                <h2 id="cortejo" className="reveal font-serif text-5xl sm:text-6xl leading-display">Nuestro cortejo</h2>
                 <p className="reveal mt-4 max-w-xl font-text text-lg leading-relaxed text-pretty">
                     Gracias a quienes nos acompañan en cada paso de este camino. Este día también es suyo.
                 </p>

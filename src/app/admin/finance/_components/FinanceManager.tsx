@@ -217,7 +217,7 @@ function TransactionItem({ tx, mutate, canWrite }: { tx: TransactionRow; mutate:
         {isIncome ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[15px] font-medium text-on-surface truncate">{tx.concept}</p>
+        <p className="text-item font-medium text-on-surface truncate">{tx.concept}</p>
         <p className="text-sm text-on-surface-variant truncate mt-0.5">
           {tx.category && <span className="font-medium">{tx.category} · </span>}{fmtDate(tx.date)}
           {tx.notes && <span> · {tx.notes}</span>}
@@ -345,7 +345,7 @@ function PlanForm({ mutate, onDone }: { mutate: PlanMutate; onDone: () => void }
 
       {perCuota > 0 && (
         <p className="text-xs text-on-surface-variant font-medium bg-surface-container-low rounded-xl px-4 py-2.5">
-          {count} cuota{count === 1 ? "" : "s"} de aprox. <span className="text-primary font-semibold">{formatMoney(perCuota)}</span>
+          {count} cuota{count === 1 ? "" : "s"} de aprox. <span className="text-primary font-semibold tabular-nums">{formatMoney(perCuota)}</span>
           {" "}· Las fechas se generan mensualmente desde el 1er vencimiento.
         </p>
       )}
@@ -381,7 +381,7 @@ function PlanCard({ plan, mutate, canWrite }: { plan: PlanWithInstallments; muta
         </div>
         <button onClick={() => setOpen((v) => !v)} className="flex-1 min-w-0 text-left border-none bg-transparent cursor-pointer">
           <p className="font-sans text-sm font-medium text-on-surface truncate">{plan.concept}</p>
-          <p className="text-sm text-on-surface-variant truncate mt-0.5">
+          <p className="text-sm text-on-surface-variant truncate mt-0.5 tabular-nums">
             {plan.category && <span className="font-medium">{plan.category} · </span>}
             {paidCount}/{plan.installmentsCount} cuotas · {formatMoney(paidCents)} de {formatMoney(plan.totalAmountCents)}
           </p>

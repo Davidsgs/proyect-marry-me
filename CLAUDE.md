@@ -55,6 +55,7 @@ Env in `.env.local` (gitignored): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUT
 - Tasks have `priority` (`HIGHEST`/`HIGH`/`MEDIUM`/`LOW` in data, Spanish labels and icons in `src/lib/priority.ts` + `PriorityIcon.tsx`).
 - Cronograma: activities belong to `schedule_sections` (name + optional date); steps (`schedule_tasks`) have a `description`; responsibles are a free name or linked to a user (`user_id`, name copied).
 - Mesas: `floor_areas` → `floor_layouts` (one `is_active` per area) → `layout_positions` (one row per table/element per layout); `floor_elements` are non-table items (pista, DJ, mesa dulce…); `tables.area_id` null = first area. `tables.pos_x/pos_y` are legacy, unused.
+- RSVP audit: every write that changes a family's RSVP (delegate or admin) appends a `rsvp_events` row via `rsvpEventInsert` from `src/lib/rsvpAudit.ts`, in the same `db.batch` when possible. Rows are append-only; history shows in the family detail (Invitados) and in Resumen.
 - Deletes clean dependent rows explicitly (`db.batch`): don't rely on DB-level cascades/SET NULL.
 
 ## Design

@@ -17,7 +17,7 @@ function Block({ id, title, description, children }: { id: string; title: string
   return (
     <section aria-labelledby={id} className="bg-surface-container-lowest p-5 sm:p-8 rounded-3xl space-y-6">
       <div>
-        <h2 id={id} className="font-serif text-3xl leading-none text-primary">{title}</h2>
+        <h2 id={id} className="font-serif text-3xl leading-display text-primary">{title}</h2>
         <p className="text-sm text-on-surface-variant mt-2 text-pretty">{description}</p>
       </div>
       {children}

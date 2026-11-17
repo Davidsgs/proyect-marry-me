@@ -1,6 +1,9 @@
 // Datos fijos de la boda. Única fuente para fecha y textos derivados.
-export const WEDDING_DATE_ISO = "2027-04-02T00:00:00-03:00"; // Argentina (UTC-3)
+export const WEDDING_DATE_ISO = "2027-04-02T21:00:00-03:00"; // Argentina (UTC-3)
 export const WEDDING_DATE_LABEL = "2 de abril de 2027";
+export const WEDDING_TIME_LABEL = "21:00 h";
+// Minutos de espera tras la hora de inicio; después la puerta se cierra hasta la fiesta.
+export const ARRIVAL_TOLERANCE_MIN = 10;
 
 // Día de la semana derivado de la fecha («Viernes»): no escribirlo a mano.
 const weekday = new Intl.DateTimeFormat("es-AR", { weekday: "long", timeZone: "America/Argentina/Buenos_Aires" }).format(new Date(WEDDING_DATE_ISO));
@@ -50,18 +53,20 @@ export const ADULTS_NOTE_DEFAULT =
   "Queremos que sea una noche para que los adultos la disfruten con calma, por eso la celebración será sin niños. Gracias por entenderlo y por organizarse para acompañarnos.";
 export const ADULTS_NOTE_MAX = 400;
 
-// "2027-04-02" → "20270403" (fin exclusivo de un evento de día completo).
-function nextDayCompact(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const next = new Date(Date.UTC(y, m - 1, d + 1));
-  return next.toISOString().slice(0, 10).replaceAll("-", "");
+// Date → "20270403T000000Z" (formato UTC de Google Calendar).
+function calendarUtc(date: Date) {
+  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
 }
 
-// Evento de día completo: el horario aún no está definido.
+// Evento con hora de inicio real. shortcut: el fin (6 h después) es estimado,
+// ajustarlo cuando se sepa la hora de cierre.
+const weddingStart = new Date(WEDDING_DATE_ISO);
+const weddingEnd = new Date(weddingStart.getTime() + 6 * 3_600_000);
 export const CALENDAR_URL =
   "https://calendar.google.com/calendar/render?action=TEMPLATE" +
   `&text=${encodeURIComponent(`Boda de ${COUPLE_NAMES}`)}` +
-  `&dates=${WEDDING_DATE_ISO.slice(0, 10).replaceAll("-", "")}/${nextDayCompact(WEDDING_DATE_ISO.slice(0, 10))}` +
+  `&dates=${calendarUtc(weddingStart)}/${calendarUtc(weddingEnd)}` +
+  `&details=${encodeURIComponent(`La ceremonia empieza a las ${WEDDING_TIME_LABEL} (hora de Argentina) con ${ARRIVAL_TOLERANCE_MIN} minutos de tolerancia. Llega con tiempo.`)}` +
   `&location=${encodeURIComponent(`${VENUE.address}, ${VENUE.area}`)}`;
 
 // Padrinos y cortejo (tabla wedding_party): límites de cada campo y papeles sugeridos.

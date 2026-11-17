@@ -1,13 +1,14 @@
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import { WEDDING_DATE_LABEL, daysUntilWedding } from "@/lib/wedding";
-import { parseLocalDate, todayLocalISO } from "@/lib/dates";
+import { formatSqlTimestamp, parseLocalDate, todayLocalISO } from "@/lib/dates";
+import type { RsvpEvent } from "@/lib/rsvpAudit";
 import { getTasks } from "@/app/actions/tasks";
 import { getTables } from "@/app/actions/tables";
 import { getSchedule } from "@/app/actions/schedule";
 import { getFinanceSummary } from "@/app/actions/finance";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
-import { getRsvpDeadline } from "@/lib/data";
+import { cachedRsvpEvents, getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { declined } from "@/lib/attendance";
 import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
@@ -48,9 +49,10 @@ export default async function AdminPage() {
     const canReadGuests = hasPermission(perms, "families.read") && hasPermission(perms, "users.read");
     const canWriteUsers = hasPermission(perms, "users.write");
 
-    const [families, users, allTasks, tables, schedule, finance, deadline] = await Promise.all([
+    const [families, users, rsvpEvents, allTasks, tables, schedule, finance, deadline] = await Promise.all([
         canReadGuests ? getFamilies() : [],
         canReadGuests ? getUsers() : [],
+        canReadGuests ? cachedRsvpEvents() : [],
         canReadTasks ? getTasks() : [],
         canReadTables ? getTables() : [],
         canReadSchedule ? getSchedule() : [],
@@ -97,10 +99,14 @@ export default async function AdminPage() {
         })
         .slice(0, 4);
 
-    // Confirmaciones recientes
+    // Confirmaciones recientes: por la fecha de su última respuesta auditada (sin
+    // historial, por la última edición de la familia) y con quién respondió.
+    const lastEvent = new Map<number, RsvpEvent>();
+    for (const e of rsvpEvents) if (!lastEvent.has(e.familyId)) lastEvent.set(e.familyId, e);
+    const answeredAt = (f: { id: number; updatedAt: string }) => lastEvent.get(f.id)?.createdAt ?? f.updatedAt ?? "";
     const recentConfirmedFamilies = families
         .filter((f) => f.globalRsvpStatus === "CONFIRMED")
-        .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
+        .toSorted((a, b) => answeredAt(b).localeCompare(answeredAt(a)))
         .slice(0, 5);
 
     // «Por resolver»: lo que la pareja tiene que perseguir, de más a menos urgente.
@@ -265,7 +271,7 @@ export default async function AdminPage() {
         <div className="max-w-6xl mx-auto space-y-10 lg:space-y-14">
             <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
                 <div className="min-w-0">
-                    <h1 className="font-serif text-5xl leading-none text-primary">Resumen</h1>
+                    <h1 className="font-serif text-5xl leading-display text-primary">Resumen</h1>
                     {firstName && <p className="mt-2 text-sm text-on-surface-variant">Hola, {firstName}.</p>}
                 </div>
                 <div className="flex flex-wrap items-end gap-6">
@@ -284,7 +290,7 @@ export default async function AdminPage() {
             <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-10 lg:gap-12 items-start">
                 {/* Por resolver: lo primero que hay que mirar */}
                 <section className="space-y-4" aria-labelledby="pendientes">
-                    <h2 id="pendientes" className="font-serif text-3xl leading-none text-primary">Por resolver</h2>
+                    <h2 id="pendientes" className="font-serif text-3xl leading-display text-primary">Por resolver</h2>
                     {pending.length === 0 ? (
                         <div className="bg-secondary-container/60 p-6 rounded-2xl flex items-center gap-3 text-sm text-on-secondary-container">
                             <CheckCircle2 className="w-5 h-5 shrink-0" aria-hidden />
@@ -302,7 +308,7 @@ export default async function AdminPage() {
                                             <item.icon className="w-5 h-5" aria-hidden />
                                         </span>
                                         <span className="min-w-0 flex-1">
-                                            <span className="block text-[15px] font-medium text-on-surface">{item.title}</span>
+                                            <span className="block text-item font-medium text-on-surface">{item.title}</span>
                                             {item.detail && <span className="block text-sm text-on-surface-variant mt-0.5 line-clamp-2">{item.detail}</span>}
                                         </span>
                                         <ChevronRight className="w-4 h-4 text-on-surface-variant shrink-0 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
@@ -321,7 +327,7 @@ export default async function AdminPage() {
                 {/* Estado: una línea por sección */}
                 {status.length > 0 && (
                     <section className="space-y-4" aria-labelledby="estado">
-                        <h2 id="estado" className="font-serif text-3xl leading-none text-primary">Estado</h2>
+                        <h2 id="estado" className="font-serif text-3xl leading-display text-primary">Estado</h2>
                         <ul className="rounded-2xl bg-surface-container-lowest p-1.5">
                             {status.map((row) => (
                                 <li key={row.href + row.label}>
@@ -346,7 +352,7 @@ export default async function AdminPage() {
                 {canReadTasks && (
                     <section className="space-y-4" aria-labelledby="proximas">
                         <div className="flex items-baseline justify-between gap-2">
-                            <h2 id="proximas" className="font-serif text-3xl leading-none text-primary">Próximas tareas</h2>
+                            <h2 id="proximas" className="font-serif text-3xl leading-display text-primary">Próximas tareas</h2>
                             <Link href="/admin/tasks" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Ver todas</Link>
                         </div>
                         {upcomingTasks.length === 0 ? (
@@ -372,7 +378,7 @@ export default async function AdminPage() {
                 {canReadGuests && (
                     <section className="space-y-4" aria-labelledby="recientes">
                         <div className="flex items-baseline justify-between gap-2">
-                            <h2 id="recientes" className="font-serif text-3xl leading-none text-primary">Últimas confirmaciones</h2>
+                            <h2 id="recientes" className="font-serif text-3xl leading-display text-primary">Últimas confirmaciones</h2>
                             <Link href="/admin/guests" className="inline-flex min-h-11 items-center text-sm font-medium text-primary hover:underline">Ver invitados</Link>
                         </div>
                         {recentConfirmedFamilies.length === 0 ? (
@@ -382,9 +388,18 @@ export default async function AdminPage() {
                                 {recentConfirmedFamilies.map((f) => {
                                     const familyUsers = users.filter((u) => u.familyId === f.id);
                                     const attending = familyUsers.filter((u) => u.isConfirmed).length;
+                                    const event = lastEvent.get(f.id);
                                     return (
                                         <li key={f.id} className="bg-surface-container-lowest px-4 py-3 rounded-xl flex items-center gap-3">
-                                            <span className="text-sm text-on-surface flex-1 min-w-0 truncate">{f.name}</span>
+                                            <span className="flex-1 min-w-0">
+                                                <span className="block text-sm text-on-surface truncate">{f.name}</span>
+                                                {event && (
+                                                    <span className="block text-xs text-on-surface-variant truncate">
+                                                        {event.actorKind === "DELEGATE" ? "Delegado" : "Administrador"}
+                                                        {event.actorName && `: ${event.actorName}`} · {formatSqlTimestamp(event.createdAt)}
+                                                    </span>
+                                                )}
+                                            </span>
                                             <span className="text-xs text-on-secondary-container font-medium tabular-nums shrink-0">
                                                 {attending} de {familyUsers.length} asisten
                                             </span>

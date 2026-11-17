@@ -28,7 +28,7 @@ export default async function WelcomePage() {
             <div className="relative w-full max-w-xl space-y-8 animate-rise">
                 <div className="text-center space-y-3">
                     <Monogram size="md" className="mx-auto" />
-                    <h1 className="font-serif text-5xl leading-none text-oliva-profundo">
+                    <h1 className="font-serif text-5xl leading-display text-oliva-profundo">
                         {firstName ? `Hola, ${firstName}` : "Hola"}
                     </h1>
                     <p className="font-text text-base">¿A dónde quieres ir?</p>

@@ -40,7 +40,7 @@ export default function GiftsForm({ initial }: { initial: Gifts }) {
       });
   }
 
-  const label = "block text-[13px] font-medium text-on-surface-variant mb-1.5";
+  const label = "block text-label font-medium text-on-surface-variant mb-1.5";
   return (
     <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
       <label className="block sm:col-span-2">

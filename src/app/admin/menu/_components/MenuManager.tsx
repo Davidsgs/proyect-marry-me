@@ -299,7 +299,7 @@ function MomentGroup({
         ) : (
           <Clock className="w-5 h-5 text-on-surface-variant shrink-0" aria-hidden />
         )}
-        <h2 className="font-serif text-3xl leading-none text-primary">{title}</h2>
+        <h2 className="font-serif text-3xl leading-display text-primary">{title}</h2>
         {time && (
           <span className="text-sm font-medium text-on-secondary-container bg-secondary-container px-2.5 py-0.5 rounded-full tabular-nums">
             {time}
@@ -388,7 +388,7 @@ function ItemRow({
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <p className={`text-[15px] font-medium text-on-surface ${discarded ? "line-through" : ""}`}>
+          <p className={`text-item font-medium text-on-surface ${discarded ? "line-through" : ""}`}>
             {item.name}
           </p>
           <span className="text-xs text-on-surface-variant">{TYPE_META[item.type].label}</span>
@@ -436,7 +436,7 @@ function ItemRow({
               mutate((s) => s.map((i) => i.id === item.id ? { ...i, status: next } : i), () => setMenuItemStatus(item.id, next), { error: "No se pudo cambiar el estado" });
             }}
             aria-label={`Estado de ${item.name}`}
-            className={`min-h-11 pointer-fine:min-h-8 text-[13px] font-medium pl-2.5 pr-1 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
+            className={`min-h-11 pointer-fine:min-h-8 text-label font-medium pl-2.5 pr-1 rounded-lg outline-none cursor-pointer focus:ring-2 focus:ring-primary/40 disabled:opacity-50 ${status.cls}`}
           >
             <option value="IDEA">Idea</option>
             <option value="CONFIRMED">Confirmado</option>

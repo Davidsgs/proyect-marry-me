@@ -55,7 +55,7 @@ export default async function DashboardLayout({
 
       <Band>
         <p>David y Rocío · {WEDDING_DATE_LABEL}</p>
-        <p className="mt-1 text-[13px]">
+        <p className="mt-1 text-label">
           ¿Dudas o algo no funciona? Escríbenos a{" "}
           <a href={`mailto:${SUPPORT_EMAIL}`} className="underline hover:no-underline">{SUPPORT_EMAIL}</a>
         </p>
