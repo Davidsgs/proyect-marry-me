@@ -97,7 +97,14 @@ export default function FamilyDetail({
             ...(delegateId !== family.delegateUserId ? { delegateUserId: delegateId } : {}),
         };
         mutate(
-            (d) => ({ ...d, families: d.families.map((f) => (f.id === family.id ? { ...f, ...data } : f)) }),
+            (d) => ({
+                ...d,
+                families: d.families.map((f) => (f.id === family.id ? { ...f, ...data } : f)),
+                // Al cambiar el estado, los integrantes lo siguen (igual que en el servidor).
+                users: data.globalRsvpStatus
+                    ? d.users.map((u) => (u.familyId === family.id ? { ...u, isConfirmed: data.globalRsvpStatus === "CONFIRMED" } : u))
+                    : d.users,
+            }),
             () => updateFamily(family.id, data),
             { ok: "Familia guardada", error: "No se pudieron guardar los cambios de la familia" },
         );
@@ -178,7 +185,8 @@ export default function FamilyDetail({
                             </select>
                             {status !== family.globalRsvpStatus && (
                                 <p className="text-xs text-on-surface-variant mt-1.5">
-                                    Normalmente responde el delegado desde la invitación; esto sobrescribe su respuesta.
+                                    Normalmente responde el delegado desde la invitación; esto sobrescribe su respuesta
+                                    {status === "CONFIRMED" ? " y marca que vienen todos los integrantes." : status === "DECLINED" ? " y marca que no viene ningún integrante." : " y deja a los integrantes sin respuesta."}
                                 </p>
                             )}
                         </div>
@@ -435,7 +443,7 @@ function AddMember({
             ageCategory: age,
         };
         mutate(
-            (d) => ({ ...d, users: [...d.users, draftUser(tempId(), { ...person, familyId })] }),
+            (d) => ({ ...d, users: [...d.users, draftUser(tempId(), { ...person, familyId, isConfirmed: d.families.find((f) => f.id === familyId)?.globalRsvpStatus === "CONFIRMED" })] }),
             () => createManyUsers(familyId, [person]),
             { ok: `${person.name} añadido a la familia`, error: `No se pudo añadir a ${person.name} (¿ese correo ya está registrado?)` },
         );
