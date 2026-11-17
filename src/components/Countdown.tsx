@@ -66,7 +66,8 @@ export default function Countdown() {
                     )}
                     <div className="flex flex-col items-center min-w-[3.75rem] sm:min-w-24">
                         {/* Cifras en Mulish ligera con numerales tabulares (no saltan al cambiar). */}
-                        <span aria-hidden className="font-sans font-light tabular-nums text-4xl sm:text-6xl md:text-7xl leading-none text-crema">{u.value}</span>
+                        {/* key = valor: solo la cifra que cambia vuelve a entrar (suave, desde arriba). */}
+                        <span key={u.value} aria-hidden className="font-sans font-light tabular-nums text-4xl sm:text-6xl md:text-7xl leading-none text-crema animate-in fade-in slide-in-from-top-1 duration-500 motion-reduce:animate-none">{u.value}</span>
                         <span aria-hidden className="mt-3 font-text text-sm sm:text-base text-crema/85">{u.label}</span>
                     </div>
                 </div>
