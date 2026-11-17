@@ -66,3 +66,33 @@ export function Band({ children, className = "" }: { children: React.ReactNode; 
         </div>
     );
 }
+
+// Ramita ornamental (hojas del manual) para separar bloques dentro de una misma
+// pieza, como en una carta impresa. Decorativa: currentColor y aria-hidden.
+export function Sprig({ className = "" }: { className?: string }) {
+    return (
+        <svg viewBox="0 0 96 20" fill="none" aria-hidden className={`w-24 h-5 ${className}`}>
+            <path d="M8 10h30M58 10h30" stroke="currentColor" strokeWidth="1" strokeLinecap="round" opacity="0.5" />
+            <path d="M48 10C44 4 38 3 34 5c3 4 9 6 14 5Z" fill="currentColor" opacity="0.75" />
+            <path d="M48 10c4-6 10-7 14-5-3 4-9 6-14 5Z" fill="currentColor" opacity="0.75" />
+            <circle cx="48" cy="10" r="2" fill="currentColor" />
+        </svg>
+    );
+}
+
+// Pétalos que salen de un punto (al confirmar asistencia). Solo CSS, una vez;
+// con «menos movimiento» no se dibujan. El padre debe ser `relative`.
+const PETALS = [0, 36, 72, 108, 144, 180, 216, 252, 288, 324];
+export function PetalBurst() {
+    return (
+        <span aria-hidden className="pointer-events-none absolute left-1/2 top-1/2">
+            {PETALS.map((angle, i) => (
+                <span
+                    key={angle}
+                    className={`animate-petal absolute -ml-1 -mt-2 w-2 h-4 rounded-[50%_50%_50%_50%/60%_60%_40%_40%] ${i % 3 === 0 ? "bg-salvia" : i % 3 === 1 ? "bg-rosa" : "bg-mono-r"}`}
+                    style={{ "--angle": `${angle}deg`, animationDelay: `${(i % 4) * 40}ms` } as React.CSSProperties}
+                />
+            ))}
+        </span>
+    );
+}
