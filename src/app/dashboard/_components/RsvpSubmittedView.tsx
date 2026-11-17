@@ -1,7 +1,8 @@
 "use client";
 
 import type { families, users } from "@/db/schema";
-import { Check, Heart, Lock, Pencil } from "lucide-react";
+import { CalendarClock, Check, Heart, Lock, Pencil, UserCheck, UserMinus, Utensils } from "lucide-react";
+import { PetalBurst } from "@/components/Brand";
 import { dietaryText } from "@/lib/diet";
 import { formatDeadline } from "./RsvpForm";
 
@@ -11,9 +12,11 @@ interface Props {
     deadline: Date | null;
     isLockedHard: boolean;
     onModify: () => void;
+    /** Recién confirmado: lluvia de pétalos alrededor del ícono. */
+    celebrate?: boolean;
 }
 
-export default function RsvpSubmittedView({ family, members, deadline, isLockedHard, onModify }: Props) {
+export default function RsvpSubmittedView({ family, members, deadline, isLockedHard, onModify, celebrate }: Props) {
     const isConfirmed = family.globalRsvpStatus === "CONFIRMED";
     const attending = members.filter((m) => m.isConfirmed);
     const notAttending = members.filter((m) => !m.isConfirmed);
@@ -23,11 +26,12 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
         <div className="space-y-8">
             <div className="text-center space-y-3 animate-in fade-in zoom-in-95 duration-500">
                 <span
-                    className={`mx-auto w-14 h-14 rounded-full flex items-center justify-center ${
+                    className={`relative mx-auto w-14 h-14 rounded-full flex items-center justify-center ${
                         isConfirmed ? "bg-secondary-container text-on-secondary-container" : "bg-primary-container text-on-primary-container"
                     }`}
                 >
                     {isConfirmed ? <Check className="w-7 h-7" strokeWidth={2.5} aria-hidden /> : <Heart className="w-6 h-6" aria-hidden />}
+                    {celebrate && isConfirmed && <PetalBurst />}
                 </span>
                 <h2 className="font-serif text-4xl sm:text-5xl leading-none text-oliva-profundo text-balance">
                     {isConfirmed ? "¡Gracias por confirmar!" : "Gracias por avisarnos"}
@@ -60,7 +64,10 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
                         Cambiar respuesta
                     </button>
                     {formattedDeadline && (
-                        <p className="text-sm text-on-surface-variant text-center">Puedes cambiarla hasta el {formattedDeadline}.</p>
+                        <p className="text-sm text-on-surface-variant text-center flex items-center justify-center gap-1.5">
+                            <CalendarClock className="w-4 h-4 text-oliva-profundo shrink-0" aria-hidden />
+                            <span>Puedes cambiarla hasta el <strong className="font-medium text-on-surface">{formattedDeadline}</strong>.</span>
+                        </p>
                     )}
                 </div>
             )}
@@ -75,7 +82,8 @@ export function AttendanceLists({ attending, notAttending }: { attending: Member
     return (
         <div className="grid sm:grid-cols-2 gap-4">
             <div className="rounded-2xl bg-secondary-container/70 p-5">
-                <h3 className="text-sm font-medium text-on-secondary-container mb-2">
+                <h3 className="text-sm font-medium text-on-secondary-container mb-2 flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4" aria-hidden />
                     {attending.length === 1 ? "Viene" : `Vienen ${attending.length}`}
                 </h3>
                 <ul className="space-y-1.5 text-base text-on-surface">
@@ -84,7 +92,12 @@ export function AttendanceLists({ attending, notAttending }: { attending: Member
                         return (
                             <li key={m.id}>
                                 {m.name} {m.lastName}
-                                {diet && <span className="block text-sm text-on-surface-variant">{diet}</span>}
+                                {diet && (
+                                    <span className="flex items-center gap-1 text-sm text-on-surface-variant">
+                                        <Utensils className="w-3.5 h-3.5 shrink-0" aria-hidden />
+                                        {diet}
+                                    </span>
+                                )}
                             </li>
                         );
                     })}
@@ -92,7 +105,10 @@ export function AttendanceLists({ attending, notAttending }: { attending: Member
             </div>
             {notAttending.length > 0 && (
                 <div className="rounded-2xl bg-surface-container-low p-5">
-                    <h3 className="text-sm font-medium text-on-surface-variant mb-2">No vienen</h3>
+                    <h3 className="text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-1.5">
+                        <UserMinus className="w-4 h-4" aria-hidden />
+                        {notAttending.length === 1 ? "No viene" : "No vienen"}
+                    </h3>
                     <ul className="space-y-1.5 text-base text-on-surface-variant">
                         {notAttending.map((m) => <li key={m.id}>{m.name} {m.lastName}</li>)}
                     </ul>
