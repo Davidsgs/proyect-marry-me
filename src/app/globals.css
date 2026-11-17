@@ -94,6 +94,14 @@ body {
   a {
     text-underline-offset: 0.25em;
   }
+  /* Diálogos modales: el scroll dentro o sobre el fondo no arrastra la página. */
+  dialog:modal {
+    overscroll-behavior: contain;
+  }
+  dialog::backdrop {
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
 }
 
 /* Sin capa a propósito: gana a text-sm. Evita el zoom de iOS al enfocar un campo. */
