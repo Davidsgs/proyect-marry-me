@@ -22,39 +22,39 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
     const notAttending = members.filter((m) => !m.isConfirmed);
     const formattedDeadline = formatDeadline(deadline);
 
+    // Confirmados en escritorio: mensaje y botón a la izquierda, quién viene a la derecha.
     return (
-        <div className="space-y-8">
-            <div className="text-center space-y-3 animate-in fade-in zoom-in-95 duration-500">
+        <div className={`flex flex-col gap-8 ${isConfirmed ? "lg:grid lg:grid-cols-2 lg:items-center lg:gap-x-10" : "max-w-xl mx-auto"}`}>
+            <div className="flex flex-col gap-8">
+            <div className="text-center space-y-3">
                 <span
-                    className={`relative mx-auto w-14 h-14 rounded-full flex items-center justify-center ${
+                    className={`mg-pop relative mx-auto w-14 h-14 rounded-full flex items-center justify-center ${
                         isConfirmed ? "bg-secondary-container text-on-secondary-container" : "bg-primary-container text-on-primary-container"
                     }`}
                 >
                     {isConfirmed ? <Check className="w-7 h-7" strokeWidth={2.5} aria-hidden /> : <Heart className="w-6 h-6" aria-hidden />}
                     {celebrate && isConfirmed && <PetalBurst />}
                 </span>
-                <h2 className="font-serif text-4xl sm:text-5xl leading-display text-oliva-profundo text-balance">
+                <h2 className="mg-mask mg-d-2 font-serif text-4xl sm:text-5xl leading-display text-oliva-profundo text-balance">
                     {isConfirmed ? "¡Gracias por confirmar!" : "Gracias por avisarnos"}
                 </h2>
-                <p className="max-w-md mx-auto text-base leading-relaxed text-pretty">
+                <p className="mg-rise mg-d-4 max-w-md mx-auto text-base leading-relaxed text-pretty">
                     {isConfirmed
-                        ? "Nos emociona muchísimo compartir este día con ustedes. Abajo tienes todo lo que necesitas saber."
+                        ? "Nos emociona muchísimo compartir este día con ustedes. Sigue para ver todo lo que necesitas saber."
                         : "Lamentamos que no puedan venir. Los tendremos muy presentes ese día."}
                 </p>
             </div>
 
-            {isConfirmed && <AttendanceLists attending={attending} notAttending={notAttending} />}
-
             {isLockedHard ? (
-                <div className="p-5 rounded-2xl bg-surface-container-low flex items-start gap-3">
-                    <Lock className="w-5 h-5 text-oliva-profundo shrink-0 mt-0.5" aria-hidden />
-                    <p className="text-sm text-on-surface-variant leading-relaxed">
+                <div className="mg-rise mg-d-6 p-5 rounded-2xl bg-surface-container-low flex flex-col items-center gap-2 text-center">
+                    <Lock className="w-5 h-5 text-oliva-profundo shrink-0" aria-hidden />
+                    <p className="text-sm text-on-surface-variant leading-relaxed text-pretty">
                         El plazo para cambiar la respuesta terminó el <strong className="font-medium text-on-surface">{formattedDeadline}</strong>.
                         Si necesitas cambiar algo, escríbeles directamente a David o Rocío.
                     </p>
                 </div>
             ) : (
-                <div className="flex flex-col items-center gap-2">
+                <div className="mg-rise mg-d-6 flex flex-col items-center gap-2">
                     <button
                         type="button"
                         onClick={onModify}
@@ -71,6 +71,9 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
                     )}
                 </div>
             )}
+            </div>
+
+            {isConfirmed && <div className="mg-rise mg-d-5"><AttendanceLists attending={attending} notAttending={notAttending} /></div>}
         </div>
     );
 }
@@ -80,9 +83,10 @@ type Member = typeof users.$inferSelect;
 // Bloques «Vienen» / «No vienen». Quien no viene va en su propio bloque, sin rojo.
 export function AttendanceLists({ attending, notAttending }: { attending: Member[]; notAttending: Member[] }) {
     return (
-        <div className="grid sm:grid-cols-2 gap-4">
+        // Flex centrado: si solo hay bloque «Vienen», queda en el medio y no a la izquierda.
+        <div className="flex flex-wrap justify-center gap-4 text-center [&>div]:w-full sm:[&>div]:w-[calc(50%-0.5rem)]">
             <div className="rounded-2xl bg-secondary-container/70 p-5">
-                <h3 className="text-sm font-medium text-on-secondary-container mb-2 flex items-center gap-1.5">
+                <h3 className="text-sm font-medium text-on-secondary-container mb-2 flex items-center justify-center gap-1.5">
                     <UserCheck className="w-4 h-4" aria-hidden />
                     {attending.length === 1 ? "Viene" : `Vienen ${attending.length}`}
                 </h3>
@@ -93,7 +97,7 @@ export function AttendanceLists({ attending, notAttending }: { attending: Member
                             <li key={m.id}>
                                 {m.name} {m.lastName}
                                 {diet && (
-                                    <span className="flex items-center gap-1 text-sm text-on-surface-variant">
+                                    <span className="flex items-center justify-center gap-1 text-sm text-on-surface-variant">
                                         <Utensils className="w-3.5 h-3.5 shrink-0" aria-hidden />
                                         {diet}
                                     </span>
@@ -105,7 +109,7 @@ export function AttendanceLists({ attending, notAttending }: { attending: Member
             </div>
             {notAttending.length > 0 && (
                 <div className="rounded-2xl bg-surface-container-low p-5">
-                    <h3 className="text-sm font-medium text-on-surface-variant mb-2 flex items-center gap-1.5">
+                    <h3 className="text-sm font-medium text-on-surface-variant mb-2 flex items-center justify-center gap-1.5">
                         <UserMinus className="w-4 h-4" aria-hidden />
                         {notAttending.length === 1 ? "No viene" : "No vienen"}
                     </h3>

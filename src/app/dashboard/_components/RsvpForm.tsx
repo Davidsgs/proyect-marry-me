@@ -102,12 +102,23 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
 
     const formattedDeadline = formatDeadline(deadline);
 
+    // Con «Sí», en escritorio la lista de quiénes vienen va en una segunda
+    // columna para que todo el paso entre en la pantalla. En móvil, una sola
+    // columna: el envoltorio izquierdo es `contents` y `order` pone la lista
+    // entre la respuesta y el botón de enviar.
+    const wide = status === "CONFIRMED";
+    const after = "order-2 lg:order-none";
+
     return (
-        <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="space-y-3">
-                <h2 className="font-serif text-4xl sm:text-5xl leading-display text-oliva-profundo">¿Nos acompañan?</h2>
+        <form
+            onSubmit={handleSubmit}
+            className={`flex flex-col gap-8 ${wide ? "lg:grid lg:grid-cols-2 lg:gap-x-10 lg:items-start" : "max-w-xl mx-auto"}`}
+        >
+            <div className="contents lg:flex lg:flex-col lg:gap-5">
+            <div className="space-y-3 text-center">
+                <h2 className="mg-mask mg-d-2 font-serif text-4xl sm:text-5xl short:text-4xl leading-display text-oliva-profundo">¿Nos acompañan?</h2>
                 {formattedDeadline && (
-                    <p className="text-sm text-on-surface-variant flex items-start gap-2">
+                    <p className="mg-rise mg-d-3 text-sm text-on-surface-variant flex items-start justify-center gap-2">
                         <CalendarClock className="w-4 h-4 text-oliva-profundo shrink-0 mt-0.5" aria-hidden />
                         <span>Puedes responder o cambiar tu respuesta hasta el <strong className="font-medium text-on-surface">{formattedDeadline}</strong>.</span>
                     </p>
@@ -115,11 +126,11 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
             </div>
 
             {error && (
-                <p role="alert" className="p-4 rounded-xl bg-error/10 text-error text-sm">{error}</p>
+                <p role="alert" className="p-4 rounded-xl bg-error/10 text-error text-sm text-center">{error}</p>
             )}
 
-            <fieldset className="space-y-3">
-                <legend className="text-base font-medium text-on-surface mb-3">Tu respuesta</legend>
+            <fieldset className="mg-rise mg-d-4 space-y-3">
+                <legend className="w-full text-center text-base font-medium text-on-surface mb-3">Tu respuesta</legend>
                 <div className="grid sm:grid-cols-2 gap-3">
                     <Choice
                         checked={status === "CONFIRMED"}
@@ -138,93 +149,11 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                 </div>
             </fieldset>
 
-            {status === "CONFIRMED" && (
-                <fieldset className="space-y-3 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <legend className="text-base font-medium text-on-surface">¿Quiénes vendrán?</legend>
-                    <p className="text-sm text-on-surface-variant">Desmarca a quien no pueda venir. Si alguien tiene una restricción alimentaria, indícala debajo de su nombre.</p>
-                    <ul className="space-y-2">
-                        {members.map((m) => {
-                            const checked = Boolean(memberStatus[m.id]);
-                            const d = diet[m.id] ?? { dietary: "NONE", note: "" };
-                            const selectId = `diet-${m.id}`;
-                            const noteId = `diet-note-${m.id}`;
-                            return (
-                                <li key={m.id} className={`rounded-xl transition-colors duration-200 ${checked ? "bg-secondary-container/70" : "bg-surface-container-low"}`}>
-                                    <label className="flex items-center gap-3 min-h-14 px-4 py-3 rounded-xl cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary">
-                                        <input
-                                            type="checkbox"
-                                            checked={checked}
-                                            onChange={() => setMemberStatus((prev) => ({ ...prev, [m.id]: !prev[m.id] }))}
-                                            className="sr-only"
-                                        />
-                                        <span
-                                            aria-hidden
-                                            className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors ${
-                                                checked ? "bg-on-secondary-container text-crema" : "bg-surface-container-lowest ring-1 ring-inset ring-outline-variant"
-                                            }`}
-                                        >
-                                            {checked && <Check className="w-4 h-4" strokeWidth={3} />}
-                                        </span>
-                                        <span className="flex-1 text-base text-on-surface">
-                                            {m.name} {m.lastName}
-                                        </span>
-                                        <span className="text-sm text-on-surface-variant">
-                                            {checked ? "Viene" : "No viene"}
-                                        </span>
-                                    </label>
-                                    {checked && (
-                                        <div className="grid gap-2 px-4 pb-4 sm:grid-cols-2">
-                                            <div>
-                                                <label htmlFor={selectId} className="block text-sm text-on-surface-variant mb-1">Restricción alimentaria</label>
-                                                <select
-                                                    id={selectId}
-                                                    value={d.dietary}
-                                                    onChange={(e) => setDiet((prev) => ({ ...prev, [m.id]: { ...d, dietary: e.target.value as Dietary } }))}
-                                                    className="w-full min-h-12 px-3 rounded-xl bg-surface-container-lowest text-base text-on-surface outline-none focus:ring-2 focus:ring-primary/45 cursor-pointer"
-                                                >
-                                                    {DIETARY.map((k) => <option key={k} value={k}>{DIETARY_LABEL[k]}</option>)}
-                                                </select>
-                                            </div>
-                                            {d.dietary === "OTHER" && (
-                                                <div>
-                                                    <label htmlFor={noteId} className="block text-sm text-on-surface-variant mb-1">¿Cuál?</label>
-                                                    <input
-                                                        id={noteId}
-                                                        type="text"
-                                                        required
-                                                        maxLength={DIETARY_NOTE_MAX}
-                                                        value={d.note}
-                                                        onChange={(e) => setDiet((prev) => ({ ...prev, [m.id]: { ...d, note: e.target.value.slice(0, DIETARY_NOTE_MAX) } }))}
-                                                        aria-describedby={`${noteId}-count`}
-                                                        placeholder="Ej.: sin mariscos"
-                                                        className="w-full min-h-12 px-3 rounded-xl bg-surface-container-lowest text-base text-on-surface outline-none focus:ring-2 focus:ring-primary/45 placeholder:text-on-surface-variant/70"
-                                                    />
-                                                    <p id={`${noteId}-count`} className="mt-1 text-right text-xs tabular-nums text-on-surface-variant">
-                                                        {d.note.length} de {DIETARY_NOTE_MAX}
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </li>
-                            );
-                        })}
-                    </ul>
-                    {needsSomeone && (
-                        <p className="text-sm text-error" role="status">
-                            Marca al menos a una persona, o elige «No podremos asistir».
-                        </p>
-                    )}
-                    {missingNote && (
-                        <p className="text-sm text-error" role="status">
-                            Escribe cuál es la restricción en «Otra».
-                        </p>
-                    )}
-                    {!family.isDirectFamily && <AdultsNote text={adultsNote} />}
-                </fieldset>
+            {wide && !family.isDirectFamily && (
+                <div className={`mg-rise mg-d-6 ${after} lg:[&>p]:text-sm lg:[&>p]:py-3 short:[&>p>svg]:hidden`}><AdultsNote text={adultsNote} /></div>
             )}
 
-            <div className="flex flex-col-reverse sm:flex-row gap-3">
+            <div className={`mg-rise mg-d-6 flex flex-col-reverse sm:flex-row gap-3 ${after}`}>
                 {isLocked && (
                     <button
                         type="button"
@@ -243,7 +172,94 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                 </button>
             </div>
             {status === "PENDING" && (
-                <p className="text-sm text-on-surface-variant text-center -mt-4">Elige una respuesta para poder enviarla.</p>
+                <p className={`mg-rise mg-d-7 text-sm text-on-surface-variant text-center -mt-4 lg:-mt-2 ${after}`}>Elige una respuesta para poder enviarla.</p>
+            )}
+            </div>
+
+            {wide && (
+                <fieldset className="order-1 mg-rise mg-d-5 space-y-3">
+                    <legend className="w-full text-center text-base font-medium text-on-surface">¿Quiénes vendrán?</legend>
+                    <p className="text-sm text-on-surface-variant text-center text-pretty">Desmarca a quien no pueda venir. Si alguien tiene una restricción alimentaria, indícala junto a su nombre.</p>
+                    <ul className="space-y-2">
+                        {members.map((m) => {
+                            const checked = Boolean(memberStatus[m.id]);
+                            const d = diet[m.id] ?? { dietary: "NONE", note: "" };
+                            const selectId = `diet-${m.id}`;
+                            const noteId = `diet-note-${m.id}`;
+                            return (
+                                <li key={m.id} className={`rounded-xl transition-colors duration-200 ${checked ? "bg-secondary-container/70" : "bg-surface-container-low"}`}>
+                                    <div className="sm:flex sm:items-center">
+                                    <label className="flex flex-1 min-w-0 items-center gap-3 min-h-14 lg:min-h-12 px-4 py-3 lg:py-2 rounded-xl cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary">
+                                        <input
+                                            type="checkbox"
+                                            checked={checked}
+                                            onChange={() => setMemberStatus((prev) => ({ ...prev, [m.id]: !prev[m.id] }))}
+                                            className="sr-only"
+                                        />
+                                        <span
+                                            aria-hidden
+                                            className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 transition-colors ${
+                                                checked ? "bg-on-secondary-container text-crema" : "bg-surface-container-lowest ring-1 ring-inset ring-outline-variant"
+                                            }`}
+                                        >
+                                            {checked && <Check className="w-4 h-4" strokeWidth={3} />}
+                                        </span>
+                                        <span className="flex-1 text-base text-on-surface">
+                                            {m.name} {m.lastName}
+                                        </span>
+                                        {/* Con la restricción al lado (sm+), «Viene» ya se entiende por la marca. */}
+                                        <span className={`text-sm text-on-surface-variant ${checked ? "sm:sr-only" : ""}`}>
+                                            {checked ? "Viene" : "No viene"}
+                                        </span>
+                                    </label>
+                                    {checked && (
+                                        <div className="px-4 pb-3 sm:p-0 sm:pr-3 sm:w-48 shrink-0">
+                                            <label htmlFor={selectId} className="block text-sm text-on-surface-variant mb-1 sm:sr-only">Restricción alimentaria</label>
+                                            <select
+                                                id={selectId}
+                                                value={d.dietary}
+                                                onChange={(e) => setDiet((prev) => ({ ...prev, [m.id]: { ...d, dietary: e.target.value as Dietary } }))}
+                                                className="w-full min-h-11 px-3 rounded-xl bg-surface-container-lowest text-base text-on-surface outline-none focus:ring-2 focus:ring-primary/45 cursor-pointer"
+                                            >
+                                                {DIETARY.map((k) => <option key={k} value={k}>{DIETARY_LABEL[k]}</option>)}
+                                            </select>
+                                        </div>
+                                    )}
+                                    </div>
+                                    {checked && d.dietary === "OTHER" && (
+                                        <div className="px-4 pb-4">
+                                            <label htmlFor={noteId} className="block text-sm text-on-surface-variant mb-1">¿Cuál?</label>
+                                            <input
+                                                id={noteId}
+                                                type="text"
+                                                required
+                                                maxLength={DIETARY_NOTE_MAX}
+                                                value={d.note}
+                                                onChange={(e) => setDiet((prev) => ({ ...prev, [m.id]: { ...d, note: e.target.value.slice(0, DIETARY_NOTE_MAX) } }))}
+                                                aria-describedby={`${noteId}-count`}
+                                                placeholder="Ej.: sin mariscos"
+                                                className="w-full min-h-12 px-3 rounded-xl bg-surface-container-lowest text-base text-on-surface outline-none focus:ring-2 focus:ring-primary/45 placeholder:text-on-surface-variant/70"
+                                            />
+                                            <p id={`${noteId}-count`} className="mt-1 text-right text-xs tabular-nums text-on-surface-variant">
+                                                {d.note.length} de {DIETARY_NOTE_MAX}
+                                            </p>
+                                        </div>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                    {needsSomeone && (
+                        <p className="text-sm text-error text-center" role="status">
+                            Marca al menos a una persona, o elige «No podremos asistir».
+                        </p>
+                    )}
+                    {missingNote && (
+                        <p className="text-sm text-error text-center" role="status">
+                            Escribe cuál es la restricción en «Otra».
+                        </p>
+                    )}
+                </fieldset>
             )}
         </form>
     );
@@ -263,7 +279,7 @@ function Choice({
         : "bg-primary-container text-on-primary-container ring-2 ring-rosa-profundo";
     return (
         <label
-            className={`flex items-center justify-center gap-2 min-h-16 px-4 rounded-2xl cursor-pointer text-base font-medium transition-[background-color,color,box-shadow] duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
+            className={`flex items-center justify-center gap-2 min-h-16 lg:min-h-14 px-4 rounded-2xl cursor-pointer text-base font-medium transition-[background-color,color,box-shadow] duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary ${
                 checked ? on : "bg-surface-container-low text-on-surface hover:bg-surface-container"
             }`}
         >
