@@ -18,6 +18,9 @@ const mulish = Mulish({
 export const metadata: Metadata = {
   title: "Nuestra boda | David & Rocío",
   description: "Invitación privada a la boda de David y Rocío.",
+  // Invitación privada: fuera de buscadores. Sin robots.txt que bloquee, para
+  // que Google pueda leer este noindex y no liste ni la URL.
+  robots: { index: false, follow: false },
 };
 
 export const viewport: Viewport = {
