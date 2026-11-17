@@ -36,6 +36,10 @@
   --color-on-surface-variant: #5c5f52;       /* ≥4.5:1 hasta surface-container */
   --color-outline-variant: rgba(54, 64, 51, 0.16);
   --color-error: #a8423a;                    /* ≥4.7:1 sobre todas las superficies */
+  /* Estado «Pendiente» de una familia: el único color fuera del manual, para
+     que los tres estados se distingan de un vistazo (on-ambar sobre ambar: 6.3:1). */
+  --color-ambar: #ecd7a0;
+  --color-on-ambar: #5a4716;
   --color-on-error: #faf8f3;
 
   /* Portada: única superficie oscura (decisión de la pareja, 2026-11-16) */
