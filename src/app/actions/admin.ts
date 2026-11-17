@@ -146,9 +146,23 @@ export async function updateFamily(id: number, data: { name?: string; alias?: st
         const write = db.update(families).set(updateSet).where(eq(families.id, id));
         if (data.globalRsvpStatus !== undefined) {
             // Cambio de estado desde el panel: siempre es de un administrador
-            // (aunque sea delegado de esa familia). Auditoría en el mismo viaje.
+            // (aunque sea delegado de esa familia). Los integrantes siguen al
+            // estado (Confirmado = vienen todos; si no, nadie): antes quedaban sin
+            // marcar y Mesas los mostraba como «no viene». Auditoría en el mismo viaje.
+            const attending = data.globalRsvpStatus === "CONFIRMED";
+            const members = (await cachedUsers()).filter((u) => u.familyId === id);
             const actor = await rsvpActor(session?.user?.id, null);
-            await db.batch([write, rsvpEventInsert({ familyId: id, status: data.globalRsvpStatus, actor })]);
+            await db.batch([
+                write,
+                db.update(users).set({ isConfirmed: attending }).where(eq(users.familyId, id)),
+                rsvpEventInsert({
+                    familyId: id,
+                    status: data.globalRsvpStatus,
+                    actor,
+                    attendees: members.map((m) => ({ userId: m.id, name: `${m.name} ${m.lastName}`.trim(), attending })),
+                }),
+            ]);
+            touchedUsers = true;
         } else {
             await write;
         }
@@ -179,6 +193,12 @@ export async function deleteFamily(id: number) {
     invalidateUsers();
 }
 
+// Quien entra a una familia ya confirmada viene (si no, Mesas lo mostraría como
+// «no viene» sin que nadie lo haya dicho); en una pendiente o que no asiste, no.
+async function attendsOnJoin(familyId: number | null) {
+    return (await cachedFamilies()).find((f) => f.id === familyId)?.globalRsvpStatus === "CONFIRMED";
+}
+
 export async function createUser(data: { email?: string | null, name: string, lastName: string, familyId: number, role: 'ADMIN' | 'MAIN_GUEST' | 'GUEST', ageCategory?: 'BABY' | 'CHILD' | 'ADULT' }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "users.write")) {
@@ -193,6 +213,7 @@ export async function createUser(data: { email?: string | null, name: string, la
         lastName: data.lastName,
         fullname,
         familyId: data.familyId,
+        isConfirmed: await attendsOnJoin(data.familyId),
         role: data.role,
         ageCategory: data.ageCategory ?? "ADULT",
     }).returning({ id: users.id });
@@ -219,6 +240,7 @@ export async function createManyUsers(
     if (clean.length === 0) return;
 
     const taken = await takenAliases();
+    const isConfirmed = await attendsOnJoin(familyId);
     for (const member of clean) {
         const fullname = `${member.name} ${member.lastName}`.trim();
         const email = normalizeEmail(member.email);
@@ -229,6 +251,7 @@ export async function createManyUsers(
             lastName: member.lastName,
             fullname,
             familyId,
+            isConfirmed,
             role: member.role,
             ageCategory: member.ageCategory ?? "ADULT",
         }).returning({ id: users.id });
@@ -295,6 +318,7 @@ export async function updateUser(id: number, data: { email?: string | null; alia
     let lostDelegation = false;
     if (data.familyId !== undefined) {
         const before = await db.select({ familyId: users.familyId, role: users.role }).from(users).where(eq(users.id, id)).get();
+        if (before && before.familyId !== data.familyId) updateSet.isConfirmed = await attendsOnJoin(data.familyId);
         if (before && before.familyId !== data.familyId && before.familyId != null) {
             const res = await db.update(families)
                 .set({ delegateUserId: null })

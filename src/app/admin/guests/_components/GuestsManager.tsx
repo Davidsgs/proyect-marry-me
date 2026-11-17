@@ -386,7 +386,7 @@ function BulkUserForm({ families, onDone }: { families: Family[]; onDone: () => 
         }));
         const n = payload.length;
         mutate(
-            (d) => ({ ...d, users: [...d.users, ...payload.map((u) => draftUser(tempId(), { ...u, familyId: fid }))] }),
+            (d) => ({ ...d, users: [...d.users, ...payload.map((u) => draftUser(tempId(), { ...u, familyId: fid, isConfirmed: d.families.find((f) => f.id === fid)?.globalRsvpStatus === "CONFIRMED" }))] }),
             () => createManyUsers(fid, payload),
             { ok: `${n} ${n === 1 ? "invitado añadido" : "invitados añadidos"}`, error: "No se pudieron registrar (¿algún correo ya existe?)" },
         );
