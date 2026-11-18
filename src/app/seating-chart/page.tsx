@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { hasPermission } from "@/lib/permissions";
 import { getTables } from "@/app/actions/tables";
 import { getFamilies, getUsers } from "@/app/actions/admin";
+import { byInvitation } from "@/lib/virtual";
 import PrintButton from "./PrintButton";
 import { dietaryText } from "@/lib/diet";
 import { declined } from "@/lib/attendance";
@@ -19,7 +20,9 @@ export default async function SeatingChartPage() {
         redirect("/");
     }
 
-    const [tables, families, users] = await Promise.all([getTables(), getFamilies(), getUsers()]);
+    const [tables, allFamilies, allUsers] = await Promise.all([getTables(), getFamilies(), getUsers()]);
+    // Las familias virtuales no ocupan mesa.
+    const { families, users } = byInvitation(allFamilies, allUsers, false);
 
     const familyOf = (id: number | null) => families.find((f) => f.id === id);
     const familyName = (id: number | null) => familyOf(id)?.name ?? "Sin familia";

@@ -9,6 +9,7 @@ import {
     CalendarClock,
     Wallet,
     UtensilsCrossed,
+    MonitorPlay,
     type LucideIcon,
 } from "lucide-react";
 
@@ -20,6 +21,8 @@ export function buildNav(permissions?: string[]): NavItem[] {
     if (has("families.read") && has("users.read")) items.push({ href: "/admin/guests", icon: Users, label: "Invitados" });
     if (has("tasks.read")) items.push({ href: "/admin/tasks", icon: ListTodo, label: "Tareas" });
     if (has("tables.read")) items.push({ href: "/admin/tables", icon: Armchair, label: "Mesas" });
+    // Después de Mesas: en la barra móvil (4 lugares + «Más») se mantienen las de siempre.
+    if (has("families.read") && has("users.read")) items.push({ href: "/admin/virtuales", icon: MonitorPlay, label: "Virtuales" });
     if (has("calendar.read")) items.push({ href: "/admin/cronograma", icon: CalendarClock, label: "Cronograma" });
     if (has("menu.read")) items.push({ href: "/admin/menu", icon: UtensilsCrossed, label: "Menú" });
     if (has("finance.read")) items.push({ href: "/admin/finance", icon: Wallet, label: "Economía" });

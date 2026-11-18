@@ -11,6 +11,7 @@ import { hasPermission } from "@/lib/permissions";
 import { cachedRsvpEvents, getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { declined } from "@/lib/attendance";
+import { byInvitation } from "@/lib/virtual";
 import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
 import {
     CheckCircle2,
@@ -49,7 +50,7 @@ export default async function AdminPage() {
     const canReadGuests = hasPermission(perms, "families.read") && hasPermission(perms, "users.read");
     const canWriteUsers = hasPermission(perms, "users.write");
 
-    const [families, users, rsvpEvents, allTasks, tables, schedule, finance, deadline] = await Promise.all([
+    const [allFamilies, allUsers, rsvpEvents, allTasks, tables, schedule, finance, deadline] = await Promise.all([
         canReadGuests ? getFamilies() : [],
         canReadGuests ? getUsers() : [],
         canReadGuests ? cachedRsvpEvents() : [],
@@ -60,6 +61,8 @@ export default async function AdminPage() {
         getRsvpDeadline(),
     ]);
     const today = todayLocalISO();
+    // Las familias virtuales (siguen la boda en vivo) no cuentan entre los presenciales.
+    const { families, users } = byInvitation(allFamilies, allUsers, false);
 
     // Familias
     const totalFamilies = families.length;
@@ -131,17 +134,17 @@ export default async function AdminPage() {
             href: "/admin/guests?filtro=sin-responder",
         });
     }
-    // Familias con menores sin marcar como «familia directa»: ven la nota de
-    // celebración sin niños aunque sus niños estén invitados.
+    // Familias con menores que tienen marcada la nota de celebración sin niños:
+    // la ven aunque sus niños estén invitados.
     const familiesWithMinors = new Set(guestUsers.filter((u) => u.ageCategory !== "ADULT").map((u) => u.familyId));
-    const minorsNotDirect = families.filter((f) => !f.isDirectFamily && familiesWithMinors.has(f.id));
-    if (minorsNotDirect.length > 0) {
+    const minorsWithNote = families.filter((f) => f.showAdultsNote && familiesWithMinors.has(f.id));
+    if (minorsWithNote.length > 0) {
         pending.push({
-            key: "minors-not-direct",
+            key: "minors-with-note",
             icon: Baby,
             tone: "warn",
-            title: `${minorsNotDirect.length} ${minorsNotDirect.length === 1 ? "familia con niños ve" : "familias con niños ven"} la nota «sin niños»`,
-            detail: "Márcalas como familia directa si sus niños están invitados. " + namesPreview(minorsNotDirect.map((f) => f.name)),
+            title: `${minorsWithNote.length} ${minorsWithNote.length === 1 ? "familia con niños ve" : "familias con niños ven"} la nota «sin niños»`,
+            detail: "Desmarca la nota en su ficha si sus niños están invitados. " + namesPreview(minorsWithNote.map((f) => f.name)),
             href: "/admin/guests?filtro=con-ninos",
         });
     }

@@ -1,6 +1,6 @@
 import type { families, users } from "@/db/schema";
 import { Check, Clock, Heart } from "lucide-react";
-import { AttendanceLists, InvitationValidity } from "./RsvpSubmittedView";
+import { AttendanceLists, InvitationValidity, WatchLive } from "./RsvpSubmittedView";
 import AdultsNote from "./AdultsNote";
 
 interface Props {
@@ -52,14 +52,14 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                     </div>
                 )}
                 <InvitationValidity count={members.length} />
-                {!family.isDirectFamily && <AdultsNote text={adultsNote} />}
+                {family.showAdultsNote && <AdultsNote text={adultsNote} />}
             </div>
         );
     }
 
     if (status === "DECLINED") {
         return (
-            <div className="text-center space-y-3">
+            <div className="text-center space-y-3 max-w-xl mx-auto">
                 <span className="mg-pop mx-auto w-14 h-14 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center">
                     <Heart className="w-6 h-6" aria-hidden />
                 </span>
@@ -67,6 +67,7 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                 <p className="mg-rise mg-d-4 text-base">
                     {delegateName ? `Si algo cambia, habla con ${delegateName} o con David y Rocío.` : "Si algo cambia, escríbeles a David o Rocío."}
                 </p>
+                <div className="mg-rise mg-d-5 pt-5"><WatchLive /></div>
             </div>
         );
     }
@@ -85,7 +86,7 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                     )}
                 </div>
                 <div className="mg-rise mg-d-5"><InvitationValidity count={members.length} /></div>
-                {!family.isDirectFamily && <div className="mg-rise mg-d-6"><AdultsNote text={adultsNote} /></div>}
+                {family.showAdultsNote && <div className="mg-rise mg-d-6"><AdultsNote text={adultsNote} /></div>}
             </div>
             <div className="mg-rise mg-d-5">
                 <AttendanceLists attending={members.filter((m) => m.isConfirmed)} notAttending={members.filter((m) => !m.isConfirmed)} />

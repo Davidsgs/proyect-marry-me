@@ -1,7 +1,8 @@
 "use client";
 
 import type { families, users } from "@/db/schema";
-import { CalendarClock, Check, Heart, Lock, Pencil, UserCheck, UserMinus, Users, Utensils } from "lucide-react";
+import Link from "next/link";
+import { CalendarClock, Check, ChevronRight, Heart, Lock, Pencil, UserCheck, UserMinus, Users, Utensils, Video } from "lucide-react";
 import { PetalBurst } from "@/components/Brand";
 import { dietaryText } from "@/lib/diet";
 import { formatDeadline } from "./RsvpForm";
@@ -45,6 +46,7 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
                 </p>
             </div>
             {isConfirmed && <div className="mg-rise mg-d-5"><InvitationValidity count={members.length} /></div>}
+            {!isConfirmed && <div className="mg-rise mg-d-5"><WatchLive /></div>}
 
             {isLockedHard ? (
                 <div className="mg-rise mg-d-6 p-5 rounded-2xl bg-surface-container-low flex flex-col items-center gap-2 text-center">
@@ -80,6 +82,26 @@ export default function RsvpSubmittedView({ family, members, deadline, isLockedH
 }
 
 type Member = typeof users.$inferSelect;
+
+// Para quien no puede venir: la ceremonia también se transmite en vivo
+// (la misma página que ven las familias virtuales).
+export function WatchLive() {
+    return (
+        <Link
+            href="/dashboard/en-vivo"
+            className="group mx-auto flex w-full max-w-md items-center gap-4 rounded-2xl bg-surface-container-low p-4 text-left hover:bg-surface-container transition-colors"
+        >
+            <span className="w-11 h-11 shrink-0 rounded-full bg-primary text-on-primary flex items-center justify-center">
+                <Video className="w-5 h-5" aria-hidden />
+            </span>
+            <span className="flex-1 min-w-0">
+                <span className="block font-sans font-semibold text-on-surface">Véanla en vivo</span>
+                <span className="block text-sm text-on-surface-variant text-pretty">Aunque no puedan venir, pueden seguir la ceremonia desde donde estén.</span>
+            </span>
+            <ChevronRight className="w-5 h-5 shrink-0 text-oliva-profundo group-hover:translate-x-0.5 transition-transform" aria-hidden />
+        </Link>
+    );
+}
 
 // Bloques «Vienen» / «No vienen». Quien no viene va en su propio bloque, sin rojo.
 export function AttendanceLists({ attending, notAttending }: { attending: Member[]; notAttending: Member[] }) {

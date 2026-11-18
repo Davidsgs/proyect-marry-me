@@ -62,7 +62,7 @@ export default async function SettingsPage() {
         <GiftsForm initial={{ holder: holder ?? "", alias: alias ?? "", cbu: cbu ?? "", note: note ?? "" }} />
       </Block>
 
-      <Block id="ninos" title="Nota sobre niños" description="La ven en su invitación las familias que no están marcadas como «familia directa». Es solo informativa.">
+      <Block id="ninos" title="Nota sobre niños" description="La ven en su invitación solo las familias que tienen marcada «Mostrar la nota de celebración sin niños» en Invitados. Es solo informativa.">
         <AdultsNoteForm initial={adultsNote ?? ""} />
       </Block>
 

@@ -21,6 +21,10 @@ export async function updateFamilyRsvp(familyId: number, status: 'PENDING' | 'CO
     if (!dbFamily) {
         throw new Error("Familia no encontrada.");
     }
+    // La invitación virtual no se confirma: siguen la boda en vivo.
+    if (dbFamily.isVirtual) {
+        throw new Error("Esta invitación es para seguir la boda en vivo: no hace falta confirmar.");
+    }
 
     // 3. Enforce dynamic delegate and admin checks
     const isDelegate = session.user.id === dbFamily.delegateUserId || 

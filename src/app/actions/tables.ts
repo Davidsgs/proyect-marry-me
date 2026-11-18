@@ -1,10 +1,10 @@
 "use server";
 
 import { db } from "@/db";
-import { layoutPositions, tables, users } from "@/db/schema";
+import { eventConfig, layoutPositions, tables, users } from "@/db/schema";
 import { eq, inArray } from "drizzle-orm";
 import { revalidatePath, updateTag } from "next/cache";
-import { cachedTables, cachedUsers } from "@/lib/data";
+import { cachedTables, cachedUsers, getTablesVisible } from "@/lib/data";
 import { auth } from "@/auth";
 import { hasPermission } from "@/lib/permissions";
 
@@ -134,9 +134,26 @@ export async function assignFamilyToTable(familyId: number, tableId: number | nu
     invalidateTables();
 }
 
+/** Muestra u oculta a los invitados su mesa (opción global de Mesas). */
+export async function setTablesVisible(visible: boolean) {
+    const session = await auth();
+    if (!hasPermission(session?.user?.permissions, "tables.write")) {
+        throw new Error("Sin permisos");
+    }
+    const value = visible ? "true" : "false";
+    await db
+        .insert(eventConfig)
+        .values({ key: "tables_visible", value })
+        .onConflictDoUpdate({ target: eventConfig.key, set: { value } });
+    updateTag("config");
+    revalidatePath("/admin/tables");
+    revalidatePath("/dashboard");
+}
+
 /**
  * Returns the logged-in user's assigned table plus their tablemates.
- * Gated by session only — a guest may always read their own seating.
+ * Gated by session only — a guest may read their own seating, but only once
+ * the tables are made visible in Mesas (otherwise null: «estamos organizando»).
  */
 export async function getMyTable() {
     const session = await auth();
@@ -144,7 +161,8 @@ export async function getMyTable() {
     if (!userId) return null;
 
     // Desde caché: sin viajes a la base salvo que cambien mesas o invitados.
-    const [allUsers, allTables] = await Promise.all([cachedUsers(), cachedTables()]);
+    const [allUsers, allTables, visible] = await Promise.all([cachedUsers(), cachedTables(), getTablesVisible()]);
+    if (!visible) return null;
     const me = allUsers.find((u) => u.id === userId);
     if (!me?.tableId) return null;
 

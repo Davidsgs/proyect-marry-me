@@ -21,8 +21,8 @@ type AgeCategory = "BABY" | "CHILD" | "ADULT";
 const AGE_LABEL: Record<AgeCategory, string> = { ADULT: "Adulto", CHILD: "Niño", BABY: "Bebé" };
 const labelCls = "block text-label font-medium text-on-surface-variant mb-1.5";
 
-// Ficha de una familia: datos (nombre, descripción, estado, delegado, familia
-// directa) e integrantes. Se muestra en el panel lateral (escritorio) o en una
+// Ficha de una familia: datos (nombre, descripción, estado, delegado, nota sin
+// niños) e integrantes. Se muestra en el panel lateral (escritorio) o en una
 // hoja (móvil). Los datos se guardan con «Guardar cambios»; añadir o quitar
 // integrantes se aplica al momento.
 export default function FamilyDetail({
@@ -58,14 +58,18 @@ export default function FamilyDetail({
     const [alias, setAlias] = useState(family.alias ?? "");
     const [status, setStatus] = useState<RsvpStatus>(family.globalRsvpStatus as RsvpStatus);
     const [delegateId, setDelegateId] = useState<number | null>(family.delegateUserId);
-    const [isDirect, setIsDirect] = useState(Boolean(family.isDirectFamily));
+    const [showNote, setShowNote] = useState(Boolean(family.showAdultsNote));
+    // Invitación virtual: sin respuesta, delegado ni mesa (ver updateFamily).
+    const [isVirtual, setIsVirtual] = useState(Boolean(family.isVirtual));
+    const virtual = Boolean(family.isVirtual);
 
     const dirty =
         name.trim() !== family.name ||
         alias.trim() !== (family.alias ?? "") ||
         status !== family.globalRsvpStatus ||
         delegateId !== family.delegateUserId ||
-        isDirect !== Boolean(family.isDirectFamily);
+        showNote !== Boolean(family.showAdultsNote) ||
+        isVirtual !== virtual;
 
     async function handleClose() {
         if (dirty && canWriteFamilies) {
@@ -83,30 +87,49 @@ export default function FamilyDetail({
         registerClose?.(handleClose);
     });
 
-    function handleSave() {
+    async function handleSave() {
         if (!name.trim()) {
             setError("La familia necesita un nombre.");
             return;
         }
         setError(null);
+        const moving = isVirtual !== virtual;
+        if (moving) {
+            const ok = await confirm({
+                title: isVirtual ? `¿Pasar «${family.name}» a invitación virtual?` : `¿Pasar «${family.name}» a invitación presencial?`,
+                description: isVirtual
+                    ? "Verán la transmisión en vivo en lugar de la invitación. Su respuesta vuelve a Pendiente, nadie figura como que viene y se liberan sus lugares en las mesas. La familia pasa a la sección Virtuales."
+                    : "Verán la invitación completa y el delegado podrá confirmar. La familia pasa a la sección Invitados, con la respuesta Pendiente.",
+                confirmLabel: isVirtual ? "Pasar a virtual" : "Pasar a presencial",
+            });
+            if (!ok) return;
+        }
         const data = {
             name: name.trim(),
             alias: alias.trim(),
-            isDirectFamily: isDirect,
-            ...(status !== family.globalRsvpStatus ? { globalRsvpStatus: status } : {}),
+            showAdultsNote: showNote,
+            ...(moving ? { isVirtual } : {}),
+            ...(!moving && status !== family.globalRsvpStatus ? { globalRsvpStatus: status } : {}),
             ...(delegateId !== family.delegateUserId ? { delegateUserId: delegateId } : {}),
         };
         mutate(
             (d) => ({
-                ...d,
-                families: d.families.map((f) => (f.id === family.id ? { ...f, ...data } : f)),
+                // Al cambiar de tipo la familia se va de esta sección (el servidor la reinicia).
+                families: moving
+                    ? d.families.filter((f) => f.id !== family.id)
+                    : d.families.map((f) => (f.id === family.id ? { ...f, ...data } : f)),
                 // Al cambiar el estado, los integrantes lo siguen (igual que en el servidor).
-                users: data.globalRsvpStatus
-                    ? d.users.map((u) => (u.familyId === family.id ? { ...u, isConfirmed: data.globalRsvpStatus === "CONFIRMED" } : u))
-                    : d.users,
+                users: moving
+                    ? d.users.filter((u) => u.familyId !== family.id)
+                    : data.globalRsvpStatus
+                        ? d.users.map((u) => (u.familyId === family.id ? { ...u, isConfirmed: data.globalRsvpStatus === "CONFIRMED" } : u))
+                        : d.users,
             }),
             () => updateFamily(family.id, data),
-            { ok: "Familia guardada", error: "No se pudieron guardar los cambios de la familia" },
+            {
+                ok: moving ? (isVirtual ? "Familia pasada a Virtuales" : "Familia pasada a Invitados") : "Familia guardada",
+                error: "No se pudieron guardar los cambios de la familia",
+            },
         );
         onClose();
     }
@@ -176,6 +199,7 @@ export default function FamilyDetail({
                             <label htmlFor="fd-alias" className={labelCls}>Descripción <span className="font-normal">(opcional)</span></label>
                             <GrowText id="fd-alias" value={alias} onChange={(e) => setAlias(e.target.value)} disabled={!canWriteFamilies} placeholder="Tíos paternos, amigos de la facu…" className={inputCls} />
                         </div>
+                        {!virtual && (<>
                         <div>
                             <label htmlFor="fd-status" className={labelCls}>Estado de la respuesta</label>
                             <select id="fd-status" value={status} onChange={(e) => setStatus(e.target.value as RsvpStatus)} disabled={!canWriteFamilies} className={rsvpSelectCls}>
@@ -209,21 +233,34 @@ export default function FamilyDetail({
                                 <p className="text-sm text-on-surface-variant py-3">Añade un adulto para elegir delegado.</p>
                             )}
                         </div>
+                        </>)}
                     </div>
+                    {!virtual && (
                     <div className="rounded-xl bg-surface-container-low px-4 py-2">
                         {canWriteFamilies ? (
-                            <Checkbox checked={isDirect} onChange={setIsDirect} label="Familia directa (puede venir con niños)" />
+                            <Checkbox checked={showNote} onChange={setShowNote} label="Mostrar la nota de celebración sin niños" />
                         ) : (
-                            <p className="py-2 text-sm text-on-surface">{isDirect ? "Familia directa (puede venir con niños)" : "No es familia directa"}</p>
+                            <p className="py-2 text-sm text-on-surface">{showNote ? "Ve la nota de celebración sin niños" : "No ve la nota sobre niños"}</p>
                         )}
                         <p className="pb-2 text-xs text-on-surface-variant">
-                            Si no está marcada, la familia verá en su invitación una nota amable de que la celebración es para adultos.
+                            Si está marcada, la familia verá en su invitación una nota amable de que la celebración es para adultos.
+                        </p>
+                    </div>
+                    )}
+                    <div className="rounded-xl bg-surface-container-low px-4 py-2">
+                        {canWriteFamilies ? (
+                            <Checkbox checked={isVirtual} onChange={setIsVirtual} label="Invitación virtual (sigue la boda en vivo)" />
+                        ) : (
+                            <p className="py-2 text-sm text-on-surface">{isVirtual ? "Invitación virtual (sigue la boda en vivo)" : "Invitación presencial"}</p>
+                        )}
+                        <p className="pb-2 text-xs text-on-surface-variant">
+                            Para familiares en el exterior: ven la cuenta atrás y el enlace de la transmisión, no confirman ni ocupan mesa, y no cuentan entre los invitados presenciales.
                         </p>
                     </div>
                     {error && <p role="alert" className="text-sm text-error">{error}</p>}
                 </section>
 
-                {family.globalRsvpStatus === "PENDING" && (
+                {!virtual && family.globalRsvpStatus === "PENDING" && (
                     <Reminder family={family} delegate={members.find((m) => m.id === family.delegateUserId) ?? null} deadlineLabel={deadlineLabel} />
                 )}
 
@@ -281,7 +318,7 @@ export default function FamilyDetail({
                     )}
                 </section>
 
-                <RsvpHistory family={family} history={history} />
+                {!virtual && <RsvpHistory family={family} history={history} />}
             </div>
 
             {canWriteFamilies && (

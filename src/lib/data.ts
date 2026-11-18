@@ -82,6 +82,14 @@ export const cachedConfig = unstable_cache(
     { tags: ["config"] },
 );
 
+/**
+ * Si los invitados ven su mesa (clave tables_visible). Sin valor = ocultas:
+ * se muestran recién cuando las activan en Mesas.
+ */
+export async function getTablesVisible(): Promise<boolean> {
+    return (await cachedConfig("tables_visible")) === "true";
+}
+
 export async function getRsvpDeadline(): Promise<Date | null> {
     const value = await cachedConfig("rsvp_deadline");
     if (!value) return null;

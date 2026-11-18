@@ -70,6 +70,7 @@ function invalidateFamilies() {
     updateTag("families");
     revalidatePath("/admin");
     revalidatePath("/admin/guests");
+    revalidatePath("/admin/virtuales");
     revalidatePath("/dashboard");
 }
 
@@ -83,10 +84,11 @@ function invalidateUsers() {
     updateTag("users");
     revalidatePath("/admin");
     revalidatePath("/admin/guests");
+    revalidatePath("/admin/virtuales");
     revalidatePath("/dashboard");
 }
 
-export async function createFamily(data: { name: string; alias?: string; globalRsvpStatus: 'PENDING' | 'CONFIRMED' | 'DECLINED' }) {
+export async function createFamily(data: { name: string; alias?: string; globalRsvpStatus: 'PENDING' | 'CONFIRMED' | 'DECLINED'; isVirtual?: boolean }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "families.write")) {
         throw new Error("Sin permisos");
@@ -94,26 +96,52 @@ export async function createFamily(data: { name: string; alias?: string; globalR
     const [created] = await db.insert(families).values({
         name: data.name,
         alias: data.alias || "",
-        globalRsvpStatus: data.globalRsvpStatus,
+        // La invitación virtual no tiene respuesta: siempre Pendiente.
+        globalRsvpStatus: data.isVirtual ? "PENDING" : data.globalRsvpStatus,
+        isVirtual: Boolean(data.isVirtual),
     }).returning({ id: families.id });
     // Creada ya con respuesta: queda registrado que la puso un administrador.
-    if (created && data.globalRsvpStatus !== "PENDING") {
+    if (created && !data.isVirtual && data.globalRsvpStatus !== "PENDING") {
         await rsvpEventInsert({ familyId: created.id, status: data.globalRsvpStatus, actor: await rsvpActor(session?.user?.id, null) });
     }
     invalidateFamilies();
 }
 
-export async function updateFamily(id: number, data: { name?: string; alias?: string; delegateUserId?: number | null; globalRsvpStatus?: 'PENDING' | 'CONFIRMED' | 'DECLINED'; isDirectFamily?: boolean }) {
+export async function updateFamily(id: number, data: { name?: string; alias?: string; delegateUserId?: number | null; globalRsvpStatus?: 'PENDING' | 'CONFIRMED' | 'DECLINED'; showAdultsNote?: boolean; isVirtual?: boolean }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "families.write")) {
         throw new Error("Sin permisos");
+    }
+
+    // Pasar a invitación virtual: la familia deja de ser presencial, así que su
+    // respuesta vuelve a Pendiente (con registro si tenía una), nadie figura como
+    // que viene y se liberan sus lugares en las mesas. Al volver a presencial
+    // queda Pendiente, lista para que el delegado responda.
+    if (data.isVirtual !== undefined) {
+        const current = (await cachedFamilies()).find((f) => f.id === id);
+        if (current && current.isVirtual !== data.isVirtual) {
+            const writes = [
+                db.update(families).set({ isVirtual: data.isVirtual, globalRsvpStatus: "PENDING" }).where(eq(families.id, id)),
+                db.update(users).set({ isConfirmed: false, tableId: null }).where(eq(users.familyId, id)),
+            ] as const;
+            if (current.globalRsvpStatus !== "PENDING") {
+                await db.batch([...writes, rsvpEventInsert({ familyId: id, status: "PENDING", actor: await rsvpActor(session?.user?.id, null) })]);
+            } else {
+                await db.batch(writes);
+            }
+            updateTag("tables");
+            revalidatePath("/admin/tables");
+            invalidateUsers();
+            // El cambio de modo ya fijó el estado: se ignora el que venga en el formulario.
+            delete data.globalRsvpStatus;
+        }
     }
 
     const updateSet: Record<string, unknown> = {};
     if (data.name !== undefined) updateSet.name = data.name;
     if (data.alias !== undefined) updateSet.alias = data.alias;
     if (data.globalRsvpStatus !== undefined) updateSet.globalRsvpStatus = data.globalRsvpStatus;
-    if (data.isDirectFamily !== undefined) updateSet.isDirectFamily = Boolean(data.isDirectFamily);
+    if (data.showAdultsNote !== undefined) updateSet.showAdultsNote = Boolean(data.showAdultsNote);
 
     let touchedUsers = false;
     if (data.delegateUserId !== undefined) {

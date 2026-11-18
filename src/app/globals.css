@@ -317,6 +317,21 @@ mark.hl {
   }
 }
 
+/* Menú de la invitación: al elegir otro menú, la carta nueva entra desde el
+   lado del índice hacia el que se avanzó (--dir = 1 o -1), como una página. */
+@keyframes mg-swap {
+  from {
+    opacity: 0;
+    transform: translate3d(calc(var(--dir, 1) * 1.5rem), 0, 0);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mg-swap {
+    animation: mg-swap 460ms var(--ease-out-soft) both;
+    animation-delay: calc(var(--d, 0) * 60ms);
+  }
+}
+
 @utility mg-d-* {
   --d: --value(integer);
 }
