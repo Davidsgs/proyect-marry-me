@@ -2,7 +2,8 @@ import { getMyTable } from "@/app/actions/tables";
 import { Armchair } from "lucide-react";
 
 // «Tu mesa»: número grande, la mesa dibujada desde arriba (tu silla destacada)
-// y con quién se comparte. Sin mesa, la misma mesa en espera con un «?».
+// y con quién se comparte. Sin mesa (o con las mesas aún ocultas desde Mesas),
+// la misma mesa en espera con un «?».
 export default async function MyTableCard({ currentUserId }: { currentUserId: number }) {
     const result = await getMyTable();
 
@@ -30,7 +31,7 @@ export default async function MyTableCard({ currentUserId }: { currentUserId: nu
                 {!result ? (
                     <p className="mg-rise mg-d-4 mx-auto font-text text-lg leading-relaxed text-pretty max-w-md flex flex-col items-center gap-3">
                         <Armchair className="w-6 h-6 shrink-0 text-oliva-profundo" aria-hidden />
-                        Todavía estamos organizando las mesas. Cuando esté lista, verás aquí la tuya y con quién la compartes.
+                        Estamos organizando las mesas. Más adelante vas a poder consultar aquí cuál es la tuya y con quién la compartes.
                     </p>
                 ) : (
                     <TableInfo result={result} currentUserId={currentUserId} />
