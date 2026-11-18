@@ -4,13 +4,15 @@ import { LIVE_STREAM_KEY } from "@/lib/virtual";
 import { Sprig } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
 import { WEDDING_DATE_LABEL, WEDDING_TIME_LABEL, WEDDING_WEEKDAY } from "@/lib/wedding";
-import { ExternalLink, Video } from "lucide-react";
+import { ChevronLeft, ExternalLink, Video } from "lucide-react";
+import Link from "next/link";
 import LocalTime from "../_components/LocalTime";
 
 export const dynamic = "force-dynamic";
 
 // Invitación virtual: familiares en el exterior que siguen la ceremonia en vivo.
 // Llegan desde «Ver mi invitación» en la portada (o /dashboard los trae aquí).
+// También la ven las familias que avisaron que no pueden venir (desde su respuesta).
 // El enlace se publica en el panel (Virtuales); mientras no exista, se avisa que
 // aparecerá aquí. Solo con sesión (src/proxy.ts), como el resto de la invitación.
 export default async function LivePage() {
@@ -31,7 +33,7 @@ export default async function LivePage() {
                 </h1>
                 <Sprig className="mg-grow mg-d-4 mx-auto mt-6 text-rosa-profundo" />
                 <p className="mg-rise mg-d-5 mt-5 max-w-md mx-auto text-lg leading-relaxed text-pretty">
-                    Aunque estén lejos, queremos que nos acompañen. Desde aquí van a poder ver la ceremonia en el momento en que sucede.
+                    Aunque no puedan estar con nosotros, queremos que nos acompañen. Desde aquí van a poder ver la ceremonia en el momento en que sucede.
                 </p>
 
                 <div className="mg-rise mg-d-7 mt-10 rounded-[2rem] bg-crema p-6 sm:p-10 shadow-md flex flex-col items-center gap-5">
@@ -61,6 +63,14 @@ export default async function LivePage() {
                         </p>
                     )}
                 </div>
+
+                {/* Las familias presenciales llegan desde su invitación: pueden volver a ella. */}
+                {family && !family.isVirtual && (
+                    <Link href="/dashboard#confirmar" className="mg-rise mg-d-8 mt-6 inline-flex items-center gap-1.5 min-h-11 px-4 rounded-xl font-sans text-sm font-medium text-tinta hover:bg-crema/60 transition-colors">
+                        <ChevronLeft className="w-4 h-4" aria-hidden />
+                        Volver a mi invitación
+                    </Link>
+                )}
             </div>
         </section>
     );
