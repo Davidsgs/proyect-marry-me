@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MENU_COURSES } from "@/lib/menuTypes";
 import type { PublicMenuGroup, PublicMenuItem } from "@/app/actions/menu";
@@ -12,9 +12,15 @@ import type { PublicMenuGroup, PublicMenuItem } from "@/app/actions/menu";
 // hay índice: se ve la carta directamente.
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"];
 
+// Escalonado de las animaciones (--d = pasos de la animación, ver globals.css).
+const step = (d: number) => ({ "--d": d }) as CSSProperties;
+
 export default function MenuBook({ groups }: { groups: PublicMenuGroup[] }) {
     const [active, setActive] = useState(0);
     const [reading, setReading] = useState(false); // celular: carta abierta
+    // Cada cambio de menú vuelve a montar la carta: su contenido entra desde el
+    // lado del índice hacia el que se avanzó (dir), como al pasar de página.
+    const [turn, setTurn] = useState({ n: 0, dir: 1 });
     const top = useRef<HTMLDivElement>(null);
     const multi = groups.length > 1;
     const menu = groups[Math.min(active, groups.length - 1)];
@@ -23,6 +29,7 @@ export default function MenuBook({ groups }: { groups: PublicMenuGroup[] }) {
         .filter((c) => c.dishes.length > 0);
 
     function open(i: number) {
+        if (i !== active) setTurn((t) => ({ n: t.n + 1, dir: i > active ? 1 : -1 }));
         setActive(i);
         setReading(true);
         // En el celular la carta reemplaza al índice: se vuelve al principio del libro.
@@ -30,6 +37,12 @@ export default function MenuBook({ groups }: { groups: PublicMenuGroup[] }) {
             requestAnimationFrame(() => top.current?.scrollIntoView({ block: "start" }));
         }
     }
+
+    // Al aparecer la sección, la carta sube después del libro (que entra en el paso 3);
+    // al cambiar de menú, entra de costado y sin espera.
+    const swapped = turn.n > 0;
+    const anim = swapped ? "mg-swap" : "mg-rise";
+    const base = swapped ? 0 : 4;
 
     // Celular: se ve el índice o la carta. Escritorio (lg): siempre los dos.
     const showIndex = multi && !reading ? "flex" : "hidden lg:flex";
@@ -49,7 +62,7 @@ export default function MenuBook({ groups }: { groups: PublicMenuGroup[] }) {
                             const current = i === active;
                             const meta = g.time ? `${g.time} h` : `${g.items.length} ${g.items.length === 1 ? "plato" : "platos"}`;
                             return (
-                                <li key={g.id ?? "otros"}>
+                                <li key={g.id ?? "otros"} className="mg-rise" style={step(4 + i)}>
                                     <button
                                         type="button"
                                         onClick={() => open(i)}
@@ -84,18 +97,20 @@ export default function MenuBook({ groups }: { groups: PublicMenuGroup[] }) {
                     </button>
                 )}
                 <article
+                    key={turn.n}
+                    style={{ "--dir": turn.dir } as CSSProperties}
                     aria-label={`Carta: ${menu.title}`}
                     className={`flex flex-col items-center gap-5 short:gap-3 rounded-[1.75rem] bg-surface-container-lowest px-5 py-7 shadow-md lg:shadow-none lg:px-12 lg:py-9 short:py-6 ${multi ? "lg:flex-1 lg:rounded-l-none" : "lg:flex-1"}`}
                 >
-                    <header className="text-center">
+                    <header className={`${anim} text-center`} style={step(base)}>
                         {multi && <p className="font-serif text-lg text-rosa-profundo">{ROMAN[active] ?? active + 1}</p>}
                         <h3 className="font-serif text-4xl lg:text-[2.6rem] short:text-4xl leading-display text-oliva-profundo">{menu.title}</h3>
                         {menu.time && <p className="mt-1 text-sm font-semibold tabular-nums text-rosa-profundo">{menu.time} h</p>}
                     </header>
                     {/* En escritorio, los cursos en dos columnas equilibradas para que la carta entre en la pantalla. */}
                     <div className="w-full flex flex-col gap-5 lg:block lg:columns-2 lg:gap-x-10">
-                        {courses.map((c) => (
-                            <section key={c.label} className="flex flex-col gap-2 short:gap-1 lg:break-inside-avoid lg:mb-5 short:mb-3">
+                        {courses.map((c, ci) => (
+                            <section key={c.label} className={`${anim} flex flex-col gap-2 short:gap-1 lg:break-inside-avoid lg:mb-5 short:mb-3`} style={step(base + 1 + ci)}>
                                 <h4 className="text-center text-xs font-semibold uppercase tracking-[0.16em] text-rosa-profundo">{c.label}</h4>
                                 <ul className="flex flex-col gap-2 short:gap-1">
                                     {c.dishes.map((d) => <Dish key={d.id} item={d} />)}
