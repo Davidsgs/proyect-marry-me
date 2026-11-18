@@ -8,10 +8,10 @@ import { FastForward } from "lucide-react";
 // puntos), cuando el paso se ve por primera vez. El texto entero está siempre en
 // la página (lo que falta, transparente): no hay saltos de maquetación y los
 // lectores de pantalla lo leen completo. Tocar o hacer clic sobre el texto lo
-// acelera mucho, y un botón visible (también con teclado) lo muestra entero de
+// acelera mucho y otro toque lo vuelve al ritmo normal; un botón visible (también con teclado) lo muestra entero de
 // una vez. Con «menos movimiento» el CSS lo muestra entero y no se escribe.
 const LETTER_MS = 60;
-const FAST = 12; // cuántas veces más rápido tras un toque o clic
+const FAST = 12; // cuántas veces más rápido tras un toque o clic (el siguiente lo revierte)
 
 function delayAfter(ch: string) {
     const jitter = 0.6 + Math.random() * 0.8; // 0.6–1.4: nadie escribe a ritmo fijo
@@ -64,7 +64,7 @@ export default function TypedStory({ paragraphs, className = "" }: { paragraphs:
     // Dónde empieza cada párrafo dentro del texto completo (+1: el salto entre párrafos).
     const starts = paragraphs.map((_, i) => paragraphs.slice(0, i).reduce((n, q) => n + q.length + 1, 0));
     return (
-        <div ref={ref} onClick={() => { speed.current = FAST; }} className={typing ? "cursor-pointer" : ""}>
+        <div ref={ref} onClick={() => { speed.current = speed.current === 1 ? FAST : 1; }} className={typing ? "cursor-pointer" : ""}>
             <div className={className}>
             {paragraphs.map((p, idx) => {
                 const start = starts[idx];
