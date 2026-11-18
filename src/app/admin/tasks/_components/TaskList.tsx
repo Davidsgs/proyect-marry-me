@@ -1,8 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { CheckCircle2, ChevronDown } from "lucide-react";
-import { EmptyState } from "@/app/admin/_components/ui";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { CheckCircle2, ChevronDown, Search } from "lucide-react";
+import { EmptyState, inputCls } from "@/app/admin/_components/ui";
 import TaskItem, { type Task } from "./TaskItem";
 import { useTasks } from "./TasksSync";
 import { PRIORITY_RANK } from "@/lib/priority";
@@ -41,6 +41,10 @@ function subscribe(cb: () => void) {
     return () => { listeners.delete(cb); };
 }
 
+// Búsqueda por título sin distinguir mayúsculas ni tildes.
+const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const SEARCH_DELAY_MS = 250;
+
 function sortTasks(list: Task[], sort: Sort): Task[] {
     if (sort === "none") return list;
     const copy = [...list];
@@ -54,8 +58,18 @@ function sortTasks(list: Task[], sort: Sort): Task[] {
 
 export default function TaskList({ canWrite }: { canWrite: boolean }) {
     const { tasks } = useTasks();
-    const pending = tasks.filter((t) => !t.isCompleted);
-    const completed = tasks.filter((t) => t.isCompleted);
+    const [query, setQuery] = useState("");
+    const [debounced, setTerm] = useState("");
+    // Al vaciar el buscador se vuelve a ver todo sin esperar.
+    const term = query.trim() ? debounced : "";
+    // Los resultados se actualizan mientras se escribe, una vez que se deja de teclear un instante.
+    useEffect(() => {
+        const id = setTimeout(() => setTerm(norm(query.trim())), SEARCH_DELAY_MS);
+        return () => clearTimeout(id);
+    }, [query]);
+    const visible = term ? tasks.filter((t) => norm(t.title).includes(term)) : tasks;
+    const pending = visible.filter((t) => !t.isCompleted);
+    const completed = visible.filter((t) => t.isCompleted);
     const sort = useSyncExternalStore(subscribe, readSort, () => "none" as Sort);
     const hint = SORTS.find((s) => s.value === sort)!.hint;
     const pendingSorted = sortTasks(pending, sort);
@@ -64,6 +78,23 @@ export default function TaskList({ canWrite }: { canWrite: boolean }) {
     return (
         <>
             <div className="space-y-6">
+            {tasks.length > 1 && (
+                <label className="relative block">
+                    <span className="sr-only">Buscar tarea por título</span>
+                    <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant" aria-hidden />
+                    <input
+                        type="search"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Buscar tarea…"
+                        className={`${inputCls} pl-11 bg-surface-container-lowest`}
+                    />
+                </label>
+            )}
+            {term && pending.length + completed.length === 0 && (
+                <EmptyState icon={Search} message={`Ninguna tarea coincide con «${query.trim()}».`} />
+            )}
+
             {pending.length + completed.length > 1 && (
                 <div className="space-y-1.5">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
@@ -98,7 +129,11 @@ export default function TaskList({ canWrite }: { canWrite: boolean }) {
                     <span className="font-sans text-sm text-on-surface-variant tabular-nums">{pending.length}</span>
                 </h2>
                 {pending.length === 0 ? (
-                    <EmptyState icon={CheckCircle2} message="No hay tareas pendientes. Todo al día." />
+                    term ? (
+                        completed.length > 0 && <p className="text-sm text-on-surface-variant">Ninguna tarea pendiente coincide con la búsqueda.</p>
+                    ) : (
+                        <EmptyState icon={CheckCircle2} message="No hay tareas pendientes. Todo al día." />
+                    )
                 ) : (
                     <div className="space-y-2">
                         {pendingSorted.map((task) => <TaskItem key={task.id} task={task} canWrite={canWrite} />)}
@@ -108,7 +143,8 @@ export default function TaskList({ canWrite }: { canWrite: boolean }) {
             </div>
 
             {completed.length > 0 && (
-                <details className="group">
+                // Al buscar, las completadas que coinciden se muestran abiertas.
+                <details key={term ? "busqueda" : "todas"} open={!!term} className="group">
                     <summary className="cursor-pointer min-h-11 font-serif text-3xl leading-display text-primary flex items-center gap-2 list-none [&::-webkit-details-marker]:hidden">
                         <ChevronDown className="w-5 h-5 text-on-surface-variant transition-transform group-open:rotate-180" aria-hidden />
                         Completadas
