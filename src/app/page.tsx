@@ -4,12 +4,17 @@ import { VENUE, WEDDING_DATE_LABEL, WEDDING_WEEKDAY } from "@/lib/wedding";
 import { MapPin } from "lucide-react";
 import Link from "next/link";
 import { auth } from "@/auth";
+import { cachedFamilies } from "@/lib/data";
 
 // Portada (solo con sesión): única pantalla oscura, sobre la foto, con el
 // monograma dorado. Decisión de la pareja; el resto del sitio va en claro.
 export default async function Home() {
   const session = await auth();
   const isAdmin = session?.user?.permissions?.includes("admin.dashboard");
+  // Invitación virtual: «Ver mi invitación» lleva directo a la transmisión en vivo.
+  const familyId = session?.user?.familyId;
+  const isVirtual = familyId != null && (await cachedFamilies()).some((f) => f.id === familyId && f.isVirtual);
+  const invitationHref = !session ? "/login" : isVirtual ? "/dashboard/en-vivo" : "/dashboard";
 
   return (
     <main className="relative min-h-dvh flex items-center justify-center overflow-hidden bg-noche text-crema">
@@ -63,7 +68,7 @@ export default async function Home() {
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 animate-rise [animation-delay:280ms]">
           <Link
-            href={session ? "/dashboard" : "/login"}
+            href={invitationHref}
             className="inline-flex items-center justify-center min-h-14 px-10 rounded-full bg-rubor text-tinta font-medium text-base hover:bg-crema active:scale-[0.98] transition-[background-color,transform] duration-150"
           >
             Ver mi invitación

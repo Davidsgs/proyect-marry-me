@@ -14,6 +14,7 @@ import { Arch, Sprig } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
 import { DRESS_CODE, SUPPORT_EMAIL, VENUE, WEDDING_DATE_LABEL, WEDDING_TIME_LABEL, WEDDING_WEEKDAY, daysUntilWedding } from "@/lib/wedding";
 import { CalendarClock, CalendarHeart, Hourglass, MapPin, Shirt } from "lucide-react";
+import { redirect } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
@@ -45,6 +46,8 @@ export default async function DashboardPage() {
     if (!family) {
         return <Notice title="No encontramos tu invitación">{help}</Notice>;
     }
+    // Invitación virtual (familiares en el exterior): su invitación es la transmisión en vivo.
+    if (family.isVirtual) redirect("/dashboard/en-vivo");
 
     const now = new Date();
     const isPastDeadline = deadline ? now > deadline : false;
