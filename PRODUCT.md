@@ -34,7 +34,7 @@ No es una plataforma de bodas genérica: está hecha a medida para una sola boda
 
 - Secciones admin: Resumen, Invitados (familias y personas), Tareas, Mesas (lista con arrastre + plano del salón + imprimible), Cronograma, Menú, Economía, Ajustes (evento y permisos por administrador).
 - Lado invitado: landing con cuenta atrás, login, panel con RSVP (con restricción alimentaria por persona), vista de solo lectura para no delegados, «Tu mesa», «Nuestra historia» con fotos y «Regalos».
-- Política de niños: cada familia lleva una marca «familia directa». Las familias sin ella ven, en el RSVP, una nota amable de que la celebración es para adultos. Es solo informativa: no bloquea nada.
+- Política de niños: solo las familias marcadas con «Mostrar la nota de celebración sin niños» ven, en el RSVP, una nota amable de que la celebración es para adultos. Es solo informativa: no bloquea nada.
 - Restricciones alimentarias: opciones cerradas más «Otra», un texto corto de 20 caracteres como máximo.
 - Regalos: datos editables en Ajustes; la sección no aparece si están vacíos.
 - Vocabulario único (usar siempre estos términos):

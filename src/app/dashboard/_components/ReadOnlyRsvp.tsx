@@ -52,7 +52,7 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                     </div>
                 )}
                 <InvitationValidity count={members.length} />
-                {!family.isDirectFamily && <AdultsNote text={adultsNote} />}
+                {family.showAdultsNote && <AdultsNote text={adultsNote} />}
             </div>
         );
     }
@@ -86,7 +86,7 @@ export default function ReadOnlyRsvp({ family, members, delegate, adultsNote }: 
                     )}
                 </div>
                 <div className="mg-rise mg-d-5"><InvitationValidity count={members.length} /></div>
-                {!family.isDirectFamily && <div className="mg-rise mg-d-6"><AdultsNote text={adultsNote} /></div>}
+                {family.showAdultsNote && <div className="mg-rise mg-d-6"><AdultsNote text={adultsNote} /></div>}
             </div>
             <div className="mg-rise mg-d-5">
                 <AttendanceLists attending={members.filter((m) => m.isConfirmed)} notAttending={members.filter((m) => !m.isConfirmed)} />

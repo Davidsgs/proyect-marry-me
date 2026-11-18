@@ -7,8 +7,9 @@ export const families = sqliteTable("families", {
   alias: text("alias").default("").notNull(),
   globalRsvpStatus: text("global_rsvp_status", { enum: ["PENDING", "CONFIRMED", "DECLINED"] }).default("PENDING").notNull(),
   delegateUserId: integer("delegate_user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
-  // Familia directa: puede traer niños. Las demás ven la nota de celebración para adultos.
-  isDirectFamily: integer("is_direct_family", { mode: 'boolean' }).default(false).notNull(),
+  // Las familias marcadas ven en su invitación la nota de celebración para adultos
+  // (sin niños). Reemplaza a is_direct_family (lógica inversa), que queda sin uso.
+  showAdultsNote: integer("show_adults_note", { mode: 'boolean' }).default(false).notNull(),
   // Invitación virtual (familiares en el exterior): no confirman ni tienen mesa,
   // ven la transmisión en vivo (/dashboard/en-vivo) y no cuentan entre los presenciales.
   isVirtual: integer("is_virtual", { mode: 'boolean' }).default(false).notNull(),

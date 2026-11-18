@@ -107,7 +107,7 @@ export async function createFamily(data: { name: string; alias?: string; globalR
     invalidateFamilies();
 }
 
-export async function updateFamily(id: number, data: { name?: string; alias?: string; delegateUserId?: number | null; globalRsvpStatus?: 'PENDING' | 'CONFIRMED' | 'DECLINED'; isDirectFamily?: boolean; isVirtual?: boolean }) {
+export async function updateFamily(id: number, data: { name?: string; alias?: string; delegateUserId?: number | null; globalRsvpStatus?: 'PENDING' | 'CONFIRMED' | 'DECLINED'; showAdultsNote?: boolean; isVirtual?: boolean }) {
     const session = await auth();
     if (!hasPermission(session?.user?.permissions, "families.write")) {
         throw new Error("Sin permisos");
@@ -141,7 +141,7 @@ export async function updateFamily(id: number, data: { name?: string; alias?: st
     if (data.name !== undefined) updateSet.name = data.name;
     if (data.alias !== undefined) updateSet.alias = data.alias;
     if (data.globalRsvpStatus !== undefined) updateSet.globalRsvpStatus = data.globalRsvpStatus;
-    if (data.isDirectFamily !== undefined) updateSet.isDirectFamily = Boolean(data.isDirectFamily);
+    if (data.showAdultsNote !== undefined) updateSet.showAdultsNote = Boolean(data.showAdultsNote);
 
     let touchedUsers = false;
     if (data.delegateUserId !== undefined) {

@@ -151,7 +151,7 @@ export default function RsvpForm({ family, members, isLocked, isLockedHard, dead
                 </div>
             </fieldset>
 
-            {wide && !family.isDirectFamily && (
+            {wide && family.showAdultsNote && (
                 <div className={`mg-rise mg-d-6 ${after} lg:[&>p]:text-sm lg:[&>p]:py-3 short:[&>p>svg]:hidden`}><AdultsNote text={adultsNote} /></div>
             )}
 

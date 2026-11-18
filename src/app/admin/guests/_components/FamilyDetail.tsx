@@ -21,8 +21,8 @@ type AgeCategory = "BABY" | "CHILD" | "ADULT";
 const AGE_LABEL: Record<AgeCategory, string> = { ADULT: "Adulto", CHILD: "Niño", BABY: "Bebé" };
 const labelCls = "block text-label font-medium text-on-surface-variant mb-1.5";
 
-// Ficha de una familia: datos (nombre, descripción, estado, delegado, familia
-// directa) e integrantes. Se muestra en el panel lateral (escritorio) o en una
+// Ficha de una familia: datos (nombre, descripción, estado, delegado, nota sin
+// niños) e integrantes. Se muestra en el panel lateral (escritorio) o en una
 // hoja (móvil). Los datos se guardan con «Guardar cambios»; añadir o quitar
 // integrantes se aplica al momento.
 export default function FamilyDetail({
@@ -58,7 +58,7 @@ export default function FamilyDetail({
     const [alias, setAlias] = useState(family.alias ?? "");
     const [status, setStatus] = useState<RsvpStatus>(family.globalRsvpStatus as RsvpStatus);
     const [delegateId, setDelegateId] = useState<number | null>(family.delegateUserId);
-    const [isDirect, setIsDirect] = useState(Boolean(family.isDirectFamily));
+    const [showNote, setShowNote] = useState(Boolean(family.showAdultsNote));
     // Invitación virtual: sin respuesta, delegado ni mesa (ver updateFamily).
     const [isVirtual, setIsVirtual] = useState(Boolean(family.isVirtual));
     const virtual = Boolean(family.isVirtual);
@@ -68,7 +68,7 @@ export default function FamilyDetail({
         alias.trim() !== (family.alias ?? "") ||
         status !== family.globalRsvpStatus ||
         delegateId !== family.delegateUserId ||
-        isDirect !== Boolean(family.isDirectFamily) ||
+        showNote !== Boolean(family.showAdultsNote) ||
         isVirtual !== virtual;
 
     async function handleClose() {
@@ -107,7 +107,7 @@ export default function FamilyDetail({
         const data = {
             name: name.trim(),
             alias: alias.trim(),
-            isDirectFamily: isDirect,
+            showAdultsNote: showNote,
             ...(moving ? { isVirtual } : {}),
             ...(!moving && status !== family.globalRsvpStatus ? { globalRsvpStatus: status } : {}),
             ...(delegateId !== family.delegateUserId ? { delegateUserId: delegateId } : {}),
@@ -238,12 +238,12 @@ export default function FamilyDetail({
                     {!virtual && (
                     <div className="rounded-xl bg-surface-container-low px-4 py-2">
                         {canWriteFamilies ? (
-                            <Checkbox checked={isDirect} onChange={setIsDirect} label="Familia directa (puede venir con niños)" />
+                            <Checkbox checked={showNote} onChange={setShowNote} label="Mostrar la nota de celebración sin niños" />
                         ) : (
-                            <p className="py-2 text-sm text-on-surface">{isDirect ? "Familia directa (puede venir con niños)" : "No es familia directa"}</p>
+                            <p className="py-2 text-sm text-on-surface">{showNote ? "Ve la nota de celebración sin niños" : "No ve la nota sobre niños"}</p>
                         )}
                         <p className="pb-2 text-xs text-on-surface-variant">
-                            Si no está marcada, la familia verá en su invitación una nota amable de que la celebración es para adultos.
+                            Si está marcada, la familia verá en su invitación una nota amable de que la celebración es para adultos.
                         </p>
                     </div>
                     )}
