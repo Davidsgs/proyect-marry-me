@@ -9,6 +9,9 @@ export const families = sqliteTable("families", {
   delegateUserId: integer("delegate_user_id").references((): AnySQLiteColumn => users.id, { onDelete: 'set null' }),
   // Familia directa: puede traer niños. Las demás ven la nota de celebración para adultos.
   isDirectFamily: integer("is_direct_family", { mode: 'boolean' }).default(false).notNull(),
+  // Invitación virtual (familiares en el exterior): no confirman ni tienen mesa,
+  // ven la transmisión en vivo (/dashboard/en-vivo) y no cuentan entre los presenciales.
+  isVirtual: integer("is_virtual", { mode: 'boolean' }).default(false).notNull(),
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
   updatedAt: text("updated_at").default(sql`(CURRENT_TIMESTAMP)`).$onUpdate(() => sql`(CURRENT_TIMESTAMP)`).notNull(),
 });

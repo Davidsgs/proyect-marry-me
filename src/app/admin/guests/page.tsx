@@ -4,6 +4,7 @@ import { hasPermission } from "@/lib/permissions";
 import { getFamilies, getUsers } from "@/app/actions/admin";
 import { PageHeader } from "@/app/admin/_components/ui";
 import { cachedRsvpEvents, getRsvpDeadline } from "@/lib/data";
+import { byInvitation } from "@/lib/virtual";
 import GuestsManager, { type FamilyFilter } from "./_components/GuestsManager";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,9 @@ export default async function GuestsPage({ searchParams }: { searchParams: Promi
         redirect("/admin");
     }
 
-    const [families, users, deadline, rsvpEvents] = await Promise.all([getFamilies(), getUsers(), getRsvpDeadline(), cachedRsvpEvents()]);
+    const [allFamilies, allUsers, deadline, rsvpEvents] = await Promise.all([getFamilies(), getUsers(), getRsvpDeadline(), cachedRsvpEvents()]);
+    // Las familias virtuales tienen su propia sección (Virtuales).
+    const { families, users } = byInvitation(allFamilies, allUsers, false);
     const deadlineLabel = deadline ? deadline.toLocaleDateString("es-AR", { day: "numeric", month: "long" }) : null;
 
     return (

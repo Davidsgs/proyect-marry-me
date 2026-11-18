@@ -11,6 +11,7 @@ import { hasPermission } from "@/lib/permissions";
 import { cachedRsvpEvents, getRsvpDeadline } from "@/lib/data";
 import { formatMoney } from "@/lib/money";
 import { declined } from "@/lib/attendance";
+import { byInvitation } from "@/lib/virtual";
 import { EmptyState, btnPrimary } from "@/app/admin/_components/ui";
 import {
     CheckCircle2,
@@ -49,7 +50,7 @@ export default async function AdminPage() {
     const canReadGuests = hasPermission(perms, "families.read") && hasPermission(perms, "users.read");
     const canWriteUsers = hasPermission(perms, "users.write");
 
-    const [families, users, rsvpEvents, allTasks, tables, schedule, finance, deadline] = await Promise.all([
+    const [allFamilies, allUsers, rsvpEvents, allTasks, tables, schedule, finance, deadline] = await Promise.all([
         canReadGuests ? getFamilies() : [],
         canReadGuests ? getUsers() : [],
         canReadGuests ? cachedRsvpEvents() : [],
@@ -60,6 +61,8 @@ export default async function AdminPage() {
         getRsvpDeadline(),
     ]);
     const today = todayLocalISO();
+    // Las familias virtuales (siguen la boda en vivo) no cuentan entre los presenciales.
+    const { families, users } = byInvitation(allFamilies, allUsers, false);
 
     // Familias
     const totalFamilies = families.length;

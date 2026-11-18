@@ -5,6 +5,7 @@ import { getTables } from "@/app/actions/tables";
 import { getFloorPlan } from "@/app/actions/floor";
 import { PageHeader } from "@/app/admin/_components/ui";
 import { getFamilies, getUsers } from "@/app/actions/admin";
+import { byInvitation } from "@/lib/virtual";
 import TablesManager from "./_components/TablesManager";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,9 @@ export default async function TablesPage() {
         redirect("/admin");
     }
 
-    const [tables, families, users, floor] = await Promise.all([getTables(), getFamilies(), getUsers(), getFloorPlan()]);
+    const [tables, allFamilies, allUsers, floor] = await Promise.all([getTables(), getFamilies(), getUsers(), getFloorPlan()]);
+    // Las familias virtuales no ocupan mesa.
+    const { families, users } = byInvitation(allFamilies, allUsers, false);
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">

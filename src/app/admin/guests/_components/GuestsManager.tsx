@@ -35,13 +35,15 @@ interface Props {
     deadlineLabel?: string | null;
     /** Historial de respuestas (más reciente primero), para la ficha de cada familia. */
     rsvpEvents?: RsvpEvent[];
+    /** Sección Virtuales: familias que siguen la boda en vivo (sin respuesta ni delegado). */
+    virtual?: boolean;
 }
 
 // "minors": familias con menores que no están marcadas como «familia directa»
 // (ven la nota de celebración sin niños aunque traigan niños).
 export type FamilyFilter = "all" | "pending" | "no-delegate" | "minors";
 
-export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all", deadlineLabel = null, rsvpEvents = [] }: Props) {
+export default function GuestsManager({ families: serverFamilies, users: serverUsers, canWriteFamilies, canWriteUsers, initialTab = "families", initialFamilyFilter = "all", deadlineLabel = null, rsvpEvents = [], virtual = false }: Props) {
     const confirm = useConfirm();
     // Familias e invitados con cambios optimistas (ver guestsStore.tsx).
     const server = useMemo(() => ({ families: serverFamilies, users: serverUsers }), [serverFamilies, serverUsers]);
@@ -73,6 +75,7 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
     const confirmedGuests = guestUsers.filter((u) => u.isConfirmed).length;
     const adultGuests = guestUsers.filter((u) => u.ageCategory === "ADULT").length;
     const minorGuests = totalGuests - adultGuests;
+    const withEmail = guestUsers.filter((u) => u.ageCategory === "ADULT" && u.email).length;
 
     const filteredFamilies = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -117,6 +120,17 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
     return (
         <GuestsCtx.Provider value={mutate}>
         <div className="space-y-8">
+            {virtual ? (
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+                <StatCard label="Familias" value={totalFamilies} />
+                <StatCard
+                    label="Personas"
+                    value={totalGuests}
+                    hint={`${adultGuests} ${adultGuests === 1 ? "adulto" : "adultos"} · ${minorGuests} ${minorGuests === 1 ? "menor" : "menores"}`}
+                />
+                <StatCard label="Pueden entrar" value={<>{withEmail}<span className="text-sm font-normal text-on-surface-variant"> / {adultGuests}</span></>} hint="adultos con correo" />
+            </div>
+            ) : (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatCard
                     label="Familias"
@@ -132,6 +146,7 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
                 />
                 <StatCard label="Asisten" value={<>{confirmedGuests}<span className="text-sm font-normal text-on-surface-variant"> / {totalGuests}</span></>} tone="good" />
             </div>
+            )}
 
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <Tabs
@@ -169,7 +184,7 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
                     />
                 </label>
                 {tab === "families" ? (
-                    <div role="group" aria-label="Filtrar familias" className="flex gap-1.5 overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+                    !virtual && <div role="group" aria-label="Filtrar familias" className="flex gap-1.5 overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
                         <FilterChip active={familyStatus === "all"} onClick={() => setFamilyStatus("all")}>Todas</FilterChip>
                         <FilterChip active={familyStatus === "pending"} onClick={() => setFamilyStatus("pending")}>Sin responder · {pendingFamilies}</FilterChip>
                         <FilterChip active={familyStatus === "no-delegate"} onClick={() => setFamilyStatus("no-delegate")} warn={withoutDelegate > 0}>Sin delegado · {withoutDelegate}</FilterChip>
@@ -200,6 +215,7 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
                         families={filteredFamilies}
                         users={users}
                         isEmpty={families.length === 0}
+                        virtual={virtual}
                         selectedId={openFamilyId}
                         onOpen={(family) => setOpenFamilyId(family.id)}
                     />
@@ -239,11 +255,11 @@ export default function GuestsManager({ families: serverFamilies, users: serverU
                 </Dialog>
             )}
 
-            <Dialog open={newFamilyOpen} onClose={() => setNewFamilyOpen(false)} title="Nueva familia" size="md">
-                <NewFamilyForm onDone={() => setNewFamilyOpen(false)} />
+            <Dialog open={newFamilyOpen} onClose={() => setNewFamilyOpen(false)} title={virtual ? "Nueva familia virtual" : "Nueva familia"} size="md">
+                <NewFamilyForm virtual={virtual} onDone={() => setNewFamilyOpen(false)} />
             </Dialog>
 
-            <Dialog open={bulkOpen} onClose={() => setBulkOpen(false)} title="Añadir invitados" description="Los niños y bebés no necesitan correo porque no inician sesión. El delegado se elige luego en la ficha de la familia." size="xl">
+            <Dialog open={bulkOpen} onClose={() => setBulkOpen(false)} title="Añadir invitados" description={virtual ? "Los niños y bebés no necesitan correo porque no inician sesión." : "Los niños y bebés no necesitan correo porque no inician sesión. El delegado se elige luego en la ficha de la familia."} size="xl">
                 <BulkUserForm families={families} onDone={() => setBulkOpen(false)} />
             </Dialog>
 
@@ -278,7 +294,7 @@ function FilterChip({ active, onClick, warn, children }: { active: boolean; onCl
     );
 }
 
-function NewFamilyForm({ onDone }: { onDone: () => void }) {
+function NewFamilyForm({ virtual, onDone }: { virtual: boolean; onDone: () => void }) {
     const mutate = useGuestsMutate();
     return (
         <form
@@ -286,7 +302,8 @@ function NewFamilyForm({ onDone }: { onDone: () => void }) {
                 const data = {
                     name: (formData.get("name") as string).trim(),
                     alias: ((formData.get("alias") as string) || "").trim(),
-                    globalRsvpStatus: formData.get("globalRsvpStatus") as RsvpStatus,
+                    globalRsvpStatus: (virtual ? "PENDING" : formData.get("globalRsvpStatus")) as RsvpStatus,
+                    isVirtual: virtual,
                 };
                 mutate(
                     (d) => ({ ...d, families: [...d.families, { ...data, id: tempId(), delegateUserId: null, isDirectFamily: false, createdAt: nowSql(), updatedAt: nowSql() }] }),
@@ -305,6 +322,9 @@ function NewFamilyForm({ onDone }: { onDone: () => void }) {
                 <span className="block text-label font-medium text-on-surface-variant mb-1.5">Descripción <span className="font-normal">(opcional)</span></span>
                 <GrowText name="alias" className={inputCls} placeholder="Tíos paternos" />
             </label>
+            {virtual ? (
+                <p className="text-sm text-on-surface-variant">Verán la cuenta atrás y, en su invitación, el enlace para seguir la ceremonia en vivo. No confirman asistencia ni ocupan mesa.</p>
+            ) : (
             <label className="block">
                 <span className="block text-label font-medium text-on-surface-variant mb-1.5">Estado</span>
                 <select name="globalRsvpStatus" className={rsvpSelectCls} defaultValue="PENDING">
@@ -313,6 +333,7 @@ function NewFamilyForm({ onDone }: { onDone: () => void }) {
                     <option value="DECLINED">No asiste</option>
                 </select>
             </label>
+            )}
             <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
                 <button type="button" onClick={onDone} className={btnGhost}>Cancelar</button>
                 <button type="submit" className={btnPrimary}>
@@ -466,16 +487,27 @@ function FamiliesList({
     families,
     users,
     isEmpty,
+    virtual,
     selectedId,
     onOpen,
 }: {
     families: Family[];
     users: User[];
     isEmpty: boolean;
+    virtual: boolean;
     selectedId: number | null;
     onOpen: (family: Family) => void;
 }) {
-    if (isEmpty) return <EmptyState icon={Home} message="No hay familias registradas aún. Crea la primera con «Nueva familia»." />;
+    if (isEmpty) {
+        return (
+            <EmptyState
+                icon={Home}
+                message={virtual
+                    ? "Aún no hay familias virtuales. Crea una con «Nueva familia» o marca «Invitación virtual» en la ficha de una familia de Invitados."
+                    : "No hay familias registradas aún. Crea la primera con «Nueva familia»."}
+            />
+        );
+    }
     if (families.length === 0) return <EmptyState icon={Search} message="Ninguna familia coincide con la búsqueda o el filtro." />;
 
     return (
@@ -499,14 +531,14 @@ function FamiliesList({
                             <span className="min-w-0 flex-1">
                                 <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                                     <span className="font-serif text-2xl leading-tight text-on-surface">{family.name}</span>
-                                    <RsvpChip status={status} />
+                                    {!family.isVirtual && <RsvpChip status={status} />}
                                 </span>
                                 <span className="mt-1 block text-sm text-on-surface-variant truncate">
                                     {family.alias ? `${family.alias} · ` : ""}
                                     {familyUsers.length} {familyUsers.length === 1 ? "integrante" : "integrantes"}
                                     {family.isDirectFamily ? " · Familia directa" : ""}
                                 </span>
-                                {delegate ? (
+                                {family.isVirtual ? null : delegate ? (
                                     <span className="mt-0.5 block text-sm text-on-surface-variant truncate">
                                         Delegado: <span className="text-on-surface">{delegate.name} {delegate.lastName}</span>
                                     </span>
@@ -566,7 +598,7 @@ function UsersList({
                             </p>
                             <div className="flex flex-wrap gap-1.5 mt-2">
                                 {isAdmin && <Chip tone="brand">Admin</Chip>}
-                                {isDelegate ? <Chip tone="brand">Delegado</Chip> : !isMinor && !isAdmin && <Chip>Acompañante</Chip>}
+                                {!family?.isVirtual && (isDelegate ? <Chip tone="brand">Delegado</Chip> : !isMinor && !isAdmin && <Chip>Acompañante</Chip>)}
                                 {user.isConfirmed && <Chip tone="yes">Confirmado</Chip>}
                                 {diet && <Chip>{diet}</Chip>}
                             </div>
