@@ -6,7 +6,7 @@
 import { unstable_cache } from "next/cache";
 import { asc, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { eventConfig, families, rsvpEvents, tables, users, weddingParty } from "@/db/schema";
+import { eventConfig, families, faqItems, rsvpEvents, tables, users, weddingParty } from "@/db/schema";
 import type { RsvpAttendee, RsvpEvent } from "@/lib/rsvpAudit";
 
 export const cachedFamilies = unstable_cache(
@@ -62,6 +62,13 @@ function parseAttendees(raw: string): RsvpAttendee[] {
 }
 
 /** Padrinos y cortejo en su orden (tag "wedding-party"). */
+/** Preguntas y respuestas en su orden (tag "faq"). */
+export const cachedFaq = unstable_cache(
+    async () => db.select().from(faqItems).orderBy(asc(faqItems.sortOrder), asc(faqItems.id)).all(),
+    ["faq"],
+    { tags: ["faq"] },
+);
+
 export const cachedWeddingParty = unstable_cache(
     async () => db.select().from(weddingParty).orderBy(asc(weddingParty.sortOrder), asc(weddingParty.id)).all(),
     ["wedding-party"],

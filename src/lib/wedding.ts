@@ -73,4 +73,8 @@ export const CALENDAR_URL =
 export const PARTY_ROLE_MAX = 40;
 export const PARTY_NAME_MAX = 80;
 export const PARTY_MESSAGE_MAX = 280;
+// Preguntas y respuestas (tabla faq_items): límites de cada campo.
+export const FAQ_QUESTION_MAX = 160;
+export const FAQ_ANSWER_MAX = 800;
+
 export const PARTY_ROLE_SUGGESTIONS = ["Padrino", "Madrina", "Testigo", "Dama de honor", "Caballero de honor", "Paje", "Florista", "Portador de anillos"];

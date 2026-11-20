@@ -258,6 +258,15 @@ export const weddingParty = sqliteTable("wedding_party", {
   createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
 });
 
+// Preguntas y respuestas de la invitación (se editan en Ajustes).
+export const faqItems = sqliteTable("faq_items", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
+  createdAt: text("created_at").default(sql`(CURRENT_TIMESTAMP)`).notNull(),
+});
+
 // ─── Planos de mesas ─────────────────────────────────────────────────────────
 // Áreas (Salón, Jardín…) con sus mesas y elementos (pista, DJ, mesa dulce…).
 // Cada área tiene varias alternativas de distribución con posiciones propias;
