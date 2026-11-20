@@ -48,7 +48,7 @@ Env in `.env.local` (gitignored): `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`, `AUT
 
 **Fixed wedding data** in `src/lib/wedding.ts` (date); `"YYYY-MM-DD"` strings parse with `src/lib/dates.ts` (`parseLocalDate`, `todayLocalISO`) — never `new Date("YYYY-MM-DD")` (UTC, shows a day early in Argentina).
 
-**Guest side**: `/dashboard` — family delegate (`MAIN_GUEST`) confirms RSVP for each family member until the configured deadline; other members get a read-only view; "Mi mesa" shows table assignment; "Menú" lists only `menu_items.is_public` (never discarded, never supplier/quantities/notes) via `getPublicMenu`; "Nuestro cortejo" lists `wedding_party` (edited in Ajustes). `/seating-chart` is a printable per-table list.
+**Guest side**: `/dashboard` — family delegate (`MAIN_GUEST`) confirms RSVP for each family member until the configured deadline; other members get a read-only view; "Mi mesa" shows table assignment; "Menú" lists only `menu_items.is_public` (never discarded, never supplier/quantities/notes) via `getPublicMenu`; "Nuestro cortejo" lists `wedding_party` and "Preguntas y respuestas" lists `faq_items` (both edited in Ajustes; `cachedFaq`, tag `faq`). `/seating-chart` is a printable per-table list.
 
 **Domain notes**
 - Every user has a unique `users.alias` (`src/lib/alias.ts`: generated from the name on create, editable in Invitados, validated client and server side).

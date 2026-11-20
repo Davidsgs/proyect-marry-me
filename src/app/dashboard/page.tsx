@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { cachedConfig, cachedFamilies, cachedUsers, cachedWeddingParty, getRsvpDeadline } from "@/lib/data";
+import { cachedConfig, cachedFaq, cachedFamilies, cachedUsers, cachedWeddingParty, getRsvpDeadline } from "@/lib/data";
 import { getPublicMenu } from "@/app/actions/menu";
 import RsvpForm from "./_components/RsvpForm";
 import ReadOnlyRsvp from "./_components/ReadOnlyRsvp";
@@ -10,6 +10,7 @@ import OurStory from "./_components/OurStory";
 import Gifts from "./_components/Gifts";
 import WeddingMenu from "./_components/WeddingMenu";
 import WeddingParty from "./_components/WeddingParty";
+import Faq from "./_components/Faq";
 import { Arch, Sprig } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
 import { DRESS_CODE, SUPPORT_EMAIL, VENUE, WEDDING_DATE_LABEL, WEDDING_TIME_LABEL, WEDDING_WEEKDAY, daysUntilWedding } from "@/lib/wedding";
@@ -84,8 +85,8 @@ export default async function DashboardPage() {
 
     // Las secciones opcionales (sin datos cargados en Ajustes) no son un paso.
     // Mismas lecturas en caché que usan los componentes: no suman consultas.
-    const [giftAlias, giftCbu, story, party, menu] = await Promise.all([
-        cachedConfig("gift_alias"), cachedConfig("gift_cbu"), cachedConfig("story"), cachedWeddingParty(), getPublicMenu(),
+    const [giftAlias, giftCbu, story, party, menu, faq] = await Promise.all([
+        cachedConfig("gift_alias"), cachedConfig("gift_cbu"), cachedConfig("story"), cachedWeddingParty(), getPublicMenu(), cachedFaq(),
     ]);
     const userId = session?.user?.id;
 
@@ -151,6 +152,7 @@ export default async function DashboardPage() {
         ...(giftAlias || giftCbu ? [{ id: "regalos", label: "Regalos", content: <Gifts /> }] : []),
         ...(story?.trim() ? [{ id: "historia", label: "Nuestra historia", content: <OurStory /> }] : []),
         ...(party.length > 0 ? [{ id: "cortejo", label: "Nuestro cortejo", content: <WeddingParty />, tone: "dark" as const }] : []),
+        ...(faq.length > 0 ? [{ id: "preguntas", label: "Preguntas y respuestas", content: <Faq /> }] : []),
     ];
 
     return <InvitationSteps steps={steps} />;
