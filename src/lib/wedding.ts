@@ -25,7 +25,7 @@ export const VENUE = {
 export type AvoidColor = { name: string; hex: string };
 
 export const DRESS_CODE = {
-  style: "Elegante",
+  style: "Elegante / Gala",
   // Colores reservados para evitar coincidir con la decoración y los novios.
   women: [
     { name: "Rosa", hex: "#e7c6c1" },
