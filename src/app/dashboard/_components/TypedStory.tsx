@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FastForward } from "lucide-react";
+import { HEART_PATH, PetalBurst } from "@/components/Brand";
 
 // «Nuestra historia» escrita como una carta: las letras aparecen una a una, a
 // ritmo de persona (con variación, pausas entre palabras y más largas en comas y
@@ -22,7 +23,7 @@ function delayAfter(ch: string) {
     return LETTER_MS * jitter;
 }
 
-export default function TypedStory({ paragraphs, className = "" }: { paragraphs: string[]; className?: string }) {
+export default function TypedStory({ paragraphs, signature, className = "" }: { paragraphs: string[]; signature?: string; className?: string }) {
     const ref = useRef<HTMLDivElement>(null);
     const full = paragraphs.join("\n");
     const total = full.length;
@@ -61,10 +62,11 @@ export default function TypedStory({ paragraphs, className = "" }: { paragraphs:
     }, [started, full, total]);
 
     const typing = started && count < total;
+    const done = count >= total;
     // Dónde empieza cada párrafo dentro del texto completo (+1: el salto entre párrafos).
     const starts = paragraphs.map((_, i) => paragraphs.slice(0, i).reduce((n, q) => n + q.length + 1, 0));
     return (
-        <div ref={ref} onClick={() => { speed.current = speed.current === 1 ? FAST : 1; }} className={typing ? "cursor-pointer" : ""}>
+<div ref={ref} onClick={() => { speed.current = speed.current === 1 ? FAST : 1; }} className={typing ? "cursor-pointer" : ""}>
             <div className={className}>
             {paragraphs.map((p, idx) => {
                 const start = starts[idx];
@@ -81,15 +83,30 @@ export default function TypedStory({ paragraphs, className = "" }: { paragraphs:
                 );
             })}
             </div>
-            {/* Siempre en el flujo (invisible cuando no escribe) para que nada salte al terminar. */}
-            <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setCount(total); }}
-                className={`mx-auto mt-3 short:mt-1 flex items-center gap-1.5 min-h-11 px-4 rounded-xl font-sans text-sm font-medium text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors motion-reduce:hidden ${typing ? "" : "invisible"}`}
-            >
-                <FastForward className="w-4 h-4" aria-hidden />
-                Mostrar la carta completa
-            </button>
+            {/* Botón y firma comparten el mismo lugar (siempre en el flujo): mientras se
+                escribe se ve el botón; al terminar, la firma con su sello. Nada salta. */}
+            <div className="mt-3 short:mt-1 grid place-items-center [&>*]:[grid-area:1/1]">
+                <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setCount(total); }}
+                    className={`flex items-center gap-1.5 min-h-11 px-4 rounded-xl font-sans text-sm font-medium text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors motion-reduce:hidden ${typing ? "" : "invisible"}`}
+                >
+                    <FastForward className="w-4 h-4" aria-hidden />
+                    Mostrar la carta completa
+                </button>
+                {signature && (
+                    // Con «menos movimiento» la carta está completa desde el inicio: la firma también.
+                    <p className={`flex items-center gap-3 motion-reduce:visible ${done ? "" : "invisible"}`}>
+                        <span className={`relative w-11 h-11 shrink-0 rounded-full bg-rosa-profundo text-crema flex items-center justify-center shadow-sm ${done ? "mg-pop" : ""}`}>
+                            <svg viewBox="0 0 24 24" fill="none" aria-hidden className="w-5 h-5">
+                                <path d={HEART_PATH} pathLength={64} stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" className={done ? "mg-draw mg-d-2" : ""} style={{ "--len": 64 } as React.CSSProperties} />
+                            </svg>
+                            {done && <PetalBurst />}
+                        </span>
+                        <span className={`font-serif text-2xl leading-none text-oliva-profundo ${done ? "mg-rise mg-d-3" : ""}`}>{signature}</span>
+                    </p>
+                )}
+            </div>
         </div>
     );
 }

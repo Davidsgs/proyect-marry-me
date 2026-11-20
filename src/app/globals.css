@@ -362,6 +362,32 @@ mark.hl {
   }
 }
 
+/* «Nuestra historia»: corazones y destellos de línea que suben despacio alrededor
+   del arco, cada uno con su ritmo (--t), retraso (--delay), deriva (--dx) y giro
+   (--r). Decorativos y en bucle; con «menos movimiento» no se dibujan. */
+@keyframes heart-float {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(var(--r, 0deg)) scale(0.7);
+  }
+  20%,
+  75% {
+    opacity: var(--o, 0.55);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--dx, 0), -9rem, 0) rotate(calc(var(--r, 0deg) * -1)) scale(1);
+  }
+}
+
+@utility animate-heart-float {
+  display: none;
+  @media (prefers-reduced-motion: no-preference) {
+    display: block;
+    animation: heart-float var(--t, 9s) ease-in-out var(--delay, 0s) infinite both;
+  }
+}
+
 /* Transiciones entre páginas (src/app/template.tsx): la página que sale se
    desvanece rápido y la nueva entra subiendo un poco. Sin «menos movimiento»
    no se anima nada: el cambio es instantáneo, como antes. */
