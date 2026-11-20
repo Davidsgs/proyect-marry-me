@@ -13,6 +13,10 @@ import { HEART_PATH, PetalBurst } from "@/components/Brand";
 // una vez. Con «menos movimiento» el CSS lo muestra entero y no se escribe.
 const LETTER_MS = 60;
 const FAST = 12; // cuántas veces más rápido tras un toque o clic (el siguiente lo revierte)
+// Últimas letras que se dibujan una a una con efecto de tinta (animate-ink). Las
+// anteriores ya terminaron su animación y vuelven a ser texto plano: el DOM no
+// crece con la carta. 14 letras a ~60 ms cubren los 520 ms del efecto.
+const INK_TRAIL = 14;
 
 function delayAfter(ch: string) {
     const jitter = 0.6 + Math.random() * 0.8; // 0.6–1.4: nadie escribe a ritmo fijo
@@ -72,9 +76,15 @@ export default function TypedStory({ paragraphs, signature, className = "" }: { 
                 const start = starts[idx];
                 const shown = Math.max(0, Math.min(count - start, p.length));
                 const caretHere = typing && count >= start && count <= start + p.length;
+                // Las últimas letras llevan su efecto de tinta (también al terminar, para que
+                // las finales no corten la animación). A toda velocidad se ve apenas un destello.
+                const ink = started ? Math.max(0, shown - INK_TRAIL) : shown;
                 return (
                     <p key={idx} className="whitespace-pre-line">
-                        {p.slice(0, shown)}
+                        {p.slice(0, ink)}
+                        {Array.from(p.slice(ink, shown), (ch, k) => (
+                            <span key={start + ink + k} className="animate-ink">{ch}</span>
+                        ))}
                         {caretHere && (
                             <span aria-hidden className="inline-block w-0.5 h-[1.1em] -mr-0.5 align-[-0.2em] bg-rosa-profundo animate-pulse" />
                         )}

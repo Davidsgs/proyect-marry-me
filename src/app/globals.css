@@ -380,6 +380,30 @@ mark.hl {
   }
 }
 
+/* Letra recién escrita en «Nuestra historia»: aparece borrosa y en rosa, y se
+   asienta nítida en el color del texto, como tinta fresca que se seca. Sin
+   transform: las letras siguen siendo texto en línea y nada se reacomoda. */
+@keyframes ink-in {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+    color: var(--color-mono-r);
+  }
+  45% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@utility animate-ink {
+  @media (prefers-reduced-motion: no-preference) {
+    animation: ink-in 520ms var(--ease-out-soft) both;
+  }
+}
+
 @utility animate-heart-float {
   display: none;
   @media (prefers-reduced-motion: no-preference) {
