@@ -34,8 +34,9 @@ import { useConfirm } from "@/app/admin/_components/ConfirmDialog";
 import { Checkbox, EmptyState, btnGhost, btnPrimary, btnSecondary, iconBtn, iconBtnDanger, inputCls } from "@/app/admin/_components/ui";
 import { Dialog } from "@/components/Dialog";
 import { GrowText } from "@/components/GrowText";
+import { useMediaQuery } from "@/lib/useMediaQuery";
 import {
-    Move, Plus, Pencil, Trash2, Star, Copy, Shapes, Check, Pipette, ZoomIn, ZoomOut, LocateFixed, Grid3x3,
+    Hand, Move, Plus, Pencil, Trash2, Star, Copy, Shapes, Check, Pipette, ZoomIn, ZoomOut, LocateFixed, Grid3x3,
     Music, Cake, Disc3, Wine, Mic, Camera, DoorOpen, type LucideIcon,
 } from "lucide-react";
 
@@ -52,7 +53,8 @@ const GAP_Y = 150;
 const PAD = 20;
 const nowSql = () => new Date().toISOString().slice(0, 19).replace("T", " ");
 // Zoom del plano: límites, paso de los botones y lado de cada celda de la cuadrícula.
-const ZOOM_MIN = 0.3;
+// 0.2: en un celular vertical, «Centrar» tiene que poder mostrar todo el salón.
+const ZOOM_MIN = 0.2;
 const ZOOM_MAX = 2;
 const ZOOM_STEP = 1.2;
 const GRID = 40;
@@ -136,9 +138,17 @@ export default function TablePlan({
         | null
     >(null);
 
+    // Pantallas táctiles: por defecto el plano solo se recorre (un dedo desplaza,
+    // pellizco acerca, tocar abre). Con «Mover piezas» las mesas y elementos se
+    // arrastran. Antes cada pieza bloqueaba el desplazamiento y mantenerla
+    // presionada la movía: con el plano lleno, recorrerlo movía mesas sin querer.
+    const coarse = useMediaQuery("(pointer: coarse)");
+    const [arranging, setArranging] = useState(false);
+    const draggable = canWrite && (!coarse || arranging);
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-        useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 5 } }),
+        // En «Mover piezas» el gesto ya es intencional: arrastra apenas se desliza el dedo.
+        useSensor(TouchSensor, { activationConstraint: { distance: 4 } }),
     );
     // ── Vista del lienzo: zoom (rueda en PC, pellizco en el móvil, botones), arrastre
     // del fondo para desplazarse, centrar y cuadrícula. Las posiciones guardadas
@@ -496,7 +506,7 @@ export default function TablePlan({
                     {layout?.isActive
                         ? <>«{layout.name}» es la distribución <span className="font-medium text-on-surface">vigente</span>, la que se usará el día de la boda.</>
                         : <>Estás viendo «{layout?.name}», una alternativa de prueba. La vigente se marca con <Star className="inline w-3 h-3 fill-current align-[-1px]" aria-label="estrella" role="img" />.</>}
-                    {" "}Las mesas y los invitados son los mismos en todas: solo cambia dónde está dibujada cada cosa.
+                    <span className="hidden sm:inline">{" "}Las mesas y los invitados son los mismos en todas: solo cambia dónde está dibujada cada cosa.</span>
                 </p>
                 {canWrite && (
                     <div className="flex flex-wrap gap-2">
@@ -519,27 +529,46 @@ export default function TablePlan({
                 )}
             </div>
 
-            <p className="text-sm text-on-surface-variant flex items-center gap-1.5">
-                <Move className="w-4 h-4 shrink-0" aria-hidden />
-                {canWrite
-                    ? "Arrastra mesas y elementos (en el móvil, mantén pulsado) para recrear la distribución. Toca uno para editarlo. Todo se guarda solo."
-                    : "Distribución del área (solo lectura)."}
-                {" "}Acerca o aleja con la rueda del ratón o pellizcando.
+            <p className="text-sm text-on-surface-variant flex items-start gap-1.5 text-pretty">
+                <Move className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
+                <span>
+                    {!canWrite
+                        ? "Distribución del área (solo lectura)."
+                        : coarse
+                          ? arranging
+                              ? "Arrastra mesas y elementos para ubicarlos; se guardan solos. Para recorrer el plano, desliza sobre el fondo."
+                              : "Desliza para recorrer el plano y pellizca para acercar. Toca una mesa para editarla; para cambiarla de lugar, activa «Mover piezas»."
+                          : "Arrastra mesas y elementos para recrear la distribución. Haz clic en uno para editarlo. Todo se guarda solo. Acerca o aleja con la rueda del ratón."}
+                </span>
             </p>
 
             {areaTables.length === 0 && areaElements.length === 0 ? (
                 <EmptyState message={canWrite ? "Esta área está vacía. Asigna mesas desde «Editar mesa» o añade elementos como la pista o la mesa dulce." : "Esta área está vacía."} />
             ) : (
                 <div className="space-y-2">
-                <div role="toolbar" aria-label="Vista del plano" className="flex flex-wrap items-center justify-end gap-1">
+                {/* En el celular, una sola fila: «Mover piezas» a la izquierda y la vista con íconos a la derecha. */}
+                <div role="toolbar" aria-label="Vista del plano" className="flex items-center justify-end gap-1">
+                    {canWrite && coarse && (
+                        <button
+                            type="button"
+                            onClick={() => setArranging((a) => !a)}
+                            aria-pressed={arranging}
+                            disabled={layoutBusy}
+                            // Clases completas por estado: mezclar btnGhost con text-on-primary dejaba el texto oliva sobre oliva.
+                            className={`${arranging ? btnPrimary : btnSecondary} mr-auto whitespace-nowrap`}
+                        >
+                            {arranging ? <Check className="w-4 h-4" aria-hidden /> : <Hand className="w-4 h-4" aria-hidden />}
+                            {arranging ? "Listo" : "Mover piezas"}
+                        </button>
+                    )}
                     <button type="button" onClick={() => zoomAt(zoom / ZOOM_STEP)} disabled={zoom <= ZOOM_MIN} className={iconBtn} aria-label="Alejar"><ZoomOut className="w-4 h-4" /></button>
-                    <span className="min-w-12 text-center text-label font-medium tabular-nums text-on-surface-variant" aria-live="polite">{Math.round(zoom * 100)} %</span>
+                    <span className="hidden sm:inline min-w-12 text-center text-label font-medium tabular-nums text-on-surface-variant" aria-live="polite">{Math.round(zoom * 100)} %</span>
                     <button type="button" onClick={() => zoomAt(zoom * ZOOM_STEP)} disabled={zoom >= ZOOM_MAX} className={iconBtn} aria-label="Acercar"><ZoomIn className="w-4 h-4" /></button>
-                    <button type="button" onClick={fit} className={btnGhost}>
-                        <LocateFixed className="w-4 h-4" aria-hidden /> Centrar
+                    <button type="button" onClick={fit} className={btnGhost} aria-label="Centrar">
+                        <LocateFixed className="w-4 h-4" aria-hidden /> <span className="hidden sm:inline">Centrar</span>
                     </button>
-                    <button type="button" onClick={() => setGrid((g) => !g)} aria-pressed={grid} className={`${btnGhost} ${grid ? "bg-secondary-container text-on-secondary-container hover:bg-secondary-container" : ""}`}>
-                        <Grid3x3 className="w-4 h-4" aria-hidden /> Cuadrícula
+                    <button type="button" onClick={() => setGrid((g) => !g)} aria-pressed={grid} aria-label="Cuadrícula" className={`${btnGhost} ${grid ? "bg-secondary-container text-on-secondary-container hover:bg-secondary-container" : ""}`}>
+                        <Grid3x3 className="w-4 h-4" aria-hidden /> <span className="hidden sm:inline">Cuadrícula</span>
                     </button>
                 </div>
                 {/* touch-action: un dedo desplaza (nativo); el pellizco lo maneja el plano. */}
@@ -552,7 +581,7 @@ export default function TablePlan({
                         backgroundSize: `${GRID * zoom}px ${GRID * zoom}px`,
                         backgroundAttachment: "local",
                     } : undefined}
-                    className="flex h-[min(70vh,40rem)] overflow-auto overscroll-contain rounded-2xl bg-surface-container-low [touch-action:pan-x_pan-y] cursor-grab active:cursor-grabbing"
+                    className={`flex h-[70dvh] sm:h-[min(70vh,40rem)] overflow-auto overscroll-contain rounded-2xl bg-surface-container-low [touch-action:pan-x_pan-y] cursor-grab active:cursor-grabbing transition-shadow ${arranging && coarse ? "ring-2 ring-primary ring-inset" : ""}`}
                 >
                     <DndContext id="tables-plan" sensors={sensors} onDragEnd={onDragEnd} onDragCancel={endDrag}>
                         {/* El tamaño escalado da el área de scroll; m-auto centra el plano si es más chico que la ventana. */}
@@ -567,10 +596,10 @@ export default function TablePlan({
                         >
                             {/* Elementos debajo de las mesas: la pista suele quedar rodeada de mesas */}
                             {placedElements.map(({ e, pos }) => (
-                                <ElementNode key={e.id} element={e} pos={pos} zoom={zoom} canWrite={canWrite && !layoutBusy} onOpen={openIfClick(() => setDialog({ kind: "element-edit", element: e }))} />
+                                <ElementNode key={e.id} element={e} pos={pos} zoom={zoom} canWrite={canWrite && !layoutBusy} draggable={draggable && !layoutBusy} onOpen={openIfClick(() => setDialog({ kind: "element-edit", element: e }))} />
                             ))}
                             {placedTables.map(({ t, pos }) => (
-                                <TableNode key={t.id} table={t} pos={pos} zoom={zoom} count={membersByTable.get(t.id)?.length ?? 0} canWrite={canWrite && !layoutBusy} onOpen={openIfClick(() => onEditTable(t))} />
+                                <TableNode key={t.id} table={t} pos={pos} zoom={zoom} count={membersByTable.get(t.id)?.length ?? 0} canWrite={canWrite && !layoutBusy} draggable={draggable && !layoutBusy} onOpen={openIfClick(() => onEditTable(t))} />
                             ))}
                         </div>
                         </div>
@@ -629,8 +658,8 @@ function useNodeDrag(id: string, canWrite: boolean, pos: Pos, zoom: number) {
     return { attributes, listeners, setNodeRef, isDragging, style };
 }
 
-function TableNode({ table, pos, zoom, count, canWrite, onOpen }: { table: Table; pos: Pos; zoom: number; count: number; canWrite: boolean; onOpen: () => void }) {
-    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`t-${table.id}`, canWrite && !isTemp(table.id), pos, zoom);
+function TableNode({ table, pos, zoom, count, canWrite, draggable, onOpen }: { table: Table; pos: Pos; zoom: number; count: number; canWrite: boolean; draggable: boolean; onOpen: () => void }) {
+    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`t-${table.id}`, draggable && !isTemp(table.id), pos, zoom);
     const over = count > table.capacity;
     return (
         <div
@@ -640,10 +669,10 @@ function TableNode({ table, pos, zoom, count, canWrite, onOpen }: { table: Table
             {...listeners}
             {...attributes}
             role={canWrite ? "button" : undefined}
-            aria-label={canWrite ? `Mesa ${table.number}: arrastra para mover, pulsa para editar` : undefined}
+            aria-label={canWrite ? (draggable ? `Mesa ${table.number}: arrastra para mover, pulsa para editar` : `Mesa ${table.number}: pulsa para editar`) : undefined}
             onClick={canWrite ? onOpen : undefined}
             onKeyDown={canWrite ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } } : undefined}
-            className={`select-none ${canWrite ? "touch-none cursor-grab active:cursor-grabbing" : ""} bg-surface-container-lowest rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${isDragging ? "ring-2 ring-primary/50 shadow-md" : ""} ${isTemp(table.id) ? pendingRowCls : ""}`}
+            className={`select-none ${draggable ? "touch-none cursor-grab active:cursor-grabbing" : canWrite ? "cursor-pointer" : ""} bg-surface-container-lowest rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow ${isDragging ? "ring-2 ring-primary/50 shadow-md" : ""} ${isTemp(table.id) ? pendingRowCls : ""}`}
         >
             <h4 className="font-serif text-2xl leading-none text-on-surface truncate">Mesa {table.number}</h4>
             {table.name && <p className="mt-1 text-xs text-on-surface-variant truncate">{table.name}</p>}
@@ -656,8 +685,8 @@ function TableNode({ table, pos, zoom, count, canWrite, onOpen }: { table: Table
     );
 }
 
-function ElementNode({ element, pos, zoom, canWrite, onOpen }: { element: FloorElement; pos: Pos; zoom: number; canWrite: boolean; onOpen: () => void }) {
-    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`e-${element.id}`, canWrite && !isTemp(element.id), pos, zoom);
+function ElementNode({ element, pos, zoom, canWrite, draggable, onOpen }: { element: FloorElement; pos: Pos; zoom: number; canWrite: boolean; draggable: boolean; onOpen: () => void }) {
+    const { attributes, listeners, setNodeRef, isDragging, style } = useNodeDrag(`e-${element.id}`, draggable && !isTemp(element.id), pos, zoom);
     const meta = KIND[element.kind];
     const Icon = meta.icon;
     const name = element.label || meta.label;
@@ -669,10 +698,10 @@ function ElementNode({ element, pos, zoom, canWrite, onOpen }: { element: FloorE
             {...listeners}
             {...attributes}
             role={canWrite ? "button" : undefined}
-            aria-label={canWrite ? `${name}: arrastra para mover, pulsa para editar` : name}
+            aria-label={canWrite ? (draggable ? `${name}: arrastra para mover, pulsa para editar` : `${name}: pulsa para editar`) : name}
             onClick={canWrite ? onOpen : undefined}
             onKeyDown={canWrite ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpen(); } } : undefined}
-            className={`select-none ${canWrite ? "touch-none cursor-grab active:cursor-grabbing" : ""} ${element.shape === "ROUND" ? "rounded-full" : "rounded-2xl"} ${meta.cls} flex flex-col items-center justify-center gap-1 p-2 text-center shadow-sm ${isDragging ? "ring-2 ring-primary/50 shadow-md" : ""} ${isTemp(element.id) ? pendingRowCls : ""}`}
+            className={`select-none ${draggable ? "touch-none cursor-grab active:cursor-grabbing" : canWrite ? "cursor-pointer" : ""} ${element.shape === "ROUND" ? "rounded-full" : "rounded-2xl"} ${meta.cls} flex flex-col items-center justify-center gap-1 p-2 text-center shadow-sm ${isDragging ? "ring-2 ring-primary/50 shadow-md" : ""} ${isTemp(element.id) ? pendingRowCls : ""}`}
         >
             <Icon className="w-5 h-5 shrink-0" aria-hidden />
             <span className="text-sm font-medium leading-tight line-clamp-2">{name}</span>
