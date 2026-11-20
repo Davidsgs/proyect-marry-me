@@ -320,27 +320,37 @@ export default function CronogramaManager({ initialActivities, initialSections, 
         <div className="space-y-6">
             {/* Toolbar: progreso + secciones + modo día del evento + nueva actividad */}
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-                <p className="flex items-center gap-2 text-sm font-sans text-on-surface-variant">
-                    <CalendarClock className="w-4 h-4" aria-hidden />
-                    {activities.length} {activities.length === 1 ? "actividad" : "actividades"}
-                    <span>· {completedCount} {completedCount === 1 ? "hecha" : "hechas"}</span>
-                </p>
+                <div className="space-y-2">
+                    <p className="flex items-center gap-2 text-sm font-sans text-on-surface-variant">
+                        <CalendarClock className="w-4 h-4" aria-hidden />
+                        {activities.length} {activities.length === 1 ? "actividad" : "actividades"}
+                        <span>· {completedCount} {completedCount === 1 ? "hecha" : "hechas"}</span>
+                    </p>
+                    {/* Avance del día, a simple vista en el celular. */}
+                    {activities.length > 0 && (
+                        <div aria-hidden className="sm:hidden h-1.5 rounded-full bg-surface-container overflow-hidden">
+                            <div className="h-full rounded-full bg-primary transition-[width] duration-300" style={{ width: `${(completedCount / activities.length) * 100}%` }} />
+                        </div>
+                    )}
+                </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                {/* En el celular: «Nueva actividad» a todo el ancho y las otras dos, una al lado de la otra. */}
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
                     {editable && (
-                        <button type="button" onClick={() => setShowSections(true)} className={btnSecondary}>
+                        <button type="button" onClick={() => setShowSections(true)} className={`${btnSecondary} w-full sm:w-auto`}>
                             <Layers className="w-4 h-4" aria-hidden />
                             Secciones
                         </button>
                     )}
                     {canWrite && !locked && (
-                        <button onClick={handleToggleLock} className={btnSecondary}>
-                            <Lock className="w-4 h-4" />
-                            Activar modo día del evento
+                        <button type="button" onClick={handleToggleLock} className={`${btnSecondary} w-full sm:w-auto`}>
+                            <Lock className="w-4 h-4" aria-hidden />
+                            <span className="sm:hidden">Día del evento</span>
+                            <span className="hidden sm:inline">Activar modo día del evento</span>
                         </button>
                     )}
                     {editable && (
-                        <button type="button" onClick={() => setShowForm(true)} className={btnPrimary}>
+                        <button type="button" onClick={() => setShowForm(true)} className={`${btnPrimary} col-span-2 order-first sm:order-none w-full sm:w-auto`}>
                             <Plus className="w-4 h-4" aria-hidden />
                             Nueva actividad
                         </button>
@@ -383,9 +393,9 @@ export default function CronogramaManager({ initialActivities, initialSections, 
                 <SectionsEditor sections={sections} activities={activities} mutateSections={mutateSections} />
             </Dialog>
 
-            <div className="grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6 items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] gap-6 items-start">
                 {/* Master: lista cronológica por secciones */}
-                <div>
+                <div className="min-w-0">
                     {activities.length === 0 && sections.length === 0 ? (
                         <EmptyState message="Aún no hay actividades. Empieza por la primera con «Nueva actividad»." />
                     ) : (
@@ -446,7 +456,7 @@ function SectionGroup({ group, editable, showSectionTitle, children }: { group: 
         <section ref={setNodeRef} aria-labelledby={showSectionTitle ? headingId : undefined} className={`rounded-3xl transition-colors ${isOver ? "bg-secondary-container/50 ring-2 ring-primary/30 p-2 -m-2" : ""}`}>
             {showSectionTitle && (
                 <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-3 px-1">
-                    <h2 id={headingId} className="font-serif text-3xl leading-display text-primary">{section?.name ?? "Sin sección"}</h2>
+                    <h2 id={headingId} className="font-serif text-2xl sm:text-3xl leading-display text-primary">{section?.name ?? "Sin sección"}</h2>
                     {section?.date && (
                         <span className="text-sm text-on-surface-variant first-letter:uppercase">{fmtSectionDate.format(parseLocalDate(section.date))}</span>
                     )}
@@ -628,7 +638,7 @@ function ActivityRow({
             ref={setNodeRef}
             style={style}
             aria-busy={temp || undefined}
-            className={`group flex items-center gap-1 rounded-2xl pl-1 pr-3 ${dayMode ? "py-3" : "py-1.5"} transition-[background-color,box-shadow] ${
+            className={`group flex items-center gap-1 rounded-2xl pl-1 pr-2 sm:pr-3 ${dayMode ? "py-3" : "py-1.5"} transition-[background-color,box-shadow] ${
                 isDragging ? "opacity-40" : ""
             } ${temp ? pendingRowCls : ""} ${
                 selected
@@ -686,24 +696,30 @@ function ActivityRow({
                 aria-current={selected ? "true" : undefined}
                 className="flex-1 min-w-0 min-h-11 flex items-center gap-3 text-left cursor-pointer"
             >
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0 flex-1 py-1 sm:py-0">
+                    {activity.time && (
+                        <p className={`sm:hidden flex items-center gap-1 text-xs font-semibold tabular-nums ${done ? "text-on-surface-variant" : "text-primary"}`}>
+                            <Clock className="w-3.5 h-3.5" aria-hidden />
+                            {activity.time}
+                        </p>
+                    )}
                     <p
-                        className={`font-serif ${dayMode ? "text-2xl" : "text-xl"} leading-tight truncate ${
+                        className={`font-serif ${dayMode ? "text-2xl" : "text-xl"} leading-tight text-pretty break-words sm:truncate ${
                             done ? "line-through text-on-surface-variant" : "text-on-surface"
                         }`}
                     >
                         {activity.title}
                     </p>
                     {(taskCount > 0 || activity.responsibles.length > 0) && (
-                        <p className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-3">
+                        <p className="text-xs text-on-surface-variant mt-0.5 flex items-center gap-3 min-w-0">
                             {taskCount > 0 && (
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1 shrink-0 whitespace-nowrap">
                                     <ListChecks className="w-3.5 h-3.5" aria-hidden />
                                     {taskDone}/{taskCount} pasos
                                 </span>
                             )}
                             {activity.responsibles.length > 0 && (
-                                <span className="flex items-center gap-1 truncate">
+                                <span className="flex items-center gap-1 min-w-0 truncate">
                                     <Users className="w-3.5 h-3.5 shrink-0" aria-hidden />
                                     <span className="truncate">{activity.responsibles.map((r) => r.name).join(", ")}</span>
                                 </span>
@@ -713,7 +729,7 @@ function ActivityRow({
                 </div>
                 {activity.time && (
                     <span
-                        className={`shrink-0 ${dayMode ? "text-base" : "text-sm"} font-medium tabular-nums px-2.5 py-1 rounded-full flex items-center gap-1 ${
+                        className={`hidden sm:flex shrink-0 ${dayMode ? "text-base" : "text-sm"} font-medium tabular-nums px-2.5 py-1 rounded-full items-center gap-1 ${
                             done ? "bg-surface-container text-on-surface-variant" : "bg-secondary-container text-on-secondary-container"
                         }`}
                     >
@@ -815,7 +831,7 @@ function ActivityDetail({
                                 {section && <p className="text-xs font-medium text-on-surface-variant mb-1">{section.name}</p>}
                                 <h2
                                     id="activity-detail-title"
-                                    className={`font-serif text-4xl leading-tight break-words ${
+                                    className={`font-serif text-3xl sm:text-4xl leading-tight break-words ${
                                         done ? "line-through text-on-surface-variant" : "text-primary"
                                     }`}
                                 >
@@ -1096,11 +1112,11 @@ function TaskRow({
             </button>
 
             {/* Responsable del paso: selector si editable, chip si no */}
-            {editable && responsibles.length > 0 ? (
+            {editable && responsibles.length > 0 && (
                 <select
                     value={task.responsibleId ?? ""}
                     onChange={(e) => onAssign(e.target.value === "" ? null : Number(e.target.value))}
-                    className={`${inputSmCls} shrink-0 max-w-32 text-label cursor-pointer`}
+                    className={`${inputSmCls} hidden sm:block shrink-0 max-w-32 text-label cursor-pointer`}
                     aria-label={`Responsable de «${task.label}»`}
                 >
                     <option value="">Sin responsable</option>
@@ -1110,22 +1126,24 @@ function TaskRow({
                         </option>
                     ))}
                 </select>
-            ) : assignee ? (
+            )}
+            {assignee && (
                 <span
-                    className="shrink-0 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface text-xs font-medium max-w-32"
+                    className={`${editable && responsibles.length > 0 ? "sm:hidden" : ""} shrink-0 flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-surface-container text-on-surface text-xs font-medium max-w-28 sm:max-w-32`}
                     title={assignee.name}
                 >
                     <User className="w-3 h-3 shrink-0" />
                     <span className="truncate">{assignee.name}</span>
                 </span>
-            ) : null}
+            )}
 
             {editable && (
                 <button
                     type="button"
                     onClick={onDelete}
                     aria-label={`Eliminar el paso «${task.label}»`}
-                    className={`${iconBtnDanger} pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100`}
+                    // En el celular se borra desde el detalle del paso (una cruz roja por fila recargaba la lista).
+                    className={`${iconBtnDanger} hidden sm:inline-flex pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 focus:opacity-100`}
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>
