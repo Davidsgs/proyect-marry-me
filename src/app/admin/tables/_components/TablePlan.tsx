@@ -161,18 +161,50 @@ export default function TablePlan({
     useLayoutEffect(() => {
         zoomRef.current = zoom;
     }, [zoom]);
-    // Punto que debe quedar quieto al cambiar el zoom (bajo el cursor o los dedos).
-    const anchor = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+    // Lienzo escalado (su caja mide lo que se ve). Las cuentas usan su posición en
+    // pantalla: así valen también cuando el plano es más chico que la ventana y
+    // queda centrado (m-auto), sin saltos.
+    const canvas = useRef<HTMLDivElement>(null);
+    // Punto del plano (x, y, sin escala) que debe quedar bajo un punto de la pantalla
+    // (cx, cy) al aplicar el zoom: bajo el cursor, o entre los dedos.
+    type Anchor = { x: number; y: number; cx: number; cy: number };
+    const anchor = useRef<Anchor | null>(null);
 
-    function zoomAt(next: number, px?: number, py?: number) {
+    // Desplaza la ventana para que el punto del plano quede bajo (cx, cy) con el zoom z.
+    function place(a: Anchor, z: number) {
         const el = viewport.current;
+        const r = canvas.current?.getBoundingClientRect();
+        if (!el || !r) return;
+        el.scrollLeft += r.left - (a.cx - a.x * z);
+        el.scrollTop += r.top - (a.cy - a.y * z);
+    }
+
+    // Punto del plano que hay hoy bajo (cx, cy) de la pantalla.
+    function planPoint(cx: number, cy: number) {
+        const r = canvas.current?.getBoundingClientRect();
         const z = zoomRef.current;
-        const target = clampZoom(next);
-        if (!el || target === z) return;
-        const ax = px ?? el.clientWidth / 2;
-        const ay = py ?? el.clientHeight / 2;
-        anchor.current = { x: (el.scrollLeft + ax) / z, y: (el.scrollTop + ay) / z, px: ax, py: ay };
-        setZoom(target);
+        return r ? { x: (cx - r.left) / z, y: (cy - r.top) / z } : { x: 0, y: 0 };
+    }
+
+    // Aplica un zoom manteniendo el anclaje. El ref se adelanta para que los eventos
+    // que llegan antes del próximo render calculen con el zoom nuevo.
+    function applyZoom(a: Anchor, next: number) {
+        const z = clampZoom(next);
+        if (z === zoomRef.current) {
+            place(a, z);
+            return;
+        }
+        anchor.current = a;
+        zoomRef.current = z;
+        setZoom(z);
+    }
+
+    function zoomAt(next: number, cx?: number, cy?: number) {
+        const r = viewport.current?.getBoundingClientRect();
+        if (!r) return;
+        const px = cx ?? r.left + r.width / 2;
+        const py = cy ?? r.top + r.height / 2;
+        applyZoom({ ...planPoint(px, py), cx: px, cy: py }, next);
     }
 
     // «Centrar»: el zoom que hace entrar todo (sin pasar del 100 %) y el contenido en el
@@ -186,63 +218,101 @@ export default function TablePlan({
         const maxX = Math.max(...nodes.map((n) => n.offsetLeft + n.offsetWidth));
         const maxY = Math.max(...nodes.map((n) => n.offsetTop + n.offsetHeight));
         const margin = 32;
-        const z = clampZoom(Math.min(1, (el.clientWidth - margin * 2) / (maxX - minX), (el.clientHeight - margin * 2) / (maxY - minY)));
-        const a = { x: (minX + maxX) / 2, y: (minY + maxY) / 2, px: el.clientWidth / 2, py: el.clientHeight / 2 };
-        if (z === zoomRef.current) {
-            el.scrollLeft = a.x * z - a.px;
-            el.scrollTop = a.y * z - a.py;
-        } else {
-            anchor.current = a;
-            setZoom(z);
-        }
+        const r = el.getBoundingClientRect();
+        const z = Math.min(1, (el.clientWidth - margin * 2) / (maxX - minX), (el.clientHeight - margin * 2) / (maxY - minY));
+        applyZoom({ x: (minX + maxX) / 2, y: (minY + maxY) / 2, cx: r.left + el.clientWidth / 2, cy: r.top + el.clientHeight / 2 }, z);
     }
 
-    // Tras cambiar el zoom, desplaza para que el punto de anclaje no se mueva.
+    // Tras cambiar el zoom, desplaza para que el punto de anclaje no se mueva. Sin
+    // dependencias: solo hay anclaje pendiente justo después de un cambio de zoom.
     useLayoutEffect(() => {
-        const el = viewport.current;
         const a = anchor.current;
-        if (!el || !a) return;
+        if (!a) return;
         anchor.current = null;
-        el.scrollLeft = a.x * zoom - a.px;
-        el.scrollTop = a.y * zoom - a.py;
-    }, [zoom]);
+        place(a, zoomRef.current);
+    });
 
-    // Rueda y pellizco: escuchas no pasivas para poder evitar el scroll y el zoom de la página.
+    // Gesto en curso. En refs, no en el efecto: los escuchas se vuelven a enganchar en
+    // cada render, y si el estado viviera ahí, el primer render del zoom cortaba el
+    // pellizco (por eso casi no acercaba).
+    const pinch = useRef<{ dist: number; zoom: number; x: number; y: number } | null>(null);
+    const lastTap = useRef<{ t: number; x: number; y: number } | null>(null);
+    const tapStart = useRef<{ x: number; y: number } | null>(null);
+    const frame = useRef(0);
+    const pending = useRef<{ a: Anchor; z: number } | null>(null);
+
+    // Rueda, pellizco y doble toque: escuchas no pasivas para poder evitar el scroll y el
+    // zoom de la página. El pellizco sigue a los dedos: acerca y a la vez desplaza, como
+    // un mapa. Se aplica una vez por cuadro (requestAnimationFrame).
     useEffect(() => {
         const el = viewport.current;
         if (!el) return;
         const onWheel = (e: WheelEvent) => {
             e.preventDefault();
-            const r = el.getBoundingClientRect();
-            zoomAt(zoomRef.current * Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top);
+            zoomAt(zoomRef.current * Math.exp(-e.deltaY * 0.0015), e.clientX, e.clientY);
         };
-        let pinch: { dist: number; zoom: number } | null = null;
         const distOf = (t: TouchList) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+        const midOf = (t: TouchList) => ({ cx: (t[0].clientX + t[1].clientX) / 2, cy: (t[0].clientY + t[1].clientY) / 2 });
         const onTouchStart = (e: TouchEvent) => {
-            if (e.touches.length === 2) pinch = { dist: distOf(e.touches), zoom: zoomRef.current };
+            if (e.touches.length === 2) {
+                const { cx, cy } = midOf(e.touches);
+                pinch.current = { dist: distOf(e.touches), zoom: zoomRef.current, ...planPoint(cx, cy) };
+                tapStart.current = null;
+            } else if (e.touches.length === 1) {
+                tapStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
         };
         const onTouchMove = (e: TouchEvent) => {
-            if (!pinch || e.touches.length !== 2) return;
+            const p = pinch.current;
+            if (!p || e.touches.length !== 2) return;
             e.preventDefault();
-            const r = el.getBoundingClientRect();
-            const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2 - r.left;
-            const my = (e.touches[0].clientY + e.touches[1].clientY) / 2 - r.top;
-            zoomAt(pinch.zoom * (distOf(e.touches) / pinch.dist), mx, my);
+            const { cx, cy } = midOf(e.touches);
+            pending.current = { a: { x: p.x, y: p.y, cx, cy }, z: p.zoom * (distOf(e.touches) / p.dist) };
+            if (!frame.current) {
+                frame.current = requestAnimationFrame(() => {
+                    frame.current = 0;
+                    const next = pending.current;
+                    pending.current = null;
+                    if (next) applyZoom(next.a, next.z);
+                });
+            }
         };
         const onTouchEnd = (e: TouchEvent) => {
-            if (e.touches.length < 2) pinch = null;
+            if (e.touches.length < 2) pinch.current = null;
+            // Doble toque en el fondo (no sobre una mesa): acerca ahí; si ya está cerca, encuadra todo.
+            const start = tapStart.current;
+            const t = e.changedTouches[0];
+            tapStart.current = null;
+            if (!start || !t || e.touches.length > 0 || (e.target as HTMLElement).closest("[data-plan-node]")) return;
+            if (Math.hypot(t.clientX - start.x, t.clientY - start.y) > 10) return;
+            const now = performance.now();
+            const prev = lastTap.current;
+            if (prev && now - prev.t < 300 && Math.hypot(t.clientX - prev.x, t.clientY - prev.y) < 30) {
+                lastTap.current = null;
+                e.preventDefault();
+                if (zoomRef.current >= 1) fit();
+                else zoomAt(Math.min(1, zoomRef.current * 2), t.clientX, t.clientY);
+            } else {
+                lastTap.current = { t: now, x: t.clientX, y: t.clientY };
+            }
         };
+        // Safari (iOS) hace su propio zoom de página con el pellizco: dentro del plano, no.
+        const stopGesture = (e: Event) => e.preventDefault();
         el.addEventListener("wheel", onWheel, { passive: false });
         el.addEventListener("touchstart", onTouchStart, { passive: true });
         el.addEventListener("touchmove", onTouchMove, { passive: false });
-        el.addEventListener("touchend", onTouchEnd);
+        el.addEventListener("touchend", onTouchEnd, { passive: false });
         el.addEventListener("touchcancel", onTouchEnd);
+        el.addEventListener("gesturestart", stopGesture, { passive: false });
+        el.addEventListener("gesturechange", stopGesture, { passive: false });
         return () => {
             el.removeEventListener("wheel", onWheel);
             el.removeEventListener("touchstart", onTouchStart);
             el.removeEventListener("touchmove", onTouchMove);
             el.removeEventListener("touchend", onTouchEnd);
             el.removeEventListener("touchcancel", onTouchEnd);
+            el.removeEventListener("gesturestart", stopGesture);
+            el.removeEventListener("gesturechange", stopGesture);
         };
     });
 
@@ -250,6 +320,8 @@ export default function TablePlan({
     useEffect(() => {
         const id = requestAnimationFrame(() => fit());
         return () => cancelAnimationFrame(id);
+        // Solo al cambiar de área o alternativa: fit mide el DOM del momento.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [areaId, layoutByArea]);
 
     // Con el ratón, arrastrar el fondo desplaza el plano (la rueda ahora hace zoom).
@@ -537,7 +609,7 @@ export default function TablePlan({
                         : coarse
                           ? arranging
                               ? "Arrastra mesas y elementos para ubicarlos; se guardan solos. Para recorrer el plano, desliza sobre el fondo."
-                              : "Desliza para recorrer el plano y pellizca para acercar. Toca una mesa para editarla; para cambiarla de lugar, activa «Mover piezas»."
+                              : "Desliza para recorrer el plano; pellizca con dos dedos o toca dos veces el fondo para acercar. Toca una mesa para editarla; para cambiarla de lugar, activa «Mover piezas»."
                           : "Arrastra mesas y elementos para recrear la distribución. Haz clic en uno para editarlo. Todo se guarda solo. Acerca o aleja con la rueda del ratón."}
                 </span>
             </p>
@@ -585,7 +657,7 @@ export default function TablePlan({
                 >
                     <DndContext id="tables-plan" sensors={sensors} onDragEnd={onDragEnd} onDragCancel={endDrag}>
                         {/* El tamaño escalado da el área de scroll; m-auto centra el plano si es más chico que la ventana. */}
-                        <div className="relative m-auto shrink-0" style={{ width: canvasW * zoom, height: canvasH * zoom }}>
+                        <div ref={canvas} className="relative m-auto shrink-0" style={{ width: canvasW * zoom, height: canvasH * zoom }}>
                         <div
                             className="absolute left-0 top-0 origin-top-left"
                             style={{
