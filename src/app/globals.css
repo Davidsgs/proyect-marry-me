@@ -404,6 +404,13 @@ mark.hl {
   }
 }
 
+/* «Preguntas y respuestas»: la respuesta entra suave al abrir la pregunta. */
+@media (prefers-reduced-motion: no-preference) {
+  details[open] > .faq-answer {
+    animation: mg-rise 360ms var(--ease-out-soft) both;
+  }
+}
+
 @utility animate-heart-float {
   display: none;
   @media (prefers-reduced-motion: no-preference) {
