@@ -144,13 +144,13 @@ export default async function DashboardPage() {
                 </section>
             ),
         },
-        { id: "dia", label: "El gran día", content: <EventWhen /> },
-        { id: "lugar", label: "Lugar y vestimenta", content: <EventPlace /> },
+        { id: "dia", label: "El gran día", content: <EventWhen />, tone: "dark" },
+        { id: "lugar", label: "Lugar y vestimenta", content: <EventPlace />, tone: "dark" },
         ...(userId ? [{ id: "mesa", label: "Tu mesa", content: <MyTableCard currentUserId={userId} /> }] : []),
         ...(menu.length > 0 ? [{ id: "menu", label: "Menú", content: <WeddingMenu /> }] : []),
         ...(giftAlias || giftCbu ? [{ id: "regalos", label: "Regalos", content: <Gifts /> }] : []),
         ...(story?.trim() ? [{ id: "historia", label: "Nuestra historia", content: <OurStory /> }] : []),
-        ...(party.length > 0 ? [{ id: "cortejo", label: "Nuestro cortejo", content: <WeddingParty /> }] : []),
+        ...(party.length > 0 ? [{ id: "cortejo", label: "Nuestro cortejo", content: <WeddingParty />, tone: "dark" as const }] : []),
     ];
 
     return <InvitationSteps steps={steps} />;

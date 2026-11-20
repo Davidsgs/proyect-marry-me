@@ -1,13 +1,15 @@
 import { STORY_PHOTOS } from "@/lib/wedding";
 import { cachedConfig } from "@/lib/data";
-import { Arch, Polaroid, Sprig } from "@/components/Brand";
+import { Arch, FloatingHearts, HeartSprig, Polaroid } from "@/components/Brand";
 import { BotanicalShadow } from "@/components/BotanicalShadow";
 import TypedStory from "./TypedStory";
 
 // «Nuestra historia» (página 3 del manual): arco crema con el texto y polaroids
 // inclinados a los lados. Solo se renderiza en /dashboard (con sesión); el texto
 // vive en la base (Ajustes, clave "story") y las fotos en public/privado/,
-// protegido por src/proxy.ts. Sin texto, la sección no aparece.
+// protegido por src/proxy.ts. Sin texto, la sección no aparece. Adornos: corazones
+// de línea que suben por el fondo, la ramita con un corazón que se dibuja y, al
+// terminar de escribirse la carta, la firma con un sello de lacre.
 const TILT = [-8, 7, -4];
 
 export default async function OurStory() {
@@ -19,6 +21,7 @@ export default async function OurStory() {
         <section aria-labelledby="historia" className="relative overflow-hidden bg-rubor text-tinta">
             <BotanicalShadow variant="orquidea" sway className="absolute -top-24 -left-32 w-[30rem] max-w-[90vw] -scale-x-100 text-rosa-profundo/20" />
             <BotanicalShadow variant="espiga" className="absolute -bottom-20 -right-20 w-[24rem] max-w-[70vw] text-rosa-profundo/20" />
+            <FloatingHearts className="text-rosa-profundo" />
 
             <div className="relative mx-auto max-w-5xl px-5 sm:px-8 py-14 sm:py-20 lg:py-8 short:py-4">
                 <div className="relative grid items-center gap-8 lg:grid-cols-[1fr_minmax(0,34rem)_1fr]">
@@ -31,9 +34,10 @@ export default async function OurStory() {
                         innerClassName="text-center short:pt-12 short:pb-5"
                     >
                         <h2 id="historia" className="mg-mask mg-d-2 font-serif text-5xl sm:text-6xl short:text-4xl leading-display text-oliva-profundo">Nuestra historia</h2>
-                        <Sprig className="mg-grow mg-d-4 mx-auto mt-5 short:mt-3 text-rosa-profundo" />
+                        <HeartSprig className="mx-auto mt-5 short:mt-3 text-rosa-profundo" />
                         <TypedStory
                             paragraphs={paragraphs}
+                            signature="David y Rocío"
                             className={`mt-5 short:mt-3 space-y-4 short:space-y-2 font-text text-base sm:text-lg short:text-item leading-relaxed text-pretty ${first ? "" : "lg:columns-2 lg:gap-12"}`}
                         />
                     </Arch>

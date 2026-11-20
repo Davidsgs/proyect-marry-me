@@ -106,17 +106,22 @@ export function EventPlace() {
                     <div className="flex flex-col items-center">
                         <h3 className={`mg-rise mg-d-3 ${label}`}><Shirt className="w-4 h-4" aria-hidden /> Vestimenta</h3>
                         <p className="mg-mask mg-d-4 mt-2 font-serif text-4xl sm:text-5xl leading-display">{DRESS_CODE.style}</p>
+                        {/* Cálido pero claro: la vestimenta es condición para entrar. */}
+                        <p className="mg-rise mg-d-5 mt-3 short:mt-2 max-w-md lg:max-w-lg font-text text-base short:text-sm leading-relaxed text-pretty">
+                            Para que la noche luzca como la soñamos, les pedimos venir con vestimenta elegante o de gala:{" "}
+                            <mark className="hl mg-mark mg-d-6">será necesaria para ingresar</mark>. ¡Gracias por acompañarnos también en este detalle!
+                        </p>
 
                         {/* Colores prohibidos: tachados y con «No usar» escrito, para que no se lean como paleta sugerida. */}
-                        <div className="mg-rise mg-d-5 mt-6 short:mt-4 w-full max-w-md lg:max-w-lg rounded-3xl bg-crema text-tinta px-5 py-6 sm:px-8 short:py-5 shadow-sm">
+                        <div className="mg-rise mg-d-5 mt-6 short:mt-4 w-full max-w-md lg:max-w-lg rounded-3xl bg-crema text-tinta px-5 py-6 sm:px-8 short:py-4 shadow-sm">
                             <Ban className="mg-pop mg-d-7 mx-auto w-7 h-7 text-rosa-profundo" aria-hidden />
-                            <p className="mt-2 font-serif text-2xl sm:text-3xl leading-display text-rosa-profundo text-balance">
+                            <p className="mt-2 short:mt-1 font-serif text-2xl sm:text-3xl short:text-2xl leading-display text-rosa-profundo text-balance">
                                 Colores que no deben usarse
                             </p>
                             <p className="mt-2 font-text text-base text-pretty">
                                 Están reservados para la decoración y los novios. Por favor, no vengas vestido de estos colores.
                             </p>
-                            <div className="mt-5 flex flex-wrap justify-center gap-x-8 gap-y-5">
+                            <div className="mt-5 short:mt-3 flex flex-wrap justify-center gap-x-8 gap-y-5">
                                 <SwatchRow who="Mujeres" colors={DRESS_CODE.women} from={8} />
                                 <SwatchRow who="Varones" colors={DRESS_CODE.men} from={8 + DRESS_CODE.women.length} />
                             </div>
@@ -142,7 +147,7 @@ function SwatchRow({ who, colors, from }: { who: string; colors: AvoidColor[]; f
                         <li key={c.hex} className="w-20 flex flex-col items-center">
                             {/* Muestra tachada con una diagonal, como una señal de prohibido: la línea se dibuja al entrar. */}
                             <span
-                                className={`mg-pop ${d} relative block w-16 h-16 rounded-full ring-1 ring-inset ring-outline-variant overflow-hidden`}
+                                className={`mg-pop ${d} relative block w-16 h-16 short:w-12 short:h-12 rounded-full ring-1 ring-inset ring-outline-variant overflow-hidden`}
                                 style={{ backgroundColor: c.hex }}
                                 aria-hidden
                             >
