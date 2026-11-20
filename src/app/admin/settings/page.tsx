@@ -2,16 +2,17 @@ import { auth } from "@/auth";
 import { PageHeader } from "@/app/admin/_components/ui";
 import { hasPermission } from "@/lib/permissions";
 import { redirect } from "next/navigation";
-import { cachedConfig, cachedUsers, cachedWeddingParty } from "@/lib/data";
+import { cachedConfig, cachedFaq, cachedUsers, cachedWeddingParty } from "@/lib/data";
 import { getAdminsWithPermissions, getEditablePermissions } from "@/app/actions/permissions";
 import SettingsForm from "./_components/SettingsForm";
 import GiftsForm from "./_components/GiftsForm";
 import AdultsNoteForm from "./_components/AdultsNoteForm";
 import WeddingPartyForm from "./_components/WeddingPartyForm";
+import FaqForm from "./_components/FaqForm";
 import StoryForm from "./_components/StoryForm";
 import AdminPermissionsManager from "./_components/AdminPermissionsManager";
 import { ADULTS_NOTE_DEFAULT } from "@/lib/wedding";
-import { BookHeart, CalendarClock, ChevronDown, Gift, HeartHandshake, ShieldCheck, Baby, type LucideIcon } from "lucide-react";
+import { BookHeart, CalendarClock, ChevronDown, Gift, HeartHandshake, MessageCircleQuestion, ShieldCheck, Baby, type LucideIcon } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -55,7 +56,7 @@ export default async function SettingsPage() {
     redirect("/admin");
   }
 
-  const [rsvpDeadline, holder, alias, cbu, note, adultsNote, story, party, allUsers, admins, editablePermissions] = await Promise.all([
+  const [rsvpDeadline, holder, alias, cbu, note, adultsNote, story, party, faq, allUsers, admins, editablePermissions] = await Promise.all([
     cachedConfig("rsvp_deadline"),
     cachedConfig("gift_holder"),
     cachedConfig("gift_alias"),
@@ -64,6 +65,7 @@ export default async function SettingsPage() {
     cachedConfig("adults_note"),
     cachedConfig("story"),
     cachedWeddingParty(),
+    cachedFaq(),
     cachedUsers(),
     getAdminsWithPermissions(),
     getEditablePermissions(),
@@ -83,6 +85,7 @@ export default async function SettingsPage() {
     ninos: adultsNote?.trim() && adultsNote.trim() !== ADULTS_NOTE_DEFAULT ? "Texto propio" : "Texto original",
     historia: storyWords ? count(storyWords, "palabra", "palabras") : "Sin texto: la sección no aparece",
     cortejo: party.length ? count(party.length, "persona", "personas") : "Nadie cargado: la sección no aparece",
+    preguntas: faq.length ? count(faq.length, "pregunta", "preguntas") : "Sin preguntas: la sección no aparece",
     permisos: count(admins.length, "administrador", "administradores"),
   };
   const group = "px-1 pt-2 text-label font-medium text-on-surface-variant";
@@ -111,6 +114,10 @@ export default async function SettingsPage() {
 
         <Block id="cortejo" icon={HeartHandshake} title="Padrinos y cortejo" summary={summaries.cortejo} description="Aparecen en «Nuestro cortejo», como agradecimiento por su ayuda. Solo los ven los invitados con sesión iniciada.">
           <WeddingPartyForm initial={party} people={people} />
+        </Block>
+
+        <Block id="preguntas" icon={MessageCircleQuestion} title="Preguntas y respuestas" summary={summaries.preguntas} description="Las dudas que suelen tener los invitados, con su respuesta. Aparecen en el último paso de la invitación, en el orden de esta lista. Sin preguntas, la sección no aparece.">
+          <FaqForm initial={faq} />
         </Block>
       </section>
 
